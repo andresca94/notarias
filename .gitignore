@@ -1,0 +1,16 @@
+# Secrets and Environment
+.env
+secrets/
+*.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+build/
+dist/
+
+# System
+.DS_Store

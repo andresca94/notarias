@@ -1,0 +1,144 @@
+```json
+{
+  "datos_inmueble": {
+    "matricula": "320-3197",
+    "predial_nacional": "686890003000000200001000000000",
+    "direccion": "Vereda: TIERRA BUENA, Corregimiento de YARIMA, San Vicente de Chucurí. Finca: VILLA LUZ.",
+    "cabida_area": "115 hectáreas 1290 metros cuadrados",
+    "linderos": "NO_DETECTADO",
+    "tradicion": [
+      {
+        "anotacion_nro": "001",
+        "fecha": "23-06-1980",
+        "radicacion": "0475",
+        "documento": "RESOLUCION 0404 DEL 30-05-1980 INCORA",
+        "especificacion": "170 ADJUDICACION BALDIOS MODO DE ADQUISICION",
+        "de": "INSTITUTO COLOMBIANO DE LA REFORMA AGRARIA",
+        "a": "MARTINEZ AGUILAR MARCO ANTONIO",
+        "valor_acto": "$0"
+      },
+      {
+        "anotacion_nro": "002",
+        "fecha": "13-06-1985",
+        "radicacion": "0637",
+        "documento": "ESCRITURA 418 DEL 06-06-1985 NOTARIA DE SAN VICENTE",
+        "especificacion": "101 COMPRAVENTA MODO DE ADQUISICION",
+        "de": "MARTINEZ AGUILAR MARCO ANTONIO",
+        "a": "CACUA CASTILLO HERNAN",
+        "valor_acto": "$500,000"
+      },
+      {
+        "anotacion_nro": "003",
+        "fecha": "23-03-2000",
+        "radicacion": "391",
+        "documento": "OFICIO 270 DEL 22-03-2000 SECRETARIA DE HACIENDA Y TESORO DE SAN VICENTE DE CHUCURI",
+        "especificacion": "MEDIDA CAUTELAR: 403 EMBARGO EN PROCESO POR JURISDICCION COACTIVA MEDIDA CAUTELAR",
+        "de": "SECRETARIA DE HACIENDA Y TESORO MUNICIPAL DE SAN VICENTE DE CHUCURI",
+        "a": "CACUA CASTILLO HERNAN",
+        "valor_acto": "$0"
+      },
+      {
+        "anotacion_nro": "004",
+        "fecha": "22-08-2002",
+        "radicacion": "1071",
+        "documento": "OFICIO 562 DEL 22-08-2002 SECRETARIA DE HACIENDA Y TESORO DE SAN VICENTE DE CHUCURI",
+        "especificacion": "CANCELACION: 0771 CANCELACION EMBARGO EN PROCESO POR JURISDICCION COACTIVA (Se cancela anotación No: 3)",
+        "de": "SECRETARIA DE HACIENDA Y TESORO MUNICIPAL DE SAN VICENTE DE CHUCURI",
+        "a": "CACUA CASTILLO HERNAN",
+        "valor_acto": "$0"
+      },
+      {
+        "anotacion_nro": "005",
+        "fecha": "23-09-2003",
+        "radicacion": "1526",
+        "documento": "ESCRITURA 2389 DEL 30-12-2002 NOTARIA 2. DE BARRANCABERMEJA",
+        "especificacion": "0125 COMPRAVENTA MODO DE ADQUISICION",
+        "de": "CACUA CASTILLO HERNAN",
+        "a": "BAUTISTA ARZUZA LUZ EUGENIA",
+        "valor_acto": "$20,000,000"
+      },
+      {
+        "anotacion_nro": "006",
+        "fecha": "23-09-2008",
+        "radicacion": "1526",
+        "documento": "ESCRITURA 2389 DEL 30-12-2002 NOTARIA 2. DE BARRANCABERMEJA",
+        "especificacion": "OTRO: 0906 CAMBIO DE NOMBRE",
+        "de": null,
+        "a": null,
+        "valor_acto": "$0"
+      },
+      {
+        "anotacion_nro": "007",
+        "fecha": "25-02-2004",
+        "radicacion": "354",
+        "documento": "ESCRITURA 171 DEL 13-02-2004 NOTARIA 2 DE BARRANCABERMEJA",
+        "especificacion": "0126 COMPRAVENTA PARCIAL LOTE DE 11 HAS MODO DE ADQUISICION",
+        "de": "BAUTISTA ARZUZA LUZ EUGENIA",
+        "a": "PEREZ GARCIA SALOMON",
+        "valor_acto": "$3,500,000"
+      },
+      {
+        "anotacion_nro": "008",
+        "fecha": "12-05-2010",
+        "radicacion": "01027",
+        "documento": "ESCRITURA 1162 DEL 05-05-2010 NOTARIA 1 DE BARRANCABERMEJA",
+        "especificacion": "0125 COMPRAVENTA EL RESTO. ESTE Y OTRO MODO DE ADQUISICION",
+        "de": "BAUTISTA ARZUZA LUZ EUGENIA",
+        "a": "GOMEZ VESGA REIMUNDO",
+        "valor_acto": "$71,000,000"
+      },
+      {
+        "anotacion_nro": "009",
+        "fecha": "30-04-2012",
+        "radicacion": "2012-320-6-697",
+        "documento": "OFICIO 764 DEL 24-04-2012 JUZGADO SEGUNDO PROMISCUO DE FAMILIA DE BARRANCABERMEJA",
+        "especificacion": "MEDIDA CAUTELAR: 0437 EMBARGO EN PROCESO DE SEPARACION DE BIENES (LIQUIDACION SOCIEDAD PATRIMONIAL)",
+        "de": "BAUTISTA ARZUZA LUZ EUGENIA",
+        "a": "GOMEZ VESGA REYMUNDO (SIC)",
+        "valor_acto": "$0"
+      },
+      {
+        "anotacion_nro": "010",
+        "fecha": "20-01-2014",
+        "radicacion": "2014-320-6-76",
+        "documento": "OFICIO 05387 DEL 16-12-2013 direccion de impuestos y aduanas nacionales DE BARRANCABERMEJA",
+        "especificacion": "MEDIDA CAUTELAR: 0444 EMBARGO POR JURISDICCION COACTIVA ORDENADO MEDIANTE RESOLUCION 630 DEL 16 DE DICIEMBRE DE 2013.-",
+        "de": "DIRECCION DE IMPUESTOS Y ADUANAS NACIONALES",
+        "a": "GOMEZ VESGA REIMUNDO",
+        "valor_acto": "$0"
+      },
+      {
+        "anotacion_nro": "011",
+        "fecha": "10-06-2014",
+        "radicacion": "2014-320-6-985",
+        "documento": "OFICIO 01999 DEL 04-06-2014 direccion de impuestos y aduanas nacionales DE BARRANCABERMEJA",
+        "especificacion": "CANCELACION: 0842 CANCELACION PROVIDENCIA ADMINISTRATIVA CANCELACION EMBARGO EN PROCESO COACTIVO (Se cancela anotación No: 10)",
+        "de": "DIRECCION DE IMPUESTOS Y ADUANAS NACIONALES",
+        "a": "GOMEZ VESGA REIMUNDO",
+        "valor_acto": "$0"
+      },
+      {
+        "anotacion_nro": "012",
+        "fecha": "15-12-2015",
+        "radicacion": "2015-320-6-2249",
+        "documento": "OFICIO 2928 DEL 03-12-2015 JUZGADO SEGUNDO PROMISCUO DE FAMILIA DE BARRANCABERMEJA",
+        "especificacion": "CANCELACION: 0841 CANCELACION PROVIDENCIA JUDICIAL SE CANCELA EMBARGO EN PROCESO DE LIQUIDACION SOCIEDAD PATRIMONIAL 2012-78 (Se cancela anotación No: 9)",
+        "de": "BAUTISTA ARZUZA LUZ EUGENIA",
+        "a": "GOMEZ VESGA REYMUNDO 13893486",
+        "valor_acto": "$0"
+      },
+      {
+        "anotacion_nro": "013",
+        "fecha": "28-04-2016",
+        "radicacion": "2016-320-6-741",
+        "documento": "ESCRITURA 0592 DEL 26-04-2016 NOTARIA PRIMERA DE BARRANCABERMEJA",
+        "especificacion": "0125 COMPRAVENTA",
+        "de": "GOMEZ VESGA REIMUNDO",
+        "a": "INGENIERIA DE SERVICIOS Y SOLUCIONES ELECTROMECANICAS S.A.S INSELEM S.A.S",
+        "valor_acto": "$86,058,000"
+      },
+      {
+        "anotacion_nro": "014",
+        "fecha": "27-07-2018",
+        "radicacion": "2018-320-6-1618",
+        "documento": "ESCRITURA 376 DEL 16-07-2018 NOTARIA UNICA DE SAN VICENTE DE CHUC

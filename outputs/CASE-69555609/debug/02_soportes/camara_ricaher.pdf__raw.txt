@@ -1,0 +1,55 @@
+```json
+{
+  "datos_inmueble": {
+      "matricula": "NO_DETECTADO",
+      "predial_nacional": "NO_DETECTADO",
+      "direccion": "NO_DETECTADO",
+      "cabida_area": "NO_DETECTADO",
+      "linderos": "NO_DETECTADO",
+      "tradicion": "NO_DETECTADO",
+      "afectacion_vivienda": "NO_DETECTADO",
+      "patrimonio_familia": "NO_DETECTADO"
+  },
+  "historia_y_antecedentes": {
+    "constitucion_sociedad": "La sociedad INVERSIONES RICAHER S.A.S. se constituyó por Documento privado del 02 de Enero de 2019 de Asamblea General de Accionistas de Girón, inscrito en la Cámara de Comercio el 15 de Enero de 2019, con el No 163775 del libro IX. Su duración es INDEFINIDA. El objeto social principal incluye el cultivo de palma de aceite y cacao, otros productos agrícolas, recolección y comercialización de frutos, ganadería (ovinos, bovinos y bufalinos), y la realización de diversas operaciones financieras, crediticias, comerciales y la adquisición, conservación, gravamen y enajenación de bienes raíces, muebles o equipos necesarios para su actividad."
+  },
+  "personas_detalle": [
+    {
+      "nombre_razon_social": "INVERSIONES RICAHER S.A.S.",
+      "tipo_persona": "juridica",
+      "rol": "Sociedad Certificada",
+      "nit_cc": "901244425-2",
+      "direccion": "CR 13 57 66 KM 6 VIA A GIRON, Floridablanca, Santander",
+      "email": "monica.ortiz@delihuevo.com",
+      "telefono": "3158953916"
+    },
+    {
+      "nombre_razon_social": "RICARDO RUEDA PINILLA",
+      "tipo_persona": "natural",
+      "rol": "Representante Legal",
+      "nit_cc": "91207193"
+    },
+    {
+      "nombre_razon_social": "MONICA LUCIA ORTIZ CUADROS",
+      "tipo_persona": "natural",
+      "rol": "Revisor Fiscal Principal",
+      "nit_cc": "63349943"
+    }
+  ],
+  "hallazgos_variables": {
+    "matricula_mercantil": "05-420423-16",
+    "fecha_matricula": "15 de Enero de 2019",
+    "ultimo_anio_renovado": "2025",
+    "fecha_renovacion": "09 de Abril de 2025",
+    "grupo_niif": "Grupo II",
+    "codigo_verificacion": "YZP42FDB40",
+    "fecha_expedicion_certificado": "11/12/2025",
+    "hora_expedicion_certificado": "9:27:51",
+    "valor_certificado": "$11.600",
+    "tamano_empresarial": "Pequeña Empresa",
+    "actividad_principal_ciiu": "0126",
+    "actividad_secundaria_ciiu": "0141",
+    "otras_actividades_ciiu": ["0143", "0129"]
+  }
+}
+```

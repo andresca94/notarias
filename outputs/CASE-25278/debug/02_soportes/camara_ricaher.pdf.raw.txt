@@ -1,0 +1,59 @@
+```json
+{
+  "datos_inmueble": {
+    "matricula": "NO_DETECTADO",
+    "predial_nacional": "NO_DETECTADO",
+    "direccion": "CR 13 57 66 KM 6 VIA A GIRON, Floridablanca, Santander (Domicilio principal de la sociedad)",
+    "cabida_area": "NO_DETECTADO",
+    "linderos": "NO_DETECTADO",
+    "tradicion": "NO_DETECTADO",
+    "afectacion_vivienda": "NO_DETECTADO",
+    "patrimonio_familia": "NO_DETECTADO"
+  },
+  "historia_y_antecedentes": {
+    "constitucion_sociedad": "La sociedad INVERSIONES RICAHER S.A.S. fue constituida por Documento privado del 02 de Enero de 2019 de Asamblea Gral Accionistas de Giron, inscrito en la Cámara de Comercio el 15 de Enero de 2019, con el No 163775 del libro IX. Su duración es INDEFINIDA y su objeto social principal es el cultivo de palma de aceite y cacao, entre otros, incluyendo la capacidad de adquirir, conservar, gravar y enajenar bienes raíces.",
+    "nombramientos_representante_revisor": "Por Acta No 04 del 29 de Enero de 2022 de Asamblea Gral Accionistas, inscrita en la Cámara de Comercio el 18 de Febrero de 2022 con el No 196589 del libro IX, se designó a Ricardo Rueda Pinilla como Representante Legal y a Mónica Lucía Ortiz Cuadros como Revisor Fiscal Principal."
+  },
+  "personas_detalle": [
+    {
+      "nombre": "RUEDA PINILLA RICARDO",
+      "cedula": "91207193",
+      "rol": "REPRESENTANTE LEGAL"
+    },
+    {
+      "nombre": "ORTIZ CUADROS MONICA LUCIA",
+      "cedula": "63349943",
+      "rol": "REVISOR FISCAL PRINCIPAL"
+    }
+  ],
+  "hallazgos_variables": {
+    "razon_social": "INVERSIONES RICAHER S.A.S.",
+    "nit": "901244425-2",
+    "matricula_mercantil": "05-420423-16",
+    "fecha_matricula_mercantil": "15 de Enero de 2019",
+    "ultimo_ano_renovado": "2025",
+    "fecha_renovacion": "09 de Abril de 2025",
+    "grupo_niif": "Grupo II",
+    "municipio_domicilio": "Giron",
+    "municipio_direccion_principal": "Floridablanca",
+    "departamento_direccion_principal": "Santander",
+    "correo_electronico_principal": "monica.ortiz@delihuevo.com",
+    "telefono_comercial_1": "3158953916",
+    "capital_autorizado_valor": "$1.049.200.000,00",
+    "capital_autorizado_acciones": "10.492",
+    "capital_autorizado_valor_nominal_accion": "$100.000,00",
+    "capital_suscrito_valor": "$524.600.000,00",
+    "capital_suscrito_acciones": "5.246",
+    "capital_suscrito_valor_nominal_accion": "$100.000,00",
+    "capital_pagado_valor": "$524.600.000,00",
+    "capital_pagado_acciones": "5.246",
+    "capital_pagado_valor_nominal_accion": "$100.000,00",
+    "actividad_principal_ciiu": "0126",
+    "actividad_secundaria_ciiu_1": "0141",
+    "actividad_secundaria_ciiu_2": "0143",
+    "actividad_secundaria_ciiu_3": "0129",
+    "tamano_empresarial": "Pequeña Empresa",
+    "ingresos_actividad_ordinaria": "$3.356.600.586"
+  }
+}
+```

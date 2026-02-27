@@ -1,0 +1,30 @@
+```json
+{
+  "datos_inmueble": {
+    "matricula": "NO_DETECTADO",
+    "predial_nacional": "00 03 00 00 0020 0001 0 00 00 0000",
+    "direccion": "VILLA LUZ VDA LAS ARRUGAS",
+    "cabida_area": "Terreno: 149 Ha. 0.00 Mts2, Construida: 213.00 Mts2",
+    "linderos": "NO_DETECTADO",
+    "tradicion": "NO_DETECTADO",
+    "afectacion_vivienda": "NO_DETECTADO",
+    "patrimonio_familia": "NO_DETECTADO"
+  },
+  "historia_y_antecedentes": {},
+  "personas_detalle": [
+    {
+      "nombre": "SANDRA MILENA GARNICA CARDENAS",
+      "cedula": "63501152",
+      "rol": "Propietario"
+    }
+  ],
+  "hallazgos_variables": {
+    "tipo_documento": "CERTIFICADO DE PAZ Y SALVO MUNICIPAL",
+    "fecha_expedicion_documento": "10/12/2025",
+    "ficha_catastral": "00 03 0020 0001 000",
+    "avaluo_catastral": "108,889,000",
+    "paz_y_salvo_hasta": "31/12/2025",
+    "observaciones_municipio": "EL MUNICIPIO DE SANVICENTE DE CHUCURI SANTANDER NO COBRA IMPUESTO DE VALORIZACION"
+  }
+}
+```

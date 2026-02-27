@@ -1,0 +1,1283 @@
+==> app/pipeline/orchestrator.py <==
+from __future__ import annotations
+
+import asyncio
+import json
+import re
+import uuid
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
+from app.core.config import settings
+from app.services.gemini_client import GeminiClient, parse_json_strict
+from app.services.openai_client import OpenAIClient
+from app.services.rag.local_rag import LocalRAG, split_metadata_and_body
+from app.services.rendering.docx_renderer import render_docx
+from app.services.export.pdf_exporter import docx_to_pdf_libreoffice
+
+from app.pipeline.prompts import (
+    ARCHITECT_PROMPT,
+    RADICACION_PROMPT,
+    DOCS_PROMPT,
+    CEDULA_PROMPT,
+    DATABINDER_SYSTEM,
+    DATABINDER_USER,
+)
+
+
+# ----------------------------
+# Utils
+# ----------------------------
+
+def _pick_radicacion_file(paths: List[str]) -> Optional[str]:
+    if not paths:
+        return None
+    for p in paths:
+        name = Path(p).name.lower()
+        if any(k in name for k in ["radic", "turno", "hoja", "radicación", "radicacion"]):
+            return p
+    # fallback: first pdf
+    for p in paths:
+        if Path(p).suffix.lower() == ".pdf":
+            return p
+    return None
+
+
+def _guess_mime(path: str) -> str:
+    ext = Path(path).suffix.lower()
+    if ext == ".pdf":
+        return "application/pdf"
+    if ext in [".jpg", ".jpeg"]:
+        return "image/jpeg"
+    if ext == ".png":
+        return "image/png"
+    return "application/octet-stream"
+
+
+def _safe_get(d: Dict[str, Any], path: List[str], default=None):
+    cur = d
+    for k in path:
+        if not isinstance(cur, dict) or k not in cur:
+            return default
+        cur = cur[k]
+    return cur
+
+
+def _extract_radicado_from_radicacion_json(radicacion: Dict[str, Any]) -> str:
+    # prefer negocio_actual.numero_radicado or radicacion.numero
+    r = _safe_get(radicacion, ["negocio_actual", "numero_radicado"])
+    if r:
+        return str(r)
+    r2 = _safe_get(radicacion, ["radicacion", "numero"])
+    if r2:
+        return str(r2)
+    # fallback
+    return str(uuid.uuid4().int)[:8]
+
+
+def _is_garbage(v: Any) -> bool:
+    if v is None:
+        return True
+    s = str(v).strip().upper()
+    if s in {"", "NULL", "UNDEFINED"}:
+        return True
+    if "NO_DETECTADO" in s or "NO_APLICA" in s or "PENDIENTE" in s:
+        return True
+    return False
+
+
+def _merge_smart(target: Dict[str, Any], source: Dict[str, Any]) -> None:
+    for k, v in (source or {}).items():
+        if _is_garbage(v):
+            continue
+        old = target.get(k)
+        # keep longer text (linderos etc.)
+        if old and not _is_garbage(old) and len(str(v)) < len(str(old)):
+            continue
+        target[k] = v
+
+
+def _normalize_person_roles(p: Dict[str, Any]) -> Dict[str, Any]:
+    rol_raw = (p.get("rol") or p.get("rol_en_hoja") or "INTERVINIENTE")
+    rol = str(rol_raw).upper()
+
+    if "DE" in rol:
+        rol = "VENDEDOR/OTORGANTE"
+    if re.search(r"\bA\b", rol):
+        rol = "COMPRADOR/BENEFICIARIO"
+
+    return {
+        "nombre": (p.get("nombre") or p.get("nombre_completo") or "").upper(),
+        "identificacion": p.get("identificacion") or p.get("cedula") or "PENDIENTE",
+        "rol_detectado": rol,
+        "datos_contacto": p.get("datos") or {},
+    }
+
+
+def _build_universal_context(
+    radicacion_json: Dict[str, Any],
+    soportes_json_list: List[Dict[str, Any]],
+    cedulas_json_list: List[Dict[str, Any]],
+) -> Dict[str, Any]:
+    contexto = {
+        "RADICACION": "PENDIENTE",
+        "INMUEBLE": {},
+        "NEGOCIO": {},
+        "PERSONAS": [],
+        "DATOS_EXTRA": {},
+        "HISTORIA": {},
+        "FUENTES": {
+            "radicacion": radicacion_json,
+            "soportes": soportes_json_list,
+            "cedulas": cedulas_json_list,
+        }
+    }
+
+    if radicacion_json:
+        contexto["RADICACION"] = _extract_radicado_from_radicacion_json(radicacion_json)
+        _merge_smart(contexto["INMUEBLE"], radicacion_json.get("datos_inmueble") or {})
+        _merge_smart(contexto["NEGOCIO"], radicacion_json.get("negocio_actual") or {})
+
+        persons = radicacion_json.get("personas_detalle") or []
+        if isinstance(persons, list):
+            for p in persons:
+                if isinstance(p, dict):
+                    contexto["PERSONAS"].append(_normalize_person_roles(p))
+
+        extra = radicacion_json.get("hallazgos_variables") or {}
+        if isinstance(extra, dict):
+            _merge_smart(contexto["DATOS_EXTRA"], extra)
+
+    # soportes
+    for s in soportes_json_list or []:
+        if not isinstance(s, dict):
+            continue
+        inm = s.get("datos_inmueble") or {}
+        if isinstance(inm, dict):
+            _merge_smart(contexto["INMUEBLE"], inm)
+
+        hist = s.get("historia_y_antecedentes") or {}
+        if isinstance(hist, dict):
+            _merge_smart(contexto["HISTORIA"], hist)
+
+        persons = s.get("personas_detalle") or s.get("personas") or []
+        if isinstance(persons, list):
+            for p in persons:
+                if isinstance(p, dict):
+                    contexto["PERSONAS"].append(_normalize_person_roles(p))
+
+        extra = s.get("hallazgos_variables") or {}
+        if isinstance(extra, dict):
+            _merge_smart(contexto["DATOS_EXTRA"], extra)
+
+    # cedulas (OCR)
+    for c in cedulas_json_list or []:
+        if not isinstance(c, dict):
+            continue
+        # normalizamos: nombre + cedula
+        nombre = (c.get("nombre") or "ILEGIBLE").upper()
+        ced = c.get("cedula") or c.get("identificacion") or "ILEGIBLE"
+        contexto["PERSONAS"].append({
+            "nombre": nombre,
+            "identificacion": ced,
+            "rol_detectado": "INTERVINIENTE_SCAN",
+            "datos_contacto": {k: v for k, v in c.items() if k not in {"nombre", "cedula", "identificacion"}}
+        })
+
+    return contexto
+
+
+def _prepare_missions(
+    plantilla_base: str,
+    contexto: Dict[str, Any],
+    actos_docs: List[Dict[str, str]],
+) -> List[Dict[str, Any]]:
+    """
+    Replica la lógica n8n: misiones ordenadas.
+    """
+    misiones: List[Dict[str, Any]] = []
+
+    # Misión 1: encabezado/comparecencia (usa plantilla base)
+    misiones.append({
+        "orden": 1,
+        "descripcion": "LLENAR_ENCABEZADO",
+        "plantilla_con_huecos": plantilla_base,
+        "contexto_datos": contexto,
+        "instrucciones": "Rellena encabezado y comparecencia."
+    })
+
+    # Misiones por acto: rellena el clausulado de cada acto usando el texto RAG
+    actos_list = _safe_get(contexto, ["NEGOCIO", "actos_a_firmar"], default=[])
+    if isinstance(actos_list, str):
+        try:
+            actos_list = json.loads(actos_list)
+        except Exception:
+            actos_list = []
+
+    if not isinstance(actos_list, list):
+        actos_list = [actos_list]
+
+    ordinales = ["PRIMER", "SEGUNDO", "TERCER", "CUARTO", "QUINTO", "SEXTO"]
+    for idx, acto in enumerate(actos_list):
+        nombre_acto = ""
+        cuantia = 0
+        if isinstance(acto, dict):
+            nombre_acto = str(acto.get("nombre") or "ACTO")
+            cuantia = int(acto.get("cuantia") or 0)
+        else:
+            nombre_acto = str(acto)
+
+        doc = actos_docs[idx] if idx < len(actos_docs) else {"metadata_especifica": "", "contenido_legal": "TEXTO NO ENCONTRADO"}
+        texto_crudo = doc.get("contenido_legal") or "TEXTO NO ENCONTRADO"
+
+        ctx_acto = json.loads(json.dumps(contexto))  # deep copy safe
+        ctx_acto["VALOR_ACTO_ACTUAL"] = cuantia
+
+        misiones.append({
+            "orden": 20 + idx,
+            "descripcion": f"LLENAR_CLAUSULADO_{idx+1}",
+            "plantilla_con_huecos": texto_crudo,
+            "contexto_datos": ctx_acto,
+            "instrucciones": f"Título: **-{ordinales[idx] if idx < len(ordinales) else 'SIGUIENTE'} ACTO-** **{nombre_acto.upper()}**"
+        })
+
+    # Misión cierre
+    cierre = """
+**OTORGAMIENTO Y AUTORIZACIÓN**
+EL(LOS) COMPARECIENTE(S) HACE(N) CONSTAR QUE...
+**EL(LOS) OTORGANTE(S),**
+[[BLOQUE_DE_FIRMAS]]
+**LA NOTARIA,**
+"""
+    misiones.append({
+        "orden": 99,
+        "descripcion": "LLENAR_CIERRE",
+        "plantilla_con_huecos": cierre,
+        "contexto_datos": contexto,
+        "instrucciones": "Genera bloque de firmas."
+    })
+
+    return misiones
+
+
+# ----------------------------
+# Main FULL pipeline
+# ----------------------------
+
+async def run_pipeline(
+    scanner_paths: List[str],
+    documentos_paths: List[str],
+    comentario: str = "(Sin comentarios)",
+    template_id: Optional[str] = None,  # compat
+) -> Dict[str, Any]:
+    """
+    FULL pipeline (n8n equivalente):
+    1) Gemini: Radicación (hoja) -> JSON
+    2) Gemini: Soportes -> JSON
+    3) Gemini: Cédulas -> JSON
+    4) RAG local por actos -> textos
+    5) OpenAI Data Binder -> secciones
+    6) Ensamblar cuerpo_escritura
+    7) Render DOCX + PDF local
+    """
+
+    tpl_path = Path(settings.TEMPLATE_DOCX_PATH)
+    if not tpl_path.exists():
+        raise RuntimeError(f"No existe plantilla DOCX: {tpl_path}")
+
+    plantilla_base = _load_template_text_fallback()
+    # (Plantilla base para "Arquitecto": aquí puedes usar un .txt si quieres.
+    # Por ahora usamos un "stub" para detectar variables; el DataBinder trabaja sobre textos por acto.)
+
+    gemini = GeminiClient()
+    openai = OpenAIClient()
+    rag = LocalRAG()
+
+    # 1) Radicación file
+    rad_path = _pick_radicacion_file(documentos_paths)
+    rad_json: Dict[str, Any] = {}
+    if rad_path:
+        rad_bytes = Path(rad_path).read_bytes()
+        rad_text = await asyncio.to_thread(
+            gemini.analyze_binary,
+            rad_bytes,
+            _guess_mime(rad_path),
+            RADICACION_PROMPT,
+            settings.GEMINI_MODEL_VISION,
+            0.1,
+            8192
+        )
+        rad_json = parse_json_strict(rad_text)
+
+    radicado = _extract_radicado_from_radicacion_json(rad_json)
+
+    # 2) Soportes (todos los PDFs excepto rad)
+    soporte_paths = [p for p in documentos_paths if p != rad_path]
+    soportes_json_list: List[Dict[str, Any]] = []
+
+    async def _analyze_soporte(p: str) -> Dict[str, Any]:
+        b = Path(p).read_bytes()
+        txt = await asyncio.to_thread(
+            gemini.analyze_binary,
+            b,
+            _guess_mime(p),
+            DOCS_PROMPT,
+            settings.GEMINI_MODEL_VISION,
+            0.1,
+            8192
+        )
+        out = parse_json_strict(txt)
+        out["_fileName"] = Path(p).name
+        return out
+
+    if soporte_paths:
+        soportes_json_list = await asyncio.gather(*[_analyze_soporte(p) for p in soporte_paths])
+
+    # 3) Cédulas (imágenes / PDFs)
+    cedulas_json_list: List[Dict[str, Any]] = []
+
+    async def _analyze_cedula(p: str) -> Dict[str, Any]:
+        b = Path(p).read_bytes()
+        txt = await asyncio.to_thread(
+            gemini.analyze_binary,
+            b,
+            _guess_mime(p),
+            CEDULA_PROMPT,
+            settings.GEMINI_MODEL_VISION,
+            0.1,
+            2048
+        )
+        out = parse_json_strict(txt)
+        out["_fileName"] = Path(p).name
+        return out
+
+    if scanner_paths:
+        cedulas_json_list = await asyncio.gather(*[_analyze_cedula(p) for p in scanner_paths])
+
+    # 4) Contexto universal (merge inteligente)
+    contexto = _build_universal_context(rad_json, soportes_json_list, cedulas_json_list)
+
+    # 5) RAG por actos
+    actos = _safe_get(contexto, ["NEGOCIO", "actos_a_firmar"], default=[])
+    if isinstance(actos, str):
+        try:
+            actos = json.loads(actos)
+        except Exception:
+            actos = []
+    if not isinstance(actos, list):
+        actos = [actos]
+
+    actos_docs: List[Dict[str, str]] = []
+    for acto in actos:
+        nombre_acto = acto.get("nombre") if isinstance(acto, dict) else str(acto)
+        raw = rag.retrieve_acto_text(nombre_acto)
+        split = split_metadata_and_body(raw)
+        actos_docs.append(split)
+
+    # 6) Misiones Data Binder
+    misiones = _prepare_missions(plantilla_base, contexto, actos_docs)
+
+    # 7) Ejecutar Data Binder (OpenAI) por misión
+    async def _run_mision(m: Dict[str, Any]) -> Dict[str, Any]:
+        user = DATABINDER_USER.format(
+            contexto_json=json.dumps(m["contexto_datos"], ensure_ascii=False),
+            plantilla=m["plantilla_con_huecos"]
+        )
+        out = await asyncio.to_thread(
+            openai.chat,
+            DATABINDER_SYSTEM,
+            user,
+            0.1,
+            8000
+        )
+        return {"orden": m["orden"], "descripcion": m["descripcion"], "texto": out}
+
+    results = await asyncio.gather(*[_run_mision(m) for m in misiones])
+    results.sort(key=lambda x: x["orden"])
+
+    cuerpo_escritura = "\n\n".join([r["texto"].strip() for r in results if r["texto"].strip()])
+
+    # 8) Render DOCX/PDF local
+    case_dir = Path(settings.OUTPUT_DIR) / f"CASE-{radicado}"
+    case_dir.mkdir(parents=True, exist_ok=True)
+
+    docx_path = str(case_dir / f"Minuta_Caso_{radicado}.docx")
+    pdf_path = str(case_dir / f"Escritura_Caso_{radicado}.pdf")
+
+    context_docx = {
+        "RADICADO": radicado,
+        "COMENTARIO": comentario or "",
+        "CONTENIDO_IA": cuerpo_escritura,
+    }
+
+    render_docx(str(tpl_path), context_docx, docx_path)
+
+    if (settings.PDF_ENGINE or "libreoffice").lower() == "word":
+        pass
+        #docx_to_pdf_word(docx_path, pdf_path)
+    else:
+        generated_pdf = docx_to_pdf_libreoffice(docx_path, str(case_dir))
+        gen_p = Path(generated_pdf)
+        final_p = Path(pdf_path)
+        if gen_p.resolve() != final_p.resolve():
+            if final_p.exists():
+                final_p.unlink()
+            gen_p.replace(final_p)
+
+    return {
+        "radicado": radicado,
+        "docx_path": docx_path,
+        "pdf_path": pdf_path,
+        "case_dir": str(case_dir),
+        "contexto": contexto,
+        "debug": {
+            "radicacion_json": rad_json,
+            "soportes_json": soportes_json_list,
+            "cedulas_json": cedulas_json_list,
+            "actos_docs": actos_docs,
+        }
+    }
+
+
+def _load_template_text_fallback() -> str:
+    """
+    Plantilla base para misión 1 (encabezado) — si quieres, cámbiala por un .txt.
+    """
+    return """En la ciudad de [[CIUDAD]], a los [[FECHA_EN_LETRAS]], comparecen [[COMPARECIENTES]].
+
+RADICADO: [[NUMERO_RADICADO]]
+
+DATOS INMUEBLE:
+MATRÍCULA: [[MATRICULA]]
+DIRECCIÓN: [[DIRECCION]]
+LINDEROS: [[LINDEROS]]
+
+(El resto del documento se completa por actos)
+"""
+
+==> app/pipeline/steps.py <==
+from __future__ import annotations
+from typing import Any, Dict, List, Optional
+import json
+import re
+import uuid
+
+def new_run_id() -> str:
+    return "RUN-" + uuid.uuid4().hex[:10].upper()
+
+def safe_json_loads(x: Any, default: Any) -> Any:
+    if isinstance(x, (dict, list)):
+        return x
+    if not x:
+        return default
+    s = str(x).strip()
+    # limpia fences
+    s = s.replace("```json", "").replace("```", "").strip()
+    # extrae primer {...}
+    i, j = s.find("{"), s.rfind("}")
+    if i != -1 and j != -1 and j > i:
+        s2 = s[i:j+1]
+        try:
+            return json.loads(s2)
+        except Exception:
+            return default
+    try:
+        return json.loads(s)
+    except Exception:
+        return default
+
+# ---------- PROMPTS (copiados/adaptados de tu n8n) ----------
+
+PROMPT_ARQUITECTO = lambda plantilla_texto: f"""ACTÚA COMO UN ARQUITECTO DE DATOS JURÍDICOS.
+
+TU TAREA PRINCIPAL:
+Recibes una plantilla notarial donde los espacios vacíos han sido marcados como `[[VARIABLE_POR_DEFINIR]]`. Tu trabajo es darles un NOMBRE TÉCNICO basado en el contexto inmediato.
+
+INPUT:
+\"\"\"{plantilla_texto}\"\"\"
+
+INSTRUCCIONES DE BAUTIZO:
+1. Lee el texto ANTES de cada `[[VARIABLE_POR_DEFINIR]]`.
+2. Asigna un nombre de variable descriptivo.
+   - Ejemplo: "...expedida en [[VARIABLE_POR_DEFINIR]]" -> `LUGAR_EXPEDICION_VENDEDOR`
+   - Ejemplo: "...estado civil [[VARIABLE_POR_DEFINIR]]" -> `ESTADO_CIVIL_COMPRADOR`
+   - Ejemplo: "...ocupación: [[VARIABLE_POR_DEFINIR]]" -> `OCUPACION_OTORGANTE`
+
+3. MANTÉN las variables que ya tienen nombre (ej: `[[NOMBRE_VENDEDOR]]`).
+
+SALIDA JSON ESTRICTA:
+{{
+ "tipo_acto": "Escritura Pública Compleja",
+ "lista_variables_requeridas": [
+    "NUMERO_RADICADO",
+    "NOMBRE_VENDEDOR"
+ ],
+ "resumen_requisitos": "..."
+}}
+
+⛔ REGLA DE ORO: Responde ÚNICAMENTE con el JSON. NO uses Markdown ni explicaciones.
+"""
+
+PROMPT_SCAN_ID = """Eres un asistente OCR experto. Extrae todos los campos de esta cédula en JSON estricto
+(nombre, cedula, FECHA DE NACIMIENTO, LUGAR DE NACIMIENTO, FECHA Y LUGAR DE EXPEDICION):
+{ "nombre": "NOMBRE COMPLETO", "cedula": "NUMERO", "fecha_nacimiento": "...", "lugar_nacimiento": "...", "fecha_expedicion": "...", "lugar_expedicion": "..." }.
+Si no se lee, usa "ILEGIBLE".
+"""
+
+PROMPT_DOCS_LEGAL1 = """ERES UN ANALISTA JURÍDICO NOTARIAL.
+TU OBJETIVO: Procesar TODOS los documentos para crear un contexto completo, pero diferenciando claramente el "Negocio Actual" de la "Historia".
+
+1. NEGOCIO ACTUAL (Fuente: Hoja de Radicación):
+- Actos que se van a firmar HOY. Extrae lista de actos, cuantías actuales, compradores y vendedores de hoy.
+- "Paz y Salvo" NO es un acto.
+
+2. CONTEXTO HISTÓRICO (Fuente: Certificados, escrituras viejas):
+- Extrae historia y guárdala como antecedentes.
+
+3. PERSONAS Y DATOS:
+- Cruza info: si en radicación dice "Sandra", busca su cédula en scans.
+
+4. DATOS DEL INMUEBLE (OBLIGATORIO):
+Extrae: matricula, predial_nacional, direccion, afectacion_vivienda, patrimonio_familia, cabida_area, linderos, tradicion (número/fecha/notaría).
+
+SALIDA JSON ESTRICTA con:
+{
+  "es_hoja_radicacion": false,
+  "negocio_actual": {...},
+  "datos_inmueble": {...},
+  "historia_y_antecedentes": {...},
+  "personas_detalle": [...],
+  "mapeo_roles": {...},
+  "actos_juridicos": [...]
+}
+"""
+
+PROMPT_RADICACION_LEGAL2 = """ERES UN ANALISTA DE DATOS NOTARIALES EXPERTO EN "HOJAS DE RADICACIÓN".
+Estructura la información del OCR adjunto.
+
+DICCIONARIO:
+- "DE": Otorgante/Vendedor
+- "A": Beneficiario/Comprador
+- "RL": Representante Legal
+- "NI": NIT (Jurídica)
+- "CC": Cédula (Natural)
+- "SS": Estado civil
+
+SALIDA JSON ESTRICTA:
+{
+  "es_hoja_radicacion": true,
+  "radicacion": { "numero": "...", "fecha": "...", "notaria": "...", "notario_encargado": "..." },
+  "datos_inmueble": { "direccion": "...", "matricula": "...", "ciudad_registro": "..." },
+  "negocio_actual": { "numero_radicado": "...", "total_venta_hoy": 0, "actos_a_firmar": [{ "nombre": "...", "cuantia": 0 }] },
+  "personas_detalle": [...],
+  "actos_juridicos": ["..."],
+  "mapeo_roles": { "vendedores": [...], "compradores": [...], "representantes": [...] }
+}
+"""
+
+# ---------- MERGE INTELIGENTE (tu misma idea) ----------
+
+def es_basura(v: Any) -> bool:
+    if v is None:
+        return True
+    s = str(v).strip()
+    if not s:
+        return True
+    u = s.upper()
+    return (
+        u in {"NULL", "UNDEFINED"} or
+        "NO_DETECTADO" in u or
+        "NO_APLICA" in u or
+        "PENDIENTE" in u or
+        len(s) < 3
+    )
+
+def merge_inteligente(target: Dict[str, Any], source: Optional[Dict[str, Any]]) -> None:
+    if not source:
+        return
+    for k, vnew in source.items():
+        if es_basura(vnew):
+            continue
+        vold = target.get(k)
+        if vold is not None and (not es_basura(vold)) and len(str(vnew)) < len(str(vold)):
+            # conserva el viejo si es más “rico” (ej: linderos)
+            continue
+        target[k] = vnew
+
+def build_contexto_universal(parsed_items: List[Dict[str, Any]]) -> Dict[str, Any]:
+    ctx = {
+        "RADICACION": "PENDIENTE",
+        "INMUEBLE": {},
+        "NEGOCIO": {},
+        "PERSONAS": [],
+        "DATOS_EXTRA": {}
+    }
+
+    for item in parsed_items:
+        # Radicación
+        if item.get("negocio_actual", {}).get("numero_radicado"):
+            ctx["RADICACION"] = item["negocio_actual"]["numero_radicado"]
+        if item.get("radicacion", {}).get("numero"):
+            ctx["RADICACION"] = item["radicacion"]["numero"]
+
+        # Inmueble
+        if item.get("datos_inmueble"):
+            merge_inteligente(ctx["INMUEBLE"], item["datos_inmueble"])
+        if item.get("linderos") and len(str(item["linderos"])) > 50:
+            ctx["INMUEBLE"]["linderos"] = item["linderos"]
+
+        # Negocio
+        if item.get("negocio_actual"):
+            merge_inteligente(ctx["NEGOCIO"], item["negocio_actual"])
+
+        # Personas
+        p = item.get("personas_detalle") or item.get("personas") or item.get("intervinientes") or []
+        if isinstance(p, list):
+            for persona in p:
+                rol_raw = persona.get("rol") or persona.get("rol_en_hoja") or "INTERVINIENTE"
+                rol = str(rol_raw).upper()
+                if "DE " in rol:
+                    rol = "VENDEDOR/OTORGANTE"
+                if "A " in rol:
+                    rol = "COMPRADOR/BENEFICIARIO"
+                ctx["PERSONAS"].append({
+                    "nombre": (persona.get("nombre") or persona.get("nombre_completo") or "").upper(),
+                    "identificacion": persona.get("identificacion") or persona.get("cedula") or "PENDIENTE",
+                    "rol_detectado": rol,
+                    "datos_contacto": persona.get("datos") or {}
+                })
+
+        # Extras
+        if item.get("hallazgos_variables"):
+            merge_inteligente(ctx["DATOS_EXTRA"], item["hallazgos_variables"])
+
+    return ctx
+
+# ---------- Misiones tipo n8n (encabezado + actos + cierre) ----------
+
+SYSTEM_NOTARIO_REDACTOR = """ERES UN MOTOR DE IA EXPERTO EN "DATA BINDING" (FUSIÓN DE DATOS JURÍDICOS).
+No inventes: usa SOLO el JSON. Si falta algo: [[PENDIENTE: ...]].
+No saludes. No expliques. Devuelve texto final.
+"""
+
+USER_NOTARIO = lambda contexto_datos, plantilla_con_huecos, extra_instr: f"""ERES UN AGENTE DE PROCESAMIENTO DOCUMENTAL (DATA BINDER).
+
+BASE DE DATOS (HECHOS):
+{json.dumps(contexto_datos, ensure_ascii=False)}
+
+PLANTILLA (CON HUECOS):
+\"\"\"{plantilla_con_huecos}\"\"\"
+
+INSTRUCCIONES:
+{extra_instr}
+
+Devuelve ÚNICAMENTE el texto completado.
+"""
+
+def preparar_misiones(plantilla_base: str, templates_rag: List[Dict[str, Any]], contexto_universal: Dict[str, Any]) -> List[Dict[str, Any]]:
+    misiones: List[Dict[str, Any]] = []
+
+    misiones.append({
+        "orden": 1,
+        "extra_instr": "Rellena el encabezado y la comparecencia.",
+        "plantilla": plantilla_base
+    })
+
+    actos_list = contexto_universal.get("NEGOCIO", {}).get("actos_a_firmar") or [{"nombre": "ACTO GENERAL", "cuantia": 0}]
+    if isinstance(actos_list, dict):
+        actos_list = [actos_list]
+    if isinstance(actos_list, str):
+        try:
+            actos_list = json.loads(actos_list)
+        except Exception:
+            actos_list = [{"nombre": "ACTO", "cuantia": 0}]
+
+    ordinales = ["PRIMER", "SEGUNDO", "TERCER", "CUARTO", "QUINTO"]
+
+    for idx, acto in enumerate(actos_list):
+        nombre_acto = (acto.get("nombre") or "ACTO").strip()
+        cuantia = acto.get("cuantia") or 0
+
+        # toma el texto RAG correspondiente (si no, deja placeholder)
+        texto_crudo = "TEXTO NO ENCONTRADO"
+        if idx < len(templates_rag) and templates_rag[idx].get("contenido_legal"):
+            texto_crudo = templates_rag[idx]["contenido_legal"]
+        else:
+            # fallback: busca por nombre dentro del texto
+            for t in templates_rag:
+                if t.get("contenido_legal") and nombre_acto.lower() in t["contenido_legal"].lower():
+                    texto_crudo = t["contenido_legal"]
+                    break
+
+        ctx = json.loads(json.dumps(contexto_universal, ensure_ascii=False))
+        ctx["VALOR_ACTO_ACTUAL"] = cuantia
+
+        misiones.append({
+            "orden": 20 + idx,
+            "extra_instr": f'Título: **-{ordinales[idx] if idx < len(ordinales) else "SIGUIENTE"} ACTO-** **{nombre_acto.upper()}**',
+            "plantilla": texto_crudo,
+            "contexto_override": ctx
+        })
+
+    cierre = """
+**OTORGAMIENTO Y AUTORIZACIÓN**
+EL(LOS) COMPARECIENTE(S) HACE(N) CONSTAR QUE...
+**EL(LOS) OTORGANTE(S),**
+[[BLOQUE_DE_FIRMAS]]
+**LA NOTARIA,**
+""".strip()
+
+    misiones.append({
+        "orden": 99,
+        "extra_instr": "Genera el bloque de firmas usando PERSONAS del contexto.",
+        "plantilla": cierre
+    })
+
+    return misiones
+
+==> app/services/gemini_client.py <==
+from __future__ import annotations
+
+import base64
+import json
+import requests
+from typing import Any, Dict, Optional
+
+from app.core.config import settings
+
+
+class GeminiClient:
+    """
+    Minimal REST client for Google Generative Language API v1beta
+    Uses API key.
+    """
+
+    def __init__(self, api_key: Optional[str] = None):
+        self.api_key = api_key or settings.GEMINI_API_KEY
+        if not self.api_key:
+            raise RuntimeError("GEMINI_API_KEY no está configurada en .env")
+
+    def _post(self, model: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+        url = f"https://generativelanguage.googleapis.com/v1beta/{model}:generateContent"
+        r = requests.post(url, params={"key": self.api_key}, json=payload, timeout=180)
+        r.raise_for_status()
+        return r.json()
+
+    @staticmethod
+    def _extract_text(resp: Dict[str, Any]) -> str:
+        # candidates[0].content.parts[0].text
+        try:
+            return resp["candidates"][0]["content"]["parts"][0]["text"]
+        except Exception:
+            return ""
+
+    def generate_text(self, prompt: str, model: Optional[str] = None, temperature: float = 0.1, max_output_tokens: int = 8192) -> str:
+        model = model or settings.GEMINI_MODEL_TEXT
+        payload = {
+            "contents": [{"parts": [{"text": prompt}]}],
+            "generationConfig": {"temperature": temperature, "maxOutputTokens": max_output_tokens},
+        }
+        resp = self._post(model, payload)
+        return self._extract_text(resp)
+
+    def analyze_binary(
+        self,
+        binary_bytes: bytes,
+        mime_type: str,
+        prompt: str,
+        model: Optional[str] = None,
+        temperature: float = 0.1,
+        max_output_tokens: int = 8192,
+    ) -> str:
+        model = model or settings.GEMINI_MODEL_VISION
+        b64 = base64.b64encode(binary_bytes).decode("utf-8")
+        payload = {
+            "contents": [
+                {
+                    "parts": [
+                        {"text": prompt},
+                        {"inlineData": {"mimeType": mime_type, "data": b64}},
+                    ]
+                }
+            ],
+            "generationConfig": {"temperature": temperature, "maxOutputTokens": max_output_tokens},
+        }
+        resp = self._post(model, payload)
+        return self._extract_text(resp)
+
+
+def parse_json_strict(maybe_json_text: str) -> Dict[str, Any]:
+    """
+    Limpia ```json ... ``` y parsea.
+    """
+    if not maybe_json_text:
+        return {}
+    s = maybe_json_text.strip()
+    s = s.replace("```json", "").replace("```", "").strip()
+    # extra: si viene texto antes/después, corta en {..}
+    if not s.startswith("{"):
+        start = s.find("{")
+        end = s.rfind("}")
+        if start != -1 and end != -1 and end > start:
+            s = s[start : end + 1]
+    try:
+        return json.loads(s)
+    except Exception:
+        return {}
+
+==> app/services/openai_client.py <==
+from __future__ import annotations
+
+import os
+from typing import Any, Dict, Optional
+
+from app.core.config import settings
+
+# OpenAI python SDK v1 style
+from openai import OpenAI
+
+
+class OpenAIClient:
+    def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None):
+        api_key = api_key or settings.OPENAI_API_KEY or os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise RuntimeError("OPENAI_API_KEY no está configurada en .env")
+        self.client = OpenAI(api_key=api_key)
+        self.model = model or settings.OPENAI_MODEL
+
+    def chat(self, system: str, user: str, temperature: float = 0.1, max_tokens: int = 8000) -> str:
+        resp = self.client.chat.completions.create(
+            model=self.model,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
+            ],
+        )
+        return resp.choices[0].message.content or ""
+
+==> app/services/__pycache__ <==
+
+==> app/services/export <==
+
+==> app/services/gemini_client.py <==
+from __future__ import annotations
+
+import base64
+import json
+import requests
+from typing import Any, Dict, Optional
+
+from app.core.config import settings
+
+
+class GeminiClient:
+    """
+    Minimal REST client for Google Generative Language API v1beta
+    Uses API key.
+    """
+
+    def __init__(self, api_key: Optional[str] = None):
+        self.api_key = api_key or settings.GEMINI_API_KEY
+        if not self.api_key:
+            raise RuntimeError("GEMINI_API_KEY no está configurada en .env")
+
+    def _post(self, model: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+        url = f"https://generativelanguage.googleapis.com/v1beta/{model}:generateContent"
+        r = requests.post(url, params={"key": self.api_key}, json=payload, timeout=180)
+        r.raise_for_status()
+        return r.json()
+
+    @staticmethod
+    def _extract_text(resp: Dict[str, Any]) -> str:
+        # candidates[0].content.parts[0].text
+        try:
+            return resp["candidates"][0]["content"]["parts"][0]["text"]
+        except Exception:
+            return ""
+
+    def generate_text(self, prompt: str, model: Optional[str] = None, temperature: float = 0.1, max_output_tokens: int = 8192) -> str:
+        model = model or settings.GEMINI_MODEL_TEXT
+        payload = {
+            "contents": [{"parts": [{"text": prompt}]}],
+            "generationConfig": {"temperature": temperature, "maxOutputTokens": max_output_tokens},
+        }
+        resp = self._post(model, payload)
+        return self._extract_text(resp)
+
+    def analyze_binary(
+        self,
+        binary_bytes: bytes,
+        mime_type: str,
+        prompt: str,
+        model: Optional[str] = None,
+        temperature: float = 0.1,
+        max_output_tokens: int = 8192,
+    ) -> str:
+        model = model or settings.GEMINI_MODEL_VISION
+        b64 = base64.b64encode(binary_bytes).decode("utf-8")
+        payload = {
+            "contents": [
+                {
+                    "parts": [
+                        {"text": prompt},
+                        {"inlineData": {"mimeType": mime_type, "data": b64}},
+                    ]
+                }
+            ],
+            "generationConfig": {"temperature": temperature, "maxOutputTokens": max_output_tokens},
+        }
+        resp = self._post(model, payload)
+        return self._extract_text(resp)
+
+
+def parse_json_strict(maybe_json_text: str) -> Dict[str, Any]:
+    """
+    Limpia ```json ... ``` y parsea.
+    """
+    if not maybe_json_text:
+        return {}
+    s = maybe_json_text.strip()
+    s = s.replace("```json", "").replace("```", "").strip()
+    # extra: si viene texto antes/después, corta en {..}
+    if not s.startswith("{"):
+        start = s.find("{")
+        end = s.rfind("}")
+        if start != -1 and end != -1 and end > start:
+            s = s[start : end + 1]
+    try:
+        return json.loads(s)
+    except Exception:
+        return {}
+
+==> app/services/google_drive.py <==
+from __future__ import annotations
+from typing import Tuple, Optional
+from distro import name
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseDownload
+import io
+
+import requests
+
+SCOPES = [
+    "https://www.googleapis.com/auth/drive",
+    "https://www.googleapis.com/auth/documents",
+]
+
+class GoogleDriveDocs:
+    def __init__(self, sa_file: str):
+        creds = service_account.Credentials.from_service_account_file(sa_file, scopes=SCOPES)
+        self.drive = build("drive", "v3", credentials=creds)
+        self.docs = build("docs", "v1", credentials=creds)
+
+    def download_doc_as_text(self, doc_id: str) -> str:
+        # export Google Doc -> text/plain
+        request = self.drive.files().export_media(fileId=doc_id, mimeType="text/plain")
+        fh = io.BytesIO()
+        downloader = MediaIoBaseDownload(fh, request)
+        done = False
+        while not done:
+            _, done = downloader.next_chunk()
+        return fh.getvalue().decode("utf-8", errors="ignore")
+
+    def create_folder(self, name: str, parent_folder_id: str = "root") -> str:
+        file_metadata = {
+            "name": name,
+            "mimeType": "application/vnd.google-apps.folder",
+            "parents": [parent_folder_id] if parent_folder_id else ["root"],
+        }
+        folder = self.drive.files().create(body=file_metadata, fields="id").execute()
+        return folder["id"]
+
+    def copy_doc(self, template_doc_id: str, name: str, folder_id: str) -> str:
+        body = {"name": name, "parents": [folder_id]}
+        copied = self.drive.files().copy(fileId=template_doc_id, body=body, fields="id").execute()
+        return copied["id"]
+
+    def replace_all_text(self, doc_id: str, placeholder: str, replacement: str) -> None:
+        requests = [{
+            "replaceAllText": {
+                "containsText": {"text": placeholder, "matchCase": True},
+                "replaceText": replacement
+            }
+        }]
+        self.docs.documents().batchUpdate(documentId=doc_id, body={"requests": requests}).execute()
+
+    def export_doc_to_pdf_bytes(self, doc_id: str) -> bytes:
+        request = self.drive.files().export_media(fileId=doc_id, mimeType="application/pdf")
+        fh = io.BytesIO()
+        downloader = MediaIoBaseDownload(fh, request)
+        done = False
+        while not done:
+            _, done = downloader.next_chunk()
+        return fh.getvalue()
+
+    def upload_pdf(self, pdf_bytes: bytes, name: str, folder_id: str) -> str:
+        from googleapiclient.http import MediaInMemoryUpload
+        media = MediaInMemoryUpload(pdf_bytes, mimetype="application/pdf", resumable=False)
+        metadata = {"name": name, "parents": [folder_id]}
+        created = self.drive.files().create(body=metadata, media_body=media, fields="id").execute()
+        return created["id"]
+    
+    def create_doc(self, name: str, parent_folder_id: str) -> str:
+        file_metadata = {
+            "name": name,
+            "mimeType": "application/vnd.google-apps.document",
+            "parents": [parent_folder_id],
+        }
+        created = self.drive.files().create(body=file_metadata, fields="id").execute()
+        return created["id"]
+    
+    def write_doc_text(self, doc_id: str, text: str) -> None:
+        requests = [{
+            "insertText": {
+            "location": {"index": 1},
+            "text": text
+            }
+        }]
+        self.docs.documents().batchUpdate(documentId=doc_id, body={"requests": requests}).execute()
+==> app/services/openai_client.py <==
+from __future__ import annotations
+
+import os
+from typing import Any, Dict, Optional
+
+from app.core.config import settings
+
+# OpenAI python SDK v1 style
+from openai import OpenAI
+
+
+class OpenAIClient:
+    def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None):
+        api_key = api_key or settings.OPENAI_API_KEY or os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise RuntimeError("OPENAI_API_KEY no está configurada en .env")
+        self.client = OpenAI(api_key=api_key)
+        self.model = model or settings.OPENAI_MODEL
+
+    def chat(self, system: str, user: str, temperature: float = 0.1, max_tokens: int = 8000) -> str:
+        resp = self.client.chat.completions.create(
+            model=self.model,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
+            ],
+        )
+        return resp.choices[0].message.content or ""
+
+==> app/services/rag <==
+
+==> app/services/rag_store.py <==
+from __future__ import annotations
+from typing import Dict, List, Tuple
+from pathlib import Path
+
+try:
+    from rank_bm25 import BM25Okapi
+except Exception:
+    BM25Okapi = None
+
+class LocalRAGStore:
+    """
+    RAG local: carga .txt de rag_store y recupera el más relevante por nombre/keyword.
+    Para tu caso (actos), normalmente basta con matching de palabras.
+    """
+    def __init__(self, rag_dir: str):
+        self.dir = Path(rag_dir)
+        self.docs: List[Tuple[str, str]] = []  # (filename, text)
+        self._bm25 = None
+        self._tokens = None
+
+    def load(self) -> None:
+        self.docs = []
+        for p in sorted(self.dir.glob("*.txt")):
+            self.docs.append((p.name, p.read_text(encoding="utf-8", errors="ignore")))
+        if BM25Okapi and self.docs:
+            self._tokens = [self._tokenize(t) for _, t in self.docs]
+            self._bm25 = BM25Okapi(self._tokens)
+
+    def _tokenize(self, s: str) -> List[str]:
+        s = s.lower()
+        for ch in ",.;:()[]{}<>/\\\n\r\t":
+            s = s.replace(ch, " ")
+        return [w for w in s.split(" ") if w.strip()]
+
+    def search_acto(self, acto_query: str, top_k: int = 1) -> List[Dict]:
+        if not self.docs:
+            self.load()
+        if not self.docs:
+            return []
+
+        q = acto_query.strip().lower()
+        # heurística rápida: si el query está en el nombre de archivo, prioridad máxima
+        exact = []
+        for fn, txt in self.docs:
+            if q.replace(" ", "_") in fn.lower():
+                exact.append({"file": fn, "text": txt, "score": 999.0})
+        if exact:
+            return exact[:top_k]
+
+        if self._bm25:
+            qtok = self._tokenize(q)
+            scores = self._bm25.get_scores(qtok)
+            ranked = sorted(list(enumerate(scores)), key=lambda x: x[1], reverse=True)[:top_k]
+            out = []
+            for idx, sc in ranked:
+                fn, txt = self.docs[idx]
+                out.append({"file": fn, "text": txt, "score": float(sc)})
+            return out
+
+        # fallback: substring
+        out = []
+        for fn, txt in self.docs:
+            sc = 1.0 if q in txt.lower() else 0.0
+            out.append({"file": fn, "text": txt, "score": sc})
+        out.sort(key=lambda d: d["score"], reverse=True)
+        return out[:top_k]
+
+==> app/services/rendering <==
+
+==> app/pipeline/prompts.py <==
+ARCHITECT_PROMPT = """ACTÚA COMO UN ARQUITECTO DE DATOS JURÍDICOS.
+
+TU TAREA PRINCIPAL:
+Recibes una plantilla notarial donde los espacios vacíos han sido marcados como `[[VARIABLE_POR_DEFINIR]]`.
+Tu trabajo es darles un NOMBRE TÉCNICO basado en el contexto inmediato.
+
+INPUT:
+\"\"\"{plantilla_texto}\"\"\"
+
+INSTRUCCIONES DE BAUTIZO:
+1. Lee el texto ANTES de cada `[[VARIABLE_POR_DEFINIR]]`.
+2. Asigna un nombre de variable descriptivo.
+3. MANTÉN las variables que ya tienen nombre (ej: `[[NOMBRE_VENDEDOR]]`).
+
+SALIDA JSON ESTRICTA:
+{{
+ "tipo_acto": "Escritura Pública Compleja",
+ "lista_variables_requeridas": [
+    "NUMERO_RADICADO",
+    "NOMBRE_VENDEDOR"
+ ],
+ "resumen_requisitos": "..."
+}}
+
+⛔ REGLA DE ORO: Responde ÚNICAMENTE con el JSON. NO uses Markdown ni explicaciones.
+"""
+
+RADICACION_PROMPT = """ERES UN ANALISTA DE DATOS NOTARIALES EXPERTO EN "HOJAS DE RADICACIÓN".
+Tu objetivo es estructurar la información cruda del OCR adjunto.
+
+SALIDA JSON ESTRICTA:
+{{
+  "es_hoja_radicacion": true,
+  "radicacion": {{
+      "numero": "EXTRAER",
+      "fecha": "EXTRAER",
+      "notaria": "EXTRAER_NOMBRE_NOTARIA",
+      "notario_encargado": "EXTRAER_NOMBRE_NOTARIO_ENCARGADO"
+  }},
+  "datos_inmueble": {{
+      "direccion": "EXTRAER",
+      "matricula": "EXTRAER",
+      "ciudad_registro": "EXTRAER"
+  }},
+  "negocio_actual": {{
+      "numero_radicado": "EXTRAER",
+      "total_venta_hoy": 0,
+      "actos_a_firmar": [
+          {{ "nombre": "COMPRAVENTA", "cuantia": 0 }}
+      ]
+  }},
+  "personas_detalle": [
+      {{
+          "nombre": "NOMBRE",
+          "identificacion": "CC 000",
+          "rol_en_hoja": "DE (Vendedor)",
+          "datos": {{
+              "email": "EXTRAER",
+              "telefono": "EXTRAER",
+              "domicilio": "EXTRAER",
+              "estado_civil": "EXTRAER",
+              "tipo_persona": "NATURAL"
+          }}
+      }}
+  ],
+  "actos_juridicos": ["COMPRAVENTA"],
+  "mapeo_roles": {{
+      "vendedores": ["..."],
+      "compradores": ["..."],
+      "representantes": ["..."]
+  }}
+}}
+
+⛔ Responde ÚNICAMENTE con JSON.
+"""
+
+DOCS_PROMPT = """ERES UN ANALISTA JURÍDICO NOTARIAL.
+TU OBJETIVO: Leer los documentos adjuntos (PDFs) y llenar esta estructura.
+
+INSTRUCCIONES:
+1) NEGOCIO ACTUAL (Prioridad): si encuentras Hoja de Radicación ignora historia vieja para actos actuales.
+2) CONTEXTO HISTÓRICO: escrituras viejas / tradición en "historia_y_antecedentes"
+3) PERSONAS: nombres/cédulas/roles
+4) DATOS INMUEBLE: matricula, predial, direccion, cabida_area, linderos, tradicion, afectacion_vivienda, patrimonio_familia
+
+SALIDA JSON ESTRICTA:
+{{
+  "datos_inmueble": {{
+      "matricula": "EXTRAER",
+      "predial_nacional": "EXTRAER",
+      "direccion": "EXTRAER",
+      "cabida_area": "EXTRAER",
+      "linderos": "EXTRAER",
+      "tradicion": "EXTRAER",
+      "afectacion_vivienda": "NO_DETECTADO",
+      "patrimonio_familia": "NO_DETECTADO"
+  }},
+  "historia_y_antecedentes": {{}},
+  "personas_detalle": [],
+  "hallazgos_variables": {{}}
+}}
+⛔ Responde ÚNICAMENTE con JSON.
+"""
+
+CEDULA_PROMPT = """Eres un asistente OCR experto.
+Extrae todos los campos de esta cédula en JSON estricto:
+{ "nombre": "...", "cedula": "...", "fecha_nacimiento": "...", "lugar_nacimiento": "...", "fecha_expedicion": "...", "lugar_expedicion": "..." }.
+Si no se lee, usa "ILEGIBLE".
+⛔ Responde ÚNICAMENTE con JSON.
+"""
+
+DATABINDER_SYSTEM = """ERES UN MOTOR DE INTELIGENCIA ARTIFICIAL EXPERTO EN "DATA BINDING" (FUSIÓN DE DATOS JURÍDICOS).
+
+REGLAS:
+1) SOLO usas la información provista en el contexto JSON.
+2) Si un dato falta tras buscar exhaustivamente, NO lo inventes: escribe [[PENDIENTE: NOMBRE_DATO]].
+3) NO saludes, NO expliques. Devuelve solo texto del documento.
+"""
+
+DATABINDER_USER = """ERES UN AGENTE DE PROCESAMIENTO DOCUMENTAL INTELIGENTE (DATA BINDER).
+
+1) BASE DE DATOS (HECHOS):
+{contexto_json}
+
+2) PLANTILLA (CON HUECOS):
+\"\"\"
+{plantilla}
+\"\"\"
+
+INSTRUCCIONES:
+- Deduce roles: Vendedor/Otorgante/DE, Comprador/A, etc.
+- Dinero con separadores de mil.
+- Fechas a letras si aplica.
+- Si falta, [[PENDIENTE: ...]].
+
+SALIDA: Solo texto final.
+"""

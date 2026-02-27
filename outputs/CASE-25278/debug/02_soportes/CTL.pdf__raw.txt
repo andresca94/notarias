@@ -1,0 +1,36 @@
+```json
+{
+  "datos_inmueble": {
+      "matricula": "320-3197",
+      "predial_nacional": "686890003000000200001000000000",
+      "direccion": "VEREDA TIERRA BUENA, CORREGIMIENTO DE YARIMA, MUNICIPIO DE SAN VICENTE DE CHUCURI",
+      "cabida_area": "115 hectáreas 1290 metros cuadrados",
+      "linderos": "NO_DETECTADO",
+      "tradicion": "El predio, inicialmente denominado 'LAS DELICIAS' con una extensión de 137 hectáreas 1290 metros cuadrados, fue adjudicado por el INCORA a Martinez Aguilar Marco Antonio (Anotación 001). Posteriormente, fue vendido a Cacua Castillo Hernan (Anotación 002). En 2002, el predio, ya denominado 'VILLA LUZ' y con una extensión de 126 hectáreas 1290 metros cuadrados, fue transferido a Bautista Arzuza Luz Eugenia (Anotación 005). Bautista Arzuza Luz Eugenia vendió una porción de 11 hectáreas a Perez Garcia Salomon (Anotación 007) y el resto (115 hectáreas 1290 metros cuadrados) a Gomez Vesga Reimundo (Anotación 008). Gomez Vesga Reimundo vendió la propiedad a Ingenieria de Servicios y Soluciones Electromecanicas S.A.S INSELEM S.A.S (Anotación 013), quienes a su vez la vendieron a Garnica Cardenas Sandra Milena (Anotación 015).",
+      "afectacion_vivienda": "NO_DETECTADO",
+      "patrimonio_familia": "NO_DETECTADO"
+  },
+  "documento_ep_info": {
+      "numero_ep": null,
+      "fecha": null,
+      "notaria": null
+  },
+  "historia_y_antecedentes": {
+    "resumen_anotaciones_historicas": "El historial del predio incluye una adjudicación inicial por el INCORA (Anotación 001), una compraventa a Martinez Aguilar Marco Antonio (Anotación 002), un embargo y posterior cancelación (Anotaciones 003 y 004). El predio cambió de nombre a 'VILLA LUZ' (Anotación 006) y sufrió segregaciones y ventas parciales (Anotaciones 005, 007, 008). También se registraron embargos y sus respectivas cancelaciones (Anotaciones 009, 010, 011, 012). Una servidumbre de energía eléctrica y telecomunicaciones fue constituida en 2018 (Anotación 014)."
+  },
+  "personas_detalle": [
+    {
+      "nombre_completo": "GARNICA CARDENAS SANDRA MILENA",
+      "rol": "Propietario / Deudor (en pacto de retroventa)"
+    },
+    {
+      "nombre_completo": "INGENIERIA DE SERVICIOS Y SOLUCIONES ELECTROMECANICAS S.A.S INSELEM S.A.S",
+      "rol": "Acreedor (en pacto de retroventa)"
+    }
+  ],
+  "hallazgos_variables": {
+      "nombre_nuevo_predio": "VILLA LUZ",
+      "fecha_escritura_referenciada": null
+  }
+}
+```

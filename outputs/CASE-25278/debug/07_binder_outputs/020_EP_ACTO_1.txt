@@ -1,0 +1,28 @@
+==============================================================================
+ACTO: CANCELACIÓN PACTO DE RETROVENTA.
+==============================================================================
+OTORGANTES: --------------------------------------------------------------------------------------
+SANDRA MILENA GARNICA CARDENAS ------------- C.C. N°. 63501152
+INGENIERIA DE SERVICIO Y SOLUCIONES ----------- NIT. 829000872
+VALOR: $ 0 -----------------------------------------------------------------
+MATRICULA(S) INMOBILIARIA(S) N°: 320-3197 -----------------------
+--------------------------------------------------------------------------------------------------------------
+En la ciudad de Bucaramanga, Departamento de Santander, República de Colombia, a los [[PENDIENTE: DIA_LETRAS]] ([[PENDIENTE: DIA_NUMERO]]) días del mes de [[PENDIENTE: MES_LETRAS]] del año [[PENDIENTE: ANO_LETRAS]], Ante mí, MARGARITA LÓPEZ CELY, Notaria Tercera, del Círculo de Bucaramanga.
+--------------------------------------------------------------------------------------------------------------
+Comparecieron, SANDRA MILENA GARNICA CARDENAS, mayor de edad, domiciliada en BUCARAMANGA, identificada con la cédula de ciudadanía número 63501152 expedida en [[PENDIENTE: LUGAR_EXP_CEDULA_VENDEDOR]], de estado civil SOLTERO(A), ocupación: [[PENDIENTE: OCUPACION_VENDEDOR]], obrando en nombre y representación propia y GOMEZ VESGA REIMUNDO, mayor de edad, domiciliado en BARRANCABERMEJA, identificado con la cédula de ciudadanía número 13893486 expedida en [[PENDIENTE: LUGAR_EXP_CEDULA_COMPRADOR]], de estado civil [[PENDIENTE: ESTADO_CIVIL_COMPRADOR]], ocupación: [[PENDIENTE: OCUPACION_COMPRADOR]], quien obra en calidad de representante legal de INGENIERIA DE SERVICIO Y SOLUCIONES, sociedad identificada con NIT. 829000872, domiciliada en BARRANCABERMEJA, quien actúa en nombre y representación de la citada sociedad, y manifestaron:
+--------------------------------------------------------------------------------------------------------------
+PRIMERO. Que por escritura pública número 526 de fecha 03 de marzo de 2025 otorgada en QUINTA DE BUCARAMANGA, debidamente registrada en la Oficina de Registro de Instrumentos Públicos de
+
+BUCARAMANGA al folio de matrícula inmobiliaria número 320-3197, la señora SANDRA MILENA GARNICA CARDENAS transfirió a título de compraventa con pacto de retroventa a favor de INGENIERIA DE SERVICIO Y SOLUCIONES, identificada con NIT. 829000872, representada legalmente por GOMEZ VESGA REIMUNDO, identificado con cédula de ciudadanía número 13893486 expedida en [[PENDIENTE: LUGAR_EXP_CEDULA_COMPRADOR]], el derecho de dominio, propiedad y posesión que tenía del siguiente inmueble:
+
+Un predio rural denominado “VILLA LUZ”, ubicado en la VEREDA TIERRA BUENA, CORREGIMIENTO DE YARIMA, MUNICIPIO DE SAN VICENTE DE CHUCURÍ, SANTANDER, con una cabida superficiaria de 126 hectáreas 1.290 metros cuadrados, cuyos linderos son: POR EL NORTE: En todo este trayecto con el Río Oponcito; POR EL ORIENTE: Con propiedades de PABLO GARCIA Y VICENTE QUIÑONEZ deslindado cerca de alambre al medio; POR EL OCCIDENTE: Con propiedades de SALOMON PEREZ GARCIA y MANUEL DARIO PEREZ deslindado en toda su extensión la Quebrada Las Arrugas y con BALDOMERO RAMON LANDAZABAL, cerca de alambre al medio; POR EL SUR: Con propiedades de ENRIQUE GALVIS, deslindado cerca de alambre al medio y encierra.
+
+A este inmueble le corresponde el folio de matrícula inmobiliaria número 320-3197 de la Oficina de Instrumentos Públicos de BUCARAMANGA y se distingue con el número predial nacional 00 03 0020 0001 000 - CÓDIGO NPN: 00 03 00 00 0020 0001 0 00 00 0000 y la cédula catastral anterior [[PENDIENTE: CODIGO_CATASTRAL_ANTERIOR]].
+--------------------------------------------------------------------------------------------------------------
+SEGUNDO: Que el precio de la compraventa fue por la suma de [[PENDIENTE: VALOR_EN_LETRAS]] MONEDA CORRIENTE ($0) recibidos a satisfacción.
+--------------------------------------------------------------------------------------------------------------
+TERCERO. Que en la citada escritura pública número 526 de fecha 03 de marzo de 2025 otorgada en QUINTA DE BUCARAMANGA, debidamente registrada en la Oficina de Registro de Instrumentos Públicos de BUCARAMANGA al folio de matrícula inmobiliaria número 320-3197, los comparecientes acordaron un pacto de retroventa en el que la parte vendedora se reservaba la facultad de recobrar el bien inmueble, facultad que podría ser ejercida dentro de un plazo de [[PENDIENTE: PLAZO_RETROVENTA]], contados desde la fecha de otorgamiento de la escritura, es decir, desde el 03 de marzo de 2025.
+--------------------------------------------------------------------------------------------------------------
+CUARTO: Que los exponentes obrando en las calidades mencionadas y como ya la señora aún se encuentran dentro del término del pacto de común declaran cancelado el pacto de retroventa que se estableció en la escritura pública número 526 de fecha 03 de marzo de 2025 otorgada en QUINTA DE BUCARAMANGA, cuyo valor fue la suma de [[PENDIENTE: VALOR_EN_LETRAS]] MONEDA CORRIENTE ($0).
+--------------------------------------------------------------------------------------------------------------
+QUINTO: Que en consecuencia de lo anterior mediante este mismo instrumento se ratifica a inmueble anteriormente mencionado. SANDRA MILENA GARNICA CARDENAS como propietaria del inmueble anteriormente mencionado.

@@ -1,0 +1,49 @@
+```json
+{
+  "datos_inmueble": {
+    "matricula": "320-3197",
+    "predial_nacional": "00 03 0020 0001 000 - CÓDIGO NPN: 00 03 00 00 0020 0001 0 00 00 0000",
+    "direccion": "VEREDA LAS ARRUGAS, CORREGIMIENTO TIERRA BUENA, MUNICIPIO DE SAN VICENTE DE CHUCURI, DEPARTAMENTO DE SANTANDER",
+    "cabida_area": "126 Hectáreas 1.290 metros cuadrados",
+    "linderos": "POR EL NORTE: En todo este trayecto con el Río Oponcito; POR EL ORIENTE: Con propiedades de PABLO GARCIA Y VICENTEQUIÑONEZ deslindado cerca de alambre al medio; POR EL OCCIDENTE: Con propiedades de SALOMON PEREZ GARCIA y MANUEL DARIO PEREZ deslindado en toda su extensión la Quebrada Las Arrugas y con BALDOMERO RAMON LANDAZABAL, cerca de alambre al medio; POR EL SUR: Con propiedades de ENRIQUE GALVIS, deslindado cerca de alambre al medio y encierra.",
+    "tradicion": "Adquirido por COMPRAVENTA a REIMUNDO GOMEZ VEGA mediante escritura pública número 592 de fecha 26 de abril de 2016, Notaría Primera del Círculo de Barrancabermeja (Sder), registrada el 28 de abril de 2016, al folio de matrícula inmobiliaria 320-3197.",
+    "afectacion_vivienda": "NO_PROCEDE",
+    "patrimonio_familia": "NO_DETECTADO"
+  },
+  "documento_ep_info": {
+    "numero_ep": "526",
+    "fecha": "03 de marzo de 2025",
+    "notaria": "QUINTA DE BUCARAMANGA"
+  },
+  "historia_y_antecedentes": {
+    "antecedente_dominio": "Adquirido por COMPRAVENTA a REIMUNDO GOMEZ VEGA mediante escritura pública número 592 de fecha 26 de abril de 2016, Notaría Primera del Círculo de Barrancabermeja (Sder), registrada el 28 de abril de 2016, al folio de matrícula inmobiliaria 320-3197.",
+    "servidumbres": "Servidumbre de Energía Eléctrica y Telecomunicaciones constituida mediante escritura pública número 376 de fecha 16 de julio de 2018, Notaría Única del Círculo de San Vicente de Chucuri (Sder)."
+  },
+  "personas_detalle": [
+    {
+      "tipo_participacion": "VENDEDORA",
+      "nombre_completo": "INGENIERIA DE SERVICIOS Y SOLUCIONES ELECTROMECANICAS S.A.S. INSELEM S.A.S.",
+      "identificacion": "829.000.872-3",
+      "tipo_identificacion": "NIT",
+      "representado_por": "CARLOS ANDRES GOMEZ BAUTISTA"
+    },
+    {
+      "tipo_participacion": "REPRESENTANTE LEGAL VENDEDORA",
+      "nombre_completo": "CARLOS ANDRES GOMEZ BAUTISTA",
+      "identificacion": "1.098.667.664",
+      "tipo_identificacion": "C.C.",
+      "representa_a": "INGENIERIA DE SERVICIOS Y SOLUCIONES ELECTROMECANICAS S.A.S. INSELEM S.A.S."
+    },
+    {
+      "tipo_participacion": "COMPRADORA",
+      "nombre_completo": "SANDRA MILENA GARNICA CARDENAS",
+      "identificacion": "63.501.152",
+      "tipo_identificacion": "C.C."
+    }
+  ],
+  "hallazgos_variables": {
+    "nombre_nuevo_predio": null,
+    "fecha_escritura_referenciada": "26 de abril de 2016"
+  }
+}
+```

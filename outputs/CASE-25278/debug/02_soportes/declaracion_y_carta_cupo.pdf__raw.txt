@@ -1,0 +1,56 @@
+```json
+{
+  "datos_inmueble": {
+      "matricula": "320-3197",
+      "predial_nacional": "NO_DETECTADO",
+      "direccion": "VEREDA TIERRA BUENA, CORREGIMIENTO DE YARIMA, MUNICIPIO DE SAN VICENTE DE CHUCURÍ, SANTANDER",
+      "cabida_area": "126 hectáreas 1290 metros cuadrados",
+      "linderos": "POR EL NORTE: en todo este trayecto con el rio oponcito; POR EL ORIENTE: con propiedades de PABLO GARCIA Y VICENTE QUIÑONEZ deslindado cerca de alambre al medio; POR EL OCCIDENTE: con propiedades de SALOMON PEREZ GARCIA Y MANUEL DARIO PEREZ deslindado en toda su extensión la quebrada las arrugas y con BALDOMERO RAMON LANDAZABAL, cerca de alambre al medio; POR EL SUR: con propiedades de enrique galvis, deslindado cerca de alambre al medio y encierra.",
+      "tradicion": "Inmueble que inicialmente tuvo origen en ADJUDICACION DE BALDIOS",
+      "afectacion_vivienda": "NO_DETECTADO",
+      "patrimonio_familia": "NO_DETECTADO"
+  },
+  "documento_ep_info": {
+      "numero_ep": null,
+      "fecha": null,
+      "notaria": null
+  },
+  "historia_y_antecedentes": {
+      "origen_predio": "ADJUDICACION DE BALDIOS"
+  },
+  "personas_detalle": [
+    {
+      "nombre_razon_social": "RICARDO RUEDA PINILLA",
+      "tipo_persona": "Persona Natural",
+      "rol": "Representante Legal, Deudor",
+      "identificacion": "C.C. 91.207.193",
+      "entidad_que_representa": "INVERSIONES RICAHER S.A.S."
+    },
+    {
+      "nombre_razon_social": "INVERSIONES RICAHER S.A.S.",
+      "tipo_persona": "Persona Jurídica",
+      "rol": "Comprador, Deudor",
+      "identificacion": "NIT. 901.244.425-2",
+      "entidad_que_representa": null
+    },
+    {
+      "nombre_razon_social": "REIMUNDO GOMEZ VESGA",
+      "tipo_persona": "Persona Natural",
+      "rol": "Representante Legal, Acreedor",
+      "identificacion": "C.C. 13.893.486",
+      "entidad_que_representa": "INGENIERIA DE SERVICIOS Y SOLUCIONES ELECTROMECANICAS S.A.S. INSELEM S.A.S."
+    },
+    {
+      "nombre_razon_social": "INGENIERIA DE SERVICIOS Y SOLUCIONES ELECTROMECANICAS S.A.S. INSELEM S.A.S.",
+      "tipo_persona": "Persona Jurídica",
+      "rol": "Acreedor",
+      "identificacion": "NIT: 829000872-3",
+      "entidad_que_representa": null
+    }
+  ],
+  "hallazgos_variables": {
+      "nombre_nuevo_predio": "HACIENDA LEJANIAS",
+      "fecha_escritura_referenciada": "2025-11-22"
+  }
+}
+```

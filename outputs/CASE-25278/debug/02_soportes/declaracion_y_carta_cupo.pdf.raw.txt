@@ -1,0 +1,64 @@
+```json
+{
+  "datos_inmueble": {
+    "matricula": "320-3197 (Oficina de Registro de Instrumentos Públicos de San Vicente de Chucuri)",
+    "predial_nacional": "NO_DETECTADO",
+    "direccion": "Vereda Tierra Buena, Corregimiento de Yarima, Municipio de San Vicente de Chucuri, Santander",
+    "cabida_area": "126 Hectáreas (aproximada)",
+    "linderos": "NO_DETECTADO",
+    "tradicion": "Adjudicación de Baldíos",
+    "afectacion_vivienda": "NO_DETECTADO",
+    "patrimonio_familia": "NO_DETECTADO"
+  },
+  "historia_y_antecedentes": {},
+  "personas_detalle": [
+    {
+      "nombre": "MARGARITA LOPEZ CELY",
+      "rol": "Notaria Tercera del Círculo de Bucaramanga"
+    },
+    {
+      "nombre": "RICARDO RUEDA PINILLA",
+      "cedula": "91.207.193",
+      "rol": "Declarante, Representante Legal de la sociedad INVERSIONES RICAHER S.A.S., Casado(a) con Sociedad Conyugal Vigente, Médico Veterinario, Residente en Vallellisa, Vereda Río Frío – Floridablanca - Santander"
+    },
+    {
+      "nombre": "INVERSIONES RICAHER S.A.S.",
+      "nit": "901.244.425-2",
+      "rol": "Sociedad Compradora del predio VILLA LUZ"
+    }
+  ],
+  "hallazgos_variables": {
+    "negocio_actual_observaciones": {
+      "compromiso_restitucion_tierras": "La sociedad INVERSIONES RICAHER S.A.S. se compromete a responder de manera económica en caso de una reclamación futura por restitución de tierras en relación al predio objeto de compra (VILLA LUZ).",
+      "declaracion_propiedades_baldios": "La sociedad INVERSIONES RICAHER S.A.S. declara no tener más predios a su nombre en esta ciudad ni en el territorio nacional que hayan sido adjudicados como baldíos.",
+      "voluntariedad_compra": "La compra del predio VILLA LUZ se realiza sin coacción o amenaza alguna, de manera libre y voluntaria.",
+      "extension_unidad_agricola_familiar": "La parte que la sociedad INVERSIONES RICAHER S.A.S. está comprando no supera la extensión máxima de la UNIDAD AGRÍCOLA FAMILIAR establecida para la misma zona o región."
+    },
+    "otra_propiedad_mencionada": {
+      "nombre_propiedad": "HACIENDA LEJANIAS",
+      "matricula": "302-3197 (Oficina de Registro de Instrumentos Públicos de Barrancabermeja)",
+      "direccion": "Vereda Tierra Buena, Corregimiento de Yarima, Municipio de San Vicente de Chucurí, Santander",
+      "cabida_area": "126 hectáreas 1.290 metros cuadrados",
+      "linderos": {
+        "NORTE": "río oponcito",
+        "ORIENTE": "propiedades de PABLO GARCIA Y VICENTE QUIÑONEZ",
+        "OCCIDENTE": "propiedades de SALOMON PEREZ GARCIA Y MANUEL DARIO PEREZ, quebrada las arrugas, y BALDOMERO RAMON LANDAZABAL",
+        "SUR": "propiedades de enrique galvis"
+      },
+      "contexto_mencion": "Mencionada en una Carta de Cupo (fecha 15 de diciembre de 2025) para un préstamo de $600.000.000.00 que sería garantizado con hipoteca sobre este inmueble."
+    },
+    "otras_personas_mencionadas_en_carta_cupo": [
+      {
+        "nombre": "REIMUNDO GOMEZ VESGA",
+        "cedula": "13.893.486",
+        "rol": "Representante Legal de INGENIERIA DE SERVICIOS Y SOLUCIONES ELECTROMECANICAS S.A.S. INSELEM S.A.S. (Acreedor)"
+      },
+      {
+        "nombre": "INGENIERIA DE SERVICIOS Y SOLUCIONES ELECTROMECANICAS S.A.S. INSELEM S.A.S.",
+        "nit": "829000872-3",
+        "rol": "Acreedor, ofreciendo préstamo para hipoteca sobre HACIENDA LEJANIAS"
+      }
+    ]
+  }
+}
+```

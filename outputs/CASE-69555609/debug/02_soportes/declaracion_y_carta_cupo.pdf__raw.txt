@@ -1,0 +1,56 @@
+```json
+{
+  "datos_inmueble": {
+      "matricula": "320-3197",
+      "predial_nacional": "NO_DETECTADO",
+      "direccion": "PREDIO RURAL DENOMINADO VILLA LUZ, UBICADO EN LA VEREDA TIERRA BUENA, CORREGIMIENTO DE YARIMA, MUNICIPIO DE SAN VICENTE DE CHUCURI, SANTANDER",
+      "cabida_area": "126 hectáreas 1.290 metros cuadrados",
+      "linderos": "POR EL NORTE: en todo este trayecto con el rio oponcito; POR EL ORIENTE: con propiedades de PABLO GARCIA Y VICENTE QUIÑONEZ deslindado cerca de alambre al medio; POR EL OCCIDENTE: con propiedades de SALOMON PEREZ GARCIA Y MANUEL DARIO PEREZ deslindado en toda su extensión la quebrada las arrugas y con BALDOMERO RAMON LANDAZABAL, cerca de alambre al medio; POR EL SUR: con propiedades de enrique galvis, deslindado cerca de alambre al medio y encierra.",
+      "tradicion": "ADJUDICACION DE BALDIOS",
+      "afectacion_vivienda": "NO_DETECTADO",
+      "patrimonio_familia": "NO_DETECTADO"
+  },
+  "historia_y_antecedentes": {
+    "origen_inmueble": "Inmueble que inicialmente tuvo origen en ADJUDICACION DE BALDIOS."
+  },
+  "personas_detalle": [
+    {
+      "nombre_razon_social": "RICARDO RUEDA PINILLA",
+      "tipo_identificacion": "Cédula de Ciudadanía",
+      "numero_identificacion": "91.207.193",
+      "rol_en_negocio_actual": "Representante Legal del Comprador y Deudor/Hipotecante",
+      "tipo_persona": "Persona Natural",
+      "entidad_representada": "INVERSIONES RICAHER S.A.S."
+    },
+    {
+      "nombre_razon_social": "INVERSIONES RICAHER S.A.S.",
+      "tipo_identificacion": "NIT",
+      "numero_identificacion": "901.244.425-2",
+      "rol_en_negocio_actual": "Comprador, Deudor/Hipotecante",
+      "tipo_persona": "Persona Jurídica",
+      "representante_legal": "RICARDO RUEDA PINILLA"
+    },
+    {
+      "nombre_razon_social": "REIMUNDO GOMEZ VESGA",
+      "tipo_identificacion": "Cédula de Ciudadanía",
+      "numero_identificacion": "13.893.486",
+      "rol_en_negocio_actual": "Representante Legal del Acreedor/Hipotecario",
+      "tipo_persona": "Persona Natural",
+      "entidad_representada": "INGENIERIA DE SERVICIOS Y SOLUCIONES ELECTROMECANICAS S.A.S. INSELEM S.A.S."
+    },
+    {
+      "nombre_razon_social": "INGENIERIA DE SERVICIOS Y SOLUCIONES ELECTROMECANICAS S.A.S. INSELEM S.A.S.",
+      "tipo_identificacion": "NIT",
+      "numero_identificacion": "829000872-3",
+      "rol_en_negocio_actual": "Acreedor/Hipotecario",
+      "tipo_persona": "Persona Jurídica",
+      "representante_legal": "REIMUNDO GOMEZ VESGA"
+    }
+  ],
+  "hallazgos_variables": {
+    "discrepancia_matricula_y_oficina_registro": "El Acta de Declaración (página 1) menciona la matrícula inmobiliaria 320-3197 de la Oficina de Registro de Instrumentos Públicos de San Vicente de Chucuri. La Carta de Cupo (página 3) menciona la matrícula inmobiliaria 302-3197 de la Oficina de Registro de Instrumentos Públicos de Barrancabermeja. Se ha priorizado la matrícula y oficina del Acta de Declaración para el campo 'matricula'.",
+    "discrepancia_nombre_predio": "El Acta de Declaración (página 1) denomina el predio como 'VILLA LUZ'. La Carta de Cupo (página 3) lo denomina 'HACIENDA LEJANIAS'. Se ha priorizado el nombre del Acta de Declaración para el campo 'direccion', manteniendo la ubicación geográfica consistente en ambos documentos.",
+    "vendedor_no_identificado": "El vendedor del predio, en la operación de compra descrita en el Acta de Declaración, no está explícitamente identificado en los documentos adjuntos."
+  }
+}
+```

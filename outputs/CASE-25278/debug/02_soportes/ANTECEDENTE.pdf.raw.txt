@@ -1,0 +1,113 @@
+```json
+{
+  "datos_inmueble": {
+      "matricula": "320-3197",
+      "predial_nacional": "00 03 0020 0001 000 - CÓDIGO NPN: 00 03 00 00 0020 0001 0 00 00 0000",
+      "direccion": "UN LOTE DE TERRENO RURAL DENOMINADO \"VILLA LUZ\", UBICADO EN LA REGION DE TIERRA BUENA, DEL MUNICIPIO DE SAN VICENTE DE CHUCURI - DEPARTAMENTO DE SANTANDER. Vereda Las Arrugas.",
+      "cabida_area": "126 Hectáreas 1.290 metros cuadrados",
+      "linderos": "POR EL NORTE: En todo este trayecto con el Río Oponcito; POR EL ORIENTE: Con propiedades de PABLO GARCIA Y VICENTEQUIÑONEZ deslindado cerca de alambre al medio; POR EL OCCIDENTE: Con propiedades de SALOMON PEREZ GARCIA y MANUEL DARIO PEREZ deslindado en toda su extensión la Quebrada Las Arrugas y con BALDOMERO RAMON LANDAZABAL, cerca de alambre al medio; POR EL SUR: Con propiedades de ENRIQUE GALVIS, deslindado cerca de alambre al medio y encierra.",
+      "tradicion": [
+          {
+              "fecha": "26 de abril de 2016",
+              "acto": "COMPRAVENTA",
+              "otorgante": "REIMUNDO GOMEZ VEGA",
+              "adquirente": "INGENIERIA DE SERVICIOS Y SOLUCIONES ELECTROMECANICAS S.A.S. INSELEM S.A.S.",
+              "escritura_publica": "592",
+              "notaria": "Notaría Primera del Círculo de Barrancabermeja (Sder)",
+              "registro": "28 de abril de 2016, folio de matrícula inmobiliaria 320-3197"
+          },
+          {
+              "fecha": "16 de julio de 2018",
+              "acto": "Constitución de SERVIDUMBRE DE ENERGIA ELECTRICA Y TELECOMUNICACIONES",
+              "escritura_publica": "376",
+              "notaria": "Notaría Única del Círculo de San Vicente de Chucuri (Sder)",
+              "registro": "Debidamente registrada"
+          },
+          {
+              "fecha": "03 de marzo de 2025",
+              "acto": "COMPRAVENTA CON PACTO DE RETROVENTA",
+              "otorgante": "INGENIERIA DE SERVICIOS Y SOLUCIONES ELECTROMECANICAS S.A.S. INSELEM S.A.S.",
+              "adquirente": "SANDRA MILENA GARNICA CARDENAS",
+              "escritura_publica": "526",
+              "notaria": "Notaría Quinta del Círculo de Bucaramanga"
+          }
+      ],
+      "afectacion_vivienda": "NO_PROCEDE",
+      "patrimonio_familia": "NO_DETECTADO"
+  },
+  "historia_y_antecedentes": {
+      "historia_vendedor_sociedad": "INGENIERIA DE SERVICIOS Y SOLUCIONES ELECTROMECANICAS S.A.S. INSELEM S.A.S. fue constituida mediante escritura pública número 2711 de fecha 24 de septiembre de 1997 otorgada en la Notaría Primera del Círculo de Barrancabermeja (Sder), inscrita el 25 de septiembre de 1997, bajo el número 5231 del libro IX, con matrícula mercantil número 33620. Fue reformada en varias ocasiones, siendo la última mediante acta número 01 de la Asamblea Extraordinaria de Accionistas, celebrada el 20 de junio de 2022, inscrita el 28 de junio de 2022, bajo el número 31722 del libro IX."
+  },
+  "personas_detalle": [
+      {
+          "nombre_completo": "INGENIERIA DE SERVICIOS Y SOLUCIONES ELECTROMECANICAS S.A.S. INSELEM S.A.S.",
+          "tipo_identificacion": "NIT",
+          "numero_identificacion": "829.000.872-3",
+          "rol": "VENDEDORA",
+          "estado_civil": "NO_APLICA",
+          "direccion": "Transversal 29 #32-53, Barrancabermeja (Sder)",
+          "email": "Reimondo.gomez@gmail.com",
+          "telefono": "3106806656",
+          "representante_legal": "CARLOS ANDRES GOMEZ BAUTISTA"
+      },
+      {
+          "nombre_completo": "CARLOS ANDRES GOMEZ BAUTISTA",
+          "tipo_identificacion": "C.C.",
+          "numero_identificacion": "1.098.667.664",
+          "rol": "Representante Legal de la VENDEDORA",
+          "estado_civil": "NO_DETECTADO",
+          "direccion": "Domiciliado en Barrancabermeja (Sder)",
+          "email": "Reimondo.gomez@gmail.com",
+          "telefono": "NO_DETECTADO"
+      },
+      {
+          "nombre_completo": "SANDRA MILENA GARNICA CARDENAS",
+          "tipo_identificacion": "C.C.",
+          "numero_identificacion": "63.501.152",
+          "rol": "COMPRADORA",
+          "estado_civil": "Soltera sin unión marital de hecho",
+          "direccion": "Cra 16 #89B-19 funderis, Bucaramanga (Sder)",
+          "email": "milegur4@hotmail.com",
+          "telefono": "3164706470"
+      },
+      {
+          "nombre_completo": "MARCO TULIO SINISTERRA HURTADO",
+          "tipo_identificacion": "NO_APLICA",
+          "numero_identificacion": "NO_APLICA",
+          "rol": "Notario Quinto del Círculo de Bucaramanga",
+          "estado_civil": "NO_APLICA",
+          "direccion": "NO_DETECTADO",
+          "email": "NO_DETECTADO",
+          "telefono": "NO_DETECTADO"
+      }
+  ],
+  "hallazgos_variables": {
+      "acto_principal": "COMPRAVENTA CON PACTO DE RETROVENTA",
+      "fecha_otorgamiento": "03 de marzo de 2025",
+      "notaria_otorgamiento": "Notaría Quinta del Círculo de Bucaramanga",
+      "escritura_publica_numero": "526",
+      "valor_compraventa": "$600.000.000",
+      "pacto_retroventa": {
+          "plazo": "UN (1) AÑO",
+          "fecha_inicio_plazo": "03 de marzo de 2025",
+          "precio_retroventa": "$600.000.000",
+          "condiciones_adicionales": "La COMPRADORA se obliga a no enajenar el bien inmueble, salvo autorización expresa y escrita de la VENDEDORA. La constitución de gravamen hipotecario queda prohibida y si se efectuare quedará resuelta una vez se dé cumplimiento al pacto de retroventa."
+      },
+      "observaciones_area": "Discrepancia en el área del inmueble: la escritura pública (página 2) menciona una extensión aproximada de 126 Hectáreas 1.290 metros cuadrados, mientras que el Certificado de Paz y Salvo Municipal (página 7) indica 149 Ha.",
+      "certificados_protocolizados": [
+          "Copia auténtica del Certificado de Libertad y Tradición No. 320-3197 de fecha 03 de marzo de 2025.",
+          "Certificado Catastral Nacional No. 3193-888267-21789-0, de fecha 21 de febrero de 2025.",
+          "Declaración extra proceso número 330 de fecha 03 de marzo de 2025 otorgada por CARLOS ANDRES GOMEZ BAUTISTA, en la que manifiesta que no ha sido presionada para vender."
+      ],
+      "costos_notariales": {
+          "derechos_notariales": "$1,914,860.00",
+          "fondo_nacional_notariado": "$34,300.00",
+          "superintendencia_notariado": "$34,300.00",
+          "iva": "$421,337.00",
+          "retencion_fuente": "$0"
+      },
+      "declaracion_origen_fondos": "Ambas partes declaran bajo la gravedad del juramento que los recursos utilizados en la compraventa provienen de actividades lícitas y no de actividades ilícitas.",
+      "medidas_proteccion": "La VENDEDORA manifiesta bajo la gravedad del juramento que el inmueble no se encuentra sometido a Medidas de Protección por Desplazamiento Forzoso."
+  }
+}
+```

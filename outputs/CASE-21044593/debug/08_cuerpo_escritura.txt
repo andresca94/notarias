@@ -1,0 +1,120 @@
+ESCRITURA PÚBLICA NÚMERO: [[PENDIENTE: NUMERO_EP]]
+RADICADO: PENDIENTE
+
+OTORGADA EN LA NOTARÍA: [[PENDIENTE: NOTARIA_NOMBRE]]
+CÍRCULO NOTARIAL: [[PENDIENTE: CIUDAD]]
+
+(Dejar espacio para fecha)
+FECHA: ___________________________
+
+COMPARECEN:
+- INVERSIONES RICAHER S.A.S. identificado(a) con 901244425-2 (SOCIEDAD (PERSONA JURÍDICA))
+- RUEDA PINILLA RICARDO identificado(a) con 91207193 (REPRESENTANTE LEGAL)
+- ORTIZ CUADROS MONICA LUCIA identificado(a) con 63349943 (REVISOR FISCAL PRINCIPAL)
+- MARGARITA LOPEZ CELY identificado(a) con NO_DETECTADO (NOTARIA TERCERA)
+- RICARDO RUEDA PINILLA identificado(a) con 91.207.193 (DECLARANTE, REPRESENTANTE LEGAL)
+- INVERSIONES RICAHER S.A.S. identificado(a) con 901.244.425-2 (COMPRADOR)
+- REIMUNDO GOMEZ VESGA identificado(a) con 13.893.486 (REPRESENTANTE LEGAL, ACREEDOR)
+- INGENIERIA DE SERVICIOS Y SOLUCIONES ELECTROMECANICAS S.A.S. INSELEM S.A.S. identificado(a) con 829000872-3 (ACREEDOR)
+- SANDRA MILENA GARNICA CARDENAS identificado(a) con 63501152 (PROPIETARIO)
+
+INMUEBLE:
+MATRÍCULA INMOBILIARIA: 320-3197
+DIRECCIÓN: VEREDA TIERRA BUENA, CORREGIMIENTO DE YARIMA, MUNICIPIO DE SAN VICENTE DE CHUCURI - SANTANDER
+CABIDA/ÁREA: Terreno: 149 Ha. 0.00 Mts2, Construida: 213.00 Mts2
+LINDEROS: POR EL NORTE: en todo este trayecto con el rio oponcito; POR EL ORIENTE: con propiedades de PABLO GARCIA Y VICENTE QUIÑONEZ deslindado cerca de alambre al medio; POR EL OCCIDENTE: con propiedades de SALOMON PEREZ GARCIA Y MANUEL DARIO PEREZ deslindado en toda su extensión la quebrada las arrugas y con BALDOMERO RAMON LANDAZABAL, cerca de alambre al medio; POR EL SUR: con propiedades de enrique galvis, deslindado cerca de alambre al medio y encierra.
+
+En la ciudad de [[PENDIENTE: CIUDAD]], siendo las ________________________, comparecen:
+
+- INVERSIONES RICAHER S.A.S. identificado(a) con 901244425-2 (SOCIEDAD (PERSONA JURÍDICA))
+- RUEDA PINILLA RICARDO identificado(a) con 91207193 (REPRESENTANTE LEGAL)
+- ORTIZ CUADROS MONICA LUCIA identificado(a) con 63349943 (REVISOR FISCAL PRINCIPAL)
+- MARGARITA LOPEZ CELY identificado(a) con NO_DETECTADO (NOTARIA TERCERA)
+- RICARDO RUEDA PINILLA identificado(a) con 91.207.193 (DECLARANTE, REPRESENTANTE LEGAL)
+- INVERSIONES RICAHER S.A.S. identificado(a) con 901.244.425-2 (COMPRADOR)
+- REIMUNDO GOMEZ VESGA identificado(a) con 13.893.486 (REPRESENTANTE LEGAL, ACREEDOR)
+- INGENIERIA DE SERVICIOS Y SOLUCIONES ELECTROMECANICAS S.A.S. INSELEM S.A.S. identificado(a) con 829000872-3 (ACREEDOR)
+- SANDRA MILENA GARNICA CARDENAS identificado(a) con 63501152 (PROPIETARIO)
+
+RADICADO: PENDIENTE
+
+INSERTOS Y COMPROBANTES: Se protocolizan:
+
+Certificado de Tradición y Libertad N° 320-3197.
+Fotocopias de cédulas / documentos de identificación de los otorgantes.
+Paz y Salvo Predial N° [[PENDIENTE: PAZ_SALVO_PREDIAL]].
+Paz y Salvo de Valorización N° [[PENDIENTE: PAZ_SALVO_VALORIZACION]] (si aplica).
+Paz y salvo de Área Metropolitana N° [[PENDIENTE: PAZ_SALVO_AREA_METRO]] (si aplica).
+Certificado REDAM (si aplica).
+
+ME FUERON PRESENTADOS LOS SIGUIENTES CERTIFICADOS DE PAZ Y SALVO QUE DICEN:
+[[PENDIENTE: CERTIFICADOS_PAZ_Y_SALVO_DETALLE]]
+
+ADVERTENCIA NOTARIAL: Los comparecientes hacen constar que han verificado cuidadosamente sus nombres completos, estado civil y número de su documento de identidad; declaran que todas las informaciones consignadas en el presente instrumento son correctas, y que, en consecuencia, asumen la responsabilidad que se derive de cualquier inexactitud.
+
+ADVERTENCIA DE REGISTRO: Se advirtió a los otorgantes la obligación de registrar esta escritura dentro de los dos (2) meses siguientes.
+
+ADVERTIDOS: Los otorgantes de la formalidad del registro se les leyó la presente escritura y la aprobaron.
+
+OTORGAMIENTO y AUTORIZACIÓN
+
+EL(LOS) COMPARECIENTE(S) HACE(N) CONSTAR QUE:
+1. Declaran bajo la gravedad de juramento que su presencia física y jurídica, así como las manifestaciones en las diferentes cláusulas de este instrumento, obedece a la autonomía de su voluntad y que no se ha ejercido sobre ellos dolo, fuerza física o psicológica, que los datos consignados en la comparecencia del presente instrumento público como lo son sus nombres y apellidos, la titularidad del documento de identificación exhibido, así como su estado civil corresponden a su actual realidad jurídica, los cuales han sido confirmados de viva voz a los funcionarios notariales y transcritos de su puño y letra al momento de plasmar su firma en señal de aceptación del presente acto notarial, hechos que dejan plenamente establecida su asistencia en este despacho notarial.
+2. Han verificado cuidadosamente su nombre y apellido, su real estado civil, numero correcto de sus documentos de identificación, y aprueban este instrumento sin reserva alguna, en forma como quedo redactado.
+3. Las declaraciones consignadas en este instrumento corresponde a la verdad el(los) otorgantes lo aprueba totalmente, sin reserva alguna, en consecuencia, asumen la responsabilidad de cualquier inexactitud.
+4. La Notaria no puede dar fe sobre la voluntad real del(los) comparecientes y beneficiaros, salvo lo expresado en este instrumento, que fue aprobado sin reserva alguna por el(los) comparecientes y beneficiarios en la forma como quedo redactado.
+5. Conocen la ley y saben que la Notaría responde de la regularidad formal de los instrumentos que autoriza, pero no de la veracidad de las declaraciones del(los) otorgantes ni de la autenticidad de los documentos que forman parte de este instrumento.
+6. Serán responsables civil, penal y físicamente, en caso de utilizarse esta escritura con fines ilegales.
+7. Solo solicitaran correcciones, aclaraciones, o modificaciones al texto de la presente escritura en la forma y casos previstos por la ley
+8. La presente escritura se Autoriza a Insistencia de los interesados (ART. 6 Decreto 960 de 1970).
+
+DE LA CAPACIDAD: El (la, los) compareciente(s) manifiesta(n) que son plenamente capaces para contratar y obligarse, que no tiene ningún tipo de impedimento legal que vicie de nulidad las declaraciones que dentro del acto o negocio jurídico se han consignado. Que gozan de forma absoluta del ejercicio de sus derechos y que las declaraciones redactadas en este instrumento son su real voluntad y de esta forma busca la eficacia del acto o negocio otorgado.
+
+DEL OBJETO LICITO: El (la, los) compareciente(s) manifiesta(n) que el objeto del presente negocio o acto jurídico se encuentra enmarcado dentro de las normas legales vigentes, que no contraviene la ley.
+
+DE LOS RECURSOS: Manifiesta(n) El (la, los) compareciente(s) que para efectos de las leyes 333 de 1996, 335 de 1997 y 793 de 2000, los dineros que componen la cuantía del acto o negocio jurídico contenido en la presente escritura pública son recursos que provienen de la práctica de actividades licitas.
+
+PROTECCIÓN DE DATOS DE CARÁCTER PERSONAL: Los intervinientes aceptan la incorporación de sus datos y la copia del documento de identidad en el presente instrumento, con la finalidad de realizar las funciones propias de la actividad Notarial.
+
+ACEPTACIÓN DE NOTIFICACIONES ELECTRÓNICAS: El(los) interesado(s) manifiesta(n) su consentimiento el cual se entiende otorgado con la firma de la presente escritura pública que NO (   ) SI ( X ) acepta(n) ser notificado(s) por medio electrónico al correo: tramites@notaria3bga.com.
+
+DERECHOS NOTARIALES: Derechos Notariales, según Resolución número 00585 del 24 de enero de 2025; por valor de:
+
+Gastos Notariales: $ [[PENDIENTE: VALOR_DERECHOS]]
+IVA: $ [[PENDIENTE: VALOR_IVA]]
+Retención en la Fuente: $ [[PENDIENTE: VALOR_RETEFUENTE]]
+Superintendencia de Notariado: $ [[PENDIENTE: VALOR_SUPER]]
+Fondo Nacional del Notariado: $ [[PENDIENTE: VALOR_FONDO]]
+
+NOTA: ESTA ESCRITURA FUE EXTENDIDA EN LAS HOJAS DE PAPEL NOTARIAL NÚMEROS:
+[[PENDIENTE: NUMEROS_PAPEL_NOTARIAL]]
+
+(INICIO HOJA DE DATOS UIAF / BIOMETRÍA)
+
+INFORMACIÓN DEL OTORGANTE 1 (VENDEDOR)
+NOMBRE COMPLETO: RICARDO RUEDA PINILLA
+IDENTIFICACIÓN: 91.207.193 DE BUCARAMANGA - SANTANDER
+TELÉFONO/CELULAR: 3202716866
+DIRECCIÓN: VALLELISA, VEREDA RIO FRIO – FLORIDABLANCA - SANTANDER
+EMAIL: [[PENDIENTE: EMAIL]]
+ACTIVIDAD ECONÓMICA: MÉDICO VETERINARIO
+PERSONA EXPUESTA POLÍTICAMENTE (PEP): SI: ___ / NO: X
+ORIGEN DE FONDOS: Lícitos procedentes de su actividad económica.
+
+(INICIO HOJA DE DATOS UIAF / BIOMETRÍA)
+
+INFORMACIÓN DEL OTORGANTE 2 (COMPRADOR)
+NOMBRE COMPLETO: INVERSIONES RICAHER S.A.S.
+IDENTIFICACIÓN: 901244425-2 DE [[PENDIENTE: LUGAR_EXPEDICION]]
+TELÉFONO/CELULAR: [[PENDIENTE: TELEFONO]]
+DIRECCIÓN: CR 13 57 66 KM 6 VIA A GIRON, FLORIDABLANCA, SANTANDER
+EMAIL: [[PENDIENTE: EMAIL]]
+ACTIVIDAD ECONÓMICA: Cultivo de palma de aceite y cacao y otros productos agrícolas y recolección y comercialización del fruto. Ganadería ovinos, bovinos y bufalinos. Realizar operaciones bancarias, de crédito, seguros y financieras. Participar en la constitución de otras empresas. Fusionarse o escindirse. Realizar actos relacionados con títulos valores. Tomar y dar dinero en mutuo. Adquirir, conservar, gravar, enajenar toda clase de bienes raíces, muebles o equipos. Tomar y dar en arrendamiento bienes muebles o inmuebles. Realizar todas las operaciones y contratos relacionados con el objeto social.
+PERSONA EXPUESTA POLÍTICAMENTE (PEP): SI: ___ / NO: X
+ORIGEN DE FONDOS: Lícitos procedentes de su actividad económica.
+
+EL(LOS) OTORGANTE(S),
+
+(Firma) RICARDO RUEDA PINILLA C.C. 91.207.193 Huella: _________
+
+(Firma) INVERSIONES RICAHER S.A.S. C.C. 901244425-2 Huella: _________

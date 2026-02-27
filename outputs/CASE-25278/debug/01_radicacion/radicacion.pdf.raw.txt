@@ -1,0 +1,119 @@
+```json
+{
+  "es_hoja_radicacion": true,
+  "radicacion": {
+    "numero": "25278",
+    "fecha": "19/11/2025 18:05:23",
+    "notaria": "NOTARIA TERCERA DE BUCARAMANGA",
+    "notario_encargado": "MARGARITA LOPEZ CELY"
+  },
+  "datos_inmueble": {
+    "direccion": "LOTE VILLA LUZ REGION TIERRA BUENA",
+    "matricula": "320-3197",
+    "ciudad_registro": "BUCARAMANGA"
+  },
+  "negocio_actual": {
+    "numero_radicado": "25278",
+    "total_venta_hoy": 605000000,
+    "actos_a_firmar": [
+      {
+        "nombre": "CANCELACION PACTO DE RETROVENTA",
+        "cuantia": 0
+      },
+      {
+        "nombre": "COMPRAVENTA DE BIENES INMUEBLES",
+        "cuantia": 605000000
+      },
+      {
+        "nombre": "CAMBIO DE NOMBRE DE PREDIO RURAL",
+        "cuantia": 0
+      },
+      {
+        "nombre": "HIPOTECA ABIERTA SIN LIMITE DE CUANTIA",
+        "cuantia": 10000000
+      }
+    ]
+  },
+  "personas_detalle": [
+    {
+      "nombre": "GARNICA CARDENAS SANDRA MILENA",
+      "identificacion": "CC 63501152",
+      "rol_en_hoja": "DE (Vendedor en Compraventa y Retroventa)",
+      "datos": {
+        "email": "MILEGAR4@HOTMAIL.COM",
+        "telefono": "3164706470",
+        "domicilio": "BUCARAMANGA",
+        "estado_civil": "SS",
+        "tipo_persona": "NATURAL"
+      }
+    },
+    {
+      "nombre": "INGENIERIA DE SERVICIO Y SOLUCIONES",
+      "identificacion": "NI 829000872",
+      "rol_en_hoja": "DE (Vendedor en Compraventa y Retroventa), A (Acreedor Hipotecario)",
+      "datos": {
+        "email": "REIMUNDO.GOMEZ@GMAIL.COM",
+        "telefono": "3106806656",
+        "domicilio": "BARRANCABERMEJA",
+        "estado_civil": "INDEPENDIENTE",
+        "tipo_persona": "JURIDICA"
+      }
+    },
+    {
+      "nombre": "GOMEZ VESGA REIMUNDO",
+      "identificacion": "CC 13893486",
+      "rol_en_hoja": "RL (Representante Legal de INGENIERIA DE SERVICIO Y SOLUCIONES)",
+      "datos": {
+        "email": "REIMUNDO.GOMEZ@GMAIL.COM",
+        "telefono": "3106806656",
+        "domicilio": "BARRANCABERMEJA",
+        "estado_civil": "EMPLEADO",
+        "tipo_persona": "NATURAL"
+      }
+    },
+    {
+      "nombre": "INVERSIONES RICAHER SAS",
+      "identificacion": "NI 901244425",
+      "rol_en_hoja": "A (Comprador), DE (Solicitante Cambio Nombre), DE (Deudor Hipotecario)",
+      "datos": {
+        "email": null,
+        "telefono": null,
+        "domicilio": "BUCARAMANGA",
+        "estado_civil": null,
+        "tipo_persona": "JURIDICA"
+      }
+    },
+    {
+      "nombre": "RUEDA PINILLA RICARDO",
+      "identificacion": "CC 91207193",
+      "rol_en_hoja": "RL (Representante Legal de INVERSIONES RICAHER SAS)",
+      "datos": {
+        "email": "delihuevo@hotmail.com",
+        "telefono": "3202717248",
+        "domicilio": "CALLE 37 N 15 25",
+        "estado_civil": "INDEPENDIENTE",
+        "tipo_persona": "NATURAL"
+      }
+    }
+  ],
+  "actos_juridicos": [
+    "CANCELACION PACTO DE RETROVENTA",
+    "COMPRAVENTA DE BIENES INMUEBLES",
+    "CAMBIO DE NOMBRE DE PREDIO RURAL",
+    "HIPOTECA ABIERTA SIN LIMITE DE CUANTIA"
+  ],
+  "mapeo_roles": {
+    "vendedores": [
+      "GARNICA CARDENAS SANDRA MILENA",
+      "INGENIERIA DE SERVICIO Y SOLUCIONES"
+    ],
+    "compradores": [
+      "INVERSIONES RICAHER SAS"
+    ],
+    "representantes": [
+      "GOMEZ VESGA REIMUNDO",
+      "RUEDA PINILLA RICARDO"
+    ]
+  }
+}
+```

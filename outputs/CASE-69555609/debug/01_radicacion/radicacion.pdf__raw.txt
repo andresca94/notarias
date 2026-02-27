@@ -1,0 +1,31 @@
+```json
+{
+  "es_hoja_radicacion": true,
+  "radicacion": {
+    "numero": "25278",
+    "fecha": "19/11/2025 18:05:23",
+    "notaria": "NOTARIA TERCERA DE BUCARAMANGA",
+    "notario_encargado": "MARGARITA LOPEZ CELY"
+  },
+  "datos_inmueble": {
+    "direccion": "LOTE VILLA LUZ REGION TIERRA BUENA",
+    "matricula": "320-3197",
+    "ciudad_registro": "BUCARAMANGA"
+  },
+  "negocio_actual": {
+    "numero_radicado": "25278",
+    "total_venta_hoy": 605000000,
+    "actos_a_firmar": [
+      {
+        "nombre": "CANCELACION PACTO DE RETROVENTA",
+        "cuantia": 0
+      },
+      {
+        "nombre": "COMPRAVENTA DE BIENES INMUEBLES",
+        "cuantia": 605000000
+      },
+      {
+        "nombre": "CAMBIO DE NOMBRE DE PREDIO RURAL",
+        "cuantia": 0
+      },
+      

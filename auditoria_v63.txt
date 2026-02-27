@@ -1,0 +1,176 @@
+==> app/api/routes.py <==
+from __future__ import annotations
+
+from pathlib import Path
+from typing import List, Optional
+
+from fastapi import APIRouter, File, Form, UploadFile, HTTPException
+from fastapi.responses import FileResponse
+
+from app.pipeline.orchestrator import run_pipeline
+from app.core.config import settings
+
+router = APIRouter()
+
+
+def save_uploads(files: List[UploadFile], out_dir: Path) -> List[str]:
+    out_dir.mkdir(parents=True, exist_ok=True)
+    saved = []
+    for f in files:
+        content = f.file.read()
+        dst = out_dir / f.filename
+        dst.write_bytes(content)
+        saved.append(str(dst))
+    return saved
+
+
+@router.post("/notaria-v63-universal")
+async def notaria_v63_universal(
+    cedula: Optional[List[UploadFile]] = File(default=None),
+    documentos: List[UploadFile] = File(...),
+    comentario: str = Form("(Sin comentarios)"),
+    template_id: Optional[str] = Form(None),
+):
+    cedula = cedula or []
+
+    base_in = Path("inputs")
+    scans_dir = base_in / "scanner"
+    docs_dir = base_in / "documentos"
+
+    scan_paths = save_uploads(cedula, scans_dir)
+    doc_paths = save_uploads(documentos, docs_dir)
+
+    result = await run_pipeline(
+        scanner_paths=scan_paths,
+        documentos_paths=doc_paths,
+        comentario=comentario,
+        template_id=template_id,
+    )
+
+    rad = result["radicado"]
+    return {
+        "ok": True,
+        "radicado": rad,
+        "docx_path": result["docx_path"],
+        "pdf_path": result["pdf_path"],
+        "download_url": f"/download/{rad}",
+        # debug opcional:
+        # "debug": result["debug"],
+    }
+
+
+@router.get("/download/{radicado}")
+async def download_pdf(radicado: str):
+    case_dir = Path(settings.OUTPUT_DIR) / f"CASE-{radicado}"
+    pdf_path = case_dir / f"Escritura_Caso_{radicado}.pdf"
+
+    if not pdf_path.exists():
+        raise HTTPException(status_code=404, detail="PDF no encontrado para ese radicado.")
+
+    return FileResponse(
+        path=str(pdf_path),
+        media_type="application/pdf",
+        filename=pdf_path.name,
+    )
+
+==> app/core/config.py <==
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    GEMINI_API_KEY: str | None = None
+    OPENAI_API_KEY: str | None = None
+
+    GEMINI_MODEL_VISION: str = "models/gemini-2.5-flash"
+    GEMINI_MODEL_TEXT: str = "models/gemini-2.5-pro"
+    OPENAI_MODEL: str = "gpt-4.1"
+
+    TEMPLATE_DOCX_PATH: str = "app/templates/plantilla_notarial.docx"
+    OUTPUT_DIR: str = "outputs"
+    PDF_ENGINE: str = "libreoffice"
+
+    RAG_STORE_DIR: str = "rag_store"
+
+
+settings = Settings()
+
+==> app/services/rag/local_rag.py <==
+# app/services/rag/local_rag.py
+from __future__ import annotations
+
+import os
+from pathlib import Path
+from typing import Dict, Optional
+
+from app.core.config import settings
+from app.services.rag_store import LocalRAGStore
+
+
+def split_metadata_and_body(raw: str) -> Dict[str, str]:
+    """
+    Permite tener archivos .txt con algo tipo:
+
+    ---METADATA---
+    ...
+    ---BODY---
+    ...
+
+    Si no existe ese formato, todo se va como contenido_legal.
+    """
+    if not raw:
+        return {"metadata_especifica": "", "contenido_legal": ""}
+
+    s = raw.strip()
+    if "---BODY---" in s:
+        parts = s.split("---BODY---", 1)
+        meta = parts[0].replace("---METADATA---", "").strip()
+        body = parts[1].strip()
+        return {"metadata_especifica": meta, "contenido_legal": body}
+
+    return {"metadata_especifica": "", "contenido_legal": s}
+
+
+class LocalRAG:
+    """
+    RAG local basado en archivos .txt dentro de un directorio.
+    Usa BM25 si está instalado (rank_bm25).
+    """
+
+    def __init__(self, store_dir: Optional[str] = None):
+        # 1) toma de settings o env o default
+        raw = store_dir or getattr(settings, "RAG_STORE_DIR", None) or os.getenv("RAG_STORE_DIR") or "rag_store"
+
+        p = Path(raw)
+
+        # 2) si es relativo, resuélvelo desde el root del repo (asumimos que uvicorn corre en el root)
+        if not p.is_absolute():
+            # intenta con BASE_DIR si existe
+            base = getattr(settings, "BASE_DIR", None)
+            if base:
+                p = Path(base) / p
+            else:
+                p = Path.cwd() / p
+
+        self.store_dir = p.resolve()
+
+        if not self.store_dir.exists():
+            raise RuntimeError(f"RAG_STORE_DIR no existe: {self.store_dir}")
+
+        self.store = LocalRAGStore(str(self.store_dir))
+        self.store.load()
+
+    def retrieve_acto_text(self, acto_nombre: str) -> str:
+        """
+        Retorna el texto del template más relevante para el acto (ej: COMPRAVENTA).
+        """
+        q = (acto_nombre or "").strip()
+        if not q:
+            return "TEXTO NO ENCONTRADO"
+
+        hits = self.store.search_acto(q, top_k=1)
+        if not hits:
+            return "TEXTO NO ENCONTRADO"
+
+        return hits[0]["text"] or "TEXTO NO ENCONTRADO"

@@ -1,0 +1,83 @@
+```json
+{
+  "datos_inmueble": {
+    "matricula": "NO_APLICA_ES_CERTIFICADO_DE_EMPRESA",
+    "predial_nacional": "NO_APLICA_ES_CERTIFICADO_DE_EMPRESA",
+    "direccion": "CR 13 57 66 KM 6 VIA A GIRON, Floridablanca, Santander",
+    "cabida_area": "NO_APLICA_ES_CERTIFICADO_DE_EMPRESA",
+    "linderos": "NO_APLICA_ES_CERTIFICADO_DE_EMPRESA",
+    "tradicion": "NO_APLICA_ES_CERTIFICADO_DE_EMPRESA",
+    "afectacion_vivienda": "NO_DETECTADO",
+    "patrimonio_familia": "NO_DETECTADO"
+  },
+  "historia_y_antecedentes": {
+    "constitucion_sociedad": "La sociedad INVERSIONES RICAHER S.A.S. se constituyó mediante Documento privado del 02 de Enero de 2019 de Asamblea General de Accionistas de Girón, inscrito en la Cámara de Comercio el 15 de Enero de 2019, con el No 163775 del libro IX."
+  },
+  "personas_detalle": [
+    {
+      "nombre": "INVERSIONES RICAHER S.A.S.",
+      "cedula": "901244425-2",
+      "rol": "Razón Social / Empresa"
+    },
+    {
+      "nombre": "RUEDA PINILLA RICARDO",
+      "cedula": "91207193",
+      "rol": "Representante Legal"
+    },
+    {
+      "nombre": "ORTIZ CUADROS MONICA LUCIA",
+      "cedula": "63349943",
+      "rol": "Revisor Fiscal Principal"
+    }
+  ],
+  "hallazgos_variables": {
+    "tipo_documento": "CERTIFICADO DE EXISTENCIA Y REPRESENTACION LEGAL",
+    "fecha_expedicion_certificado": "11/12/2025",
+    "valor_certificado": "$11.600",
+    "codigo_verificacion": "YZP42FDB40",
+    "matricula_mercantil_empresa": "05-420423-16",
+    "fecha_matricula_mercantil": "15 de Enero de 2019",
+    "ultimo_ano_renovado": "2025",
+    "fecha_renovacion": "09 de Abril de 2025",
+    "grupo_niif": "Grupo II",
+    "domicilio_principal_municipio": "Floridablanca",
+    "domicilio_principal_departamento": "Santander",
+    "correo_electronico_comercial": "monica.ortiz@delihuevo.com",
+    "telefono_comercial_1": "3158953916",
+    "direccion_notificacion_judicial": "CR 13 57 66 KM 6 VIA A GIRON, Floridablanca, Santander",
+    "correo_electronico_notificacion_judicial": "monica.ortiz@delihuevo.com",
+    "telefono_notificacion_judicial_1": "3158953916",
+    "autorizacion_notificaciones_electronicas": "SI autorizó para recibir notificaciones personales a través de correo electrónico, de conformidad con lo establecido en los artículos 291 del Código General del Proceso y 67 del Código de Procedimiento Administrativo y de lo Contencioso Administrativo.",
+    "termino_duracion_sociedad": "INDEFINIDA",
+    "objeto_social_principal": "CULTIVO DE PALMA DE ACEITE Y CACAO Y OTROS PRODUCTOS AGRICOLAS Y RECOLECCION Y COMERCIALIZACION DEL FRUTO GANADERIA OVINOS, BOVINOS Y BUFALINOS.",
+    "objeto_social_secundario": [
+      "Hacer operaciones bancarias, de crédito, de seguros y financieras.",
+      "Participar en la constitución como socia o accionista de otras empresas.",
+      "Fusionarse con otras sociedades o escindirse.",
+      "Realizar toda clase de actos relacionados con títulos valores.",
+      "Tomar y dar dinero en mutuo con o sin intereses, con garantía o sin ella.",
+      "Adquirir, conservar, gravar, enajenar toda clase de bienes raíces, muebles o equipos.",
+      "Tomar en arrendamiento bienes muebles o inmuebles y dar en arrendamiento la totalidad o parte de sus activos.",
+      "Realizar todas las operaciones y celebrar todos los actos y contratos relacionados con el objeto social."
+    ],
+    "capital_autorizado": "$1.049.200.000,00",
+    "numero_acciones_autorizadas": "10.492",
+    "valor_nominal_accion": "$100.000,00",
+    "capital_suscrito": "$524.600.000,00",
+    "numero_acciones_suscritas": "5.246",
+    "capital_pagado": "$524.600.000,00",
+    "numero_acciones_pagadas": "5.246",
+    "facultades_representante_legal": "Amplias, sin restricciones de contratación por razón de la naturaleza ni de la cuantía de los actos que celebre.",
+    "actividad_principal_ciiu": "0126 (Cultivo de palma de aceite y otros frutos oleaginosos)",
+    "actividad_secundaria_ciiu": "0141 (Cría de ganado bovino y bufalino)",
+    "otras_actividades_ciiu": [
+      "0143 (Cría de ganado caballar y otros equinos)",
+      "0129 (Otros cultivos permanentes)"
+    ],
+    "tamano_empresarial": "Pequeña Empresa",
+    "ingresos_actividad_ordinaria": "$3.356.600.586",
+    "actividad_mayores_ingresos_periodo": "CIIU: 0126",
+    "recursos_contra_actos_inscripcion": "No se encuentra en curso ningún recurso a la fecha y hora de expedición del certificado."
+  }
+}
+```

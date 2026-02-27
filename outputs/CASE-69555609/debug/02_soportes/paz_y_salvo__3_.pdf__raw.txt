@@ -1,0 +1,24 @@
+```json
+{
+  "datos_inmueble": {
+    "matricula": "NO_DETECTADO",
+    "predial_nacional": "00 03 00 00 0020 0001 0 00 00 0000",
+    "direccion": "VILLA LUZ VDA LAS ARRUGAS",
+    "cabida_area": "149 hectáreas 0 metros cuadrados",
+    "linderos": "NO_DETECTADO",
+    "tradicion": "NO_DETECTADO",
+    "afectacion_vivienda": "NO_DETECTADO",
+    "patrimonio_familia": "NO_DETECTADO"
+  },
+  "historia_y_antecedentes": {},
+  "personas_detalle": [
+    {
+      "nombre_completo": "SANDRA MILENA GARNICA CARDENAS",
+      "rol": "Propietario",
+      "tipo_identificacion": "NO_DETECTADO",
+      "numero_identificacion": "63501152"
+    }
+  ],
+  "hallazgos_variables": {}
+}
+```

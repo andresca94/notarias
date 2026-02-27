@@ -1,0 +1,109 @@
+```json
+{
+  "datos_inmueble": {
+      "matricula": null,
+      "predial_nacional": null,
+      "direccion": null,
+      "cabida_area": null,
+      "linderos": null,
+      "tradicion": null,
+      "afectacion_vivienda": "NO_DETECTADO",
+      "patrimonio_familia": "NO_DETECTADO"
+  },
+  "documento_ep_info": {
+      "numero_ep": null,
+      "fecha": null,
+      "notaria": null
+  },
+  "historia_y_antecedentes": {
+      "eventos_historicos": [
+          {
+              "evento": "Constitución de Sociedad",
+              "tipo_documento": "Escritura Pública",
+              "numero_documento": "2711",
+              "fecha_documento": "24 de septiembre de 1997",
+              "notaria": "Primera de Barrancabermeja",
+              "inscripcion_camara": "25 de septiembre de 1997",
+              "numero_inscripcion": "5231 del Libro IX",
+              "detalle": "Constitución de COJURIDICAS LTDA CONSULTORES JURIDICOS ASOCIADOS LIMITADA."
+          },
+          {
+              "evento": "Reforma de Estatutos y Primer Cambio de Nombre",
+              "tipo_documento": "Escritura Pública",
+              "numero_documento": "1909",
+              "fecha_documento": "20 de diciembre de 2001",
+              "notaria": "Primera de Barrancabermeja",
+              "inscripcion_camara": "11 de enero de 2002",
+              "numero_inscripcion": "7940 del Libro IX",
+              "detalle": "Cambio de nombre de COJURIDICAS LTDA CONSULTORES JURIDICOS ASOCIADOS LIMITADA por APOYAR LIMITADA ASESORES & CONSULTORES."
+          },
+          {
+              "evento": "Reforma de Estatutos (Adicional)",
+              "tipo_documento": "Escritura Pública",
+              "numero_documento": "1909",
+              "fecha_documento": "20 de diciembre de 2001",
+              "notaria": "Primera de Barrancabermeja",
+              "inscripcion_camara": "11 de enero de 2002",
+              "numero_inscripcion": "7939 del Libro IX",
+              "detalle": "Reforma de estatutos."
+          },
+          {
+              "evento": "Múltiples Reformas de Estatutos",
+              "tipo_documento": "Escritura Pública",
+              "numero_documento": "2875",
+              "fecha_documento": "28 de octubre de 2010",
+              "notaria": "Primera de Barrancabermeja",
+              "inscripcion_camara": "17 de noviembre de 2010",
+              "numero_inscripcion": "13949, 13950, 13951, 13952, 13953 del Libro IX",
+              "detalle": "Varias reformas de estatutos."
+          },
+          {
+              "evento": "Reforma de Estatutos",
+              "tipo_documento": "Escritura Pública",
+              "numero_documento": "895",
+              "fecha_documento": "29 de mayo de 2012",
+              "notaria": "Primera de Barrancabermeja",
+              "inscripcion_camara": "03 de julio de 2012",
+              "numero_inscripcion": "16182 del Libro IX",
+              "detalle": "Reforma de estatutos."
+          },
+          {
+              "evento": "Transformación de Sociedad y Segundo Cambio de Nombre",
+              "tipo_documento": "Acta de Junta de Socios",
+              "numero_documento": "2",
+              "fecha_documento": "21 de agosto de 2012",
+              "inscripcion_camara": "05 de octubre de 2012",
+              "numero_inscripcion": "16554 del Libro IX",
+              "detalle": "Transformación de Sociedad Limitada a Sociedad por Acciones Simplificada (SAS) y cambio de nombre de APOYAR LIMITADA ASESORES & CONSULTORES por INGENIERIA DE SERVICIOS Y SOLUCIONES ELECTROMECANICAS S.A.S INSELEM S.A.S."
+          },
+          {
+              "evento": "Reforma de Estatutos (Facultades Representante Legal)",
+              "tipo_documento": "Acta de Asamblea Extraordinaria de Accionistas",
+              "numero_documento": "001",
+              "fecha_documento": "20 de junio de 2022",
+              "inscripcion_camara": "28 de junio de 2022",
+              "numero_inscripcion": "31722 del Libro IX",
+              "detalle": "Reforma de estatutos, incluyendo facultades y limitaciones del Representante Legal (Artículo 73)."
+          }
+      ]
+  },
+  "personas_detalle": [
+      {
+          "nombre_completo": "REIMUNDO GOMEZ VESGA",
+          "tipo_identificacion": "C.C.",
+          "numero_identificacion": "13.893.486",
+          "rol": "REPRESENTANTE LEGAL"
+      },
+      {
+          "nombre_completo": "CARLOS ANDRES GOMEZ BAUTISTA",
+          "tipo_identificacion": "C.C.",
+          "numero_identificacion": "1.098.667.664",
+          "rol": "REPRESENTANTE LEGAL SUPLENTE"
+      }
+  ],
+  "hallazgos_variables": {
+      "nombre_nuevo_predio": null,
+      "fecha_escritura_referenciada": "02/10/2025"
+  }
+}
+```

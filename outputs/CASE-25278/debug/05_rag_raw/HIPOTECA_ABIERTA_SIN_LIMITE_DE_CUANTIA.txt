@@ -1,0 +1,109 @@
+==============================================================================
+ACTO: CONSTITUCIÓN DE HIPOTECA ABIERTA SIN LÍMITE DE CUANTÍA.
+==============================================================================
+
+{Crear metadata para usar en encabezado}
+PERSONAS QUE COMPARECEN: <<DEUDOR>> Y <<ACREEDOR>> -------------
+DEUDOR: <<DEUDOR>>
+ACREEDORA: <<ACREEDOR>>
+VALOR HIPOTECA: $ <<VALOR$>> -----------------------------------------------------------
+MATRICULA INMOBILIARIA Nº.: <<MATR>> ----------------------------------------------
+CODIGO CATASTRAL ANTERIOR N°: <<CODCATASTRAL>>
+NUMERO PREDIAL NACIONAL: <<NPNACIONAL>>
+--------------------------------------------------------------------------------------------------------------
+{Cuerpo del Acto}
+En la ciudad de Bucaramanga, Departamento de Santander, República de
+Colombia, a los [[DIA_LETRAS]] ([[DIA_NUMERO]]) días del mes de [[MES_LETRAS]] del año
+[[ANO_LETRAS]], ante mí, MARGARITA LOPEZ CELY, Notaria
+Tercera del Círculo de Bucaramanga.
+------------------------------------------------------------
+Compareció(eron): <<DEUDOR>>, mayor de edad, identificado(a) con cédula de
+ciudadanía número [[CEDULA_DEUDOR]] expedida en [[LUGAR_EXP_CEDULA_DEUDOR]], de estado civil
+[[ESTADO_CIVIL_DEUDOR]], domiciliado(a) en [[CIUDAD_DOMICILIO_DEUDOR]], quien(es) se
+denominará(n) en el presente instrumento EL(LA)(LOS) HIPOTECANTE(S) y
+manifestó(aron): --------------------------------------------------------------------------------------
+PRIMERO: Que por medio de esta escritura constituye HIPOTECA ABIERTA SIN
+LIMITE DE CUANTÍA a favor de <<ACREEDOR>>, mayor de edad,
+identificado(a) con cédula de ciudadanía número [[CEDULA_ACREEDOR]] expedida en
+[[LUGAR_EXP_CEDULA_ACREEDOR]], de estado civil [[ESTADO_CIVIL_ACREEDOR]], domiciliado(a) en
+[[CIUDAD_DOMICILIO_ACREEDOR]], quien(es) en este instrumento se denominara(n)
+EL(LA)(LOS) ACREEDOR(A)(ES), sobre el siguiente inmueble: -----------------------
+
+INCLUIR INMUEBLE JUNTO CON SU NOMENCLATURA, AREA Y LINDEROS
+ESPECIFICOS
+Le corresponde el folio de Matricula inmobiliaria número <<MATR>> de la Oficina
+de Registro de Instrumentos Públicos de <<ORIP>> y se distingue con el numero
+predial nacional <<NPNACIONAL>> y el código catastral anterior
+<<CODCATASTRAL>>
+PARÁGRAFO PRIMERO: No obstante, la mención de áreas, cabida y linderos, la
+hipoteca recae sobre cuerpo cierto. --------------------------------------------------------------
+SI ES PROPIEDAD HORIZONTAL INCLUIR LOS LINDEROS GENERALES Y LA
+CONSTITUCION DE LA P.H.
+UBICACION GENERAL: EL <<CONJUNTOoEDIFICIO>>
+PARÁGRAFO SEGUNDO: -- PROPIEDAD HORIZONTAL:
+<<CONJUNTOoEDIFICIO>> - Fue constituido en propiedad Horizontal con el lleno
+de todos los requisitos exigidos por la ley y demás normas que rigen la materia,
+mediante escritura pública número [[NUMERO_ESCRITURA_PH]]
+de fecha [[DIA_ESCRITURA_PH]]
+de [[MES_ESCRITURA_PH]]
+del año [[ANO_ESCRITURA_PH]], otorgada en la Notaría [[NUMERO_NOTARIA_PH]]
+del Círculo de
+[[CIRCULO_NOTARIA_PH]], (aclaraciones, reformas), debidamente registrada(s) en la Oficina
+de Registro de Instrumentos Públicos de <<ORIP>>.
+
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+SEGUNDO: Que la hipoteca que se constituye se extiende a todas las
+construcciones, los aumentos y mejoras que el inmueble reciba, lo mismo que a
+las pensiones e indemnizaciones de que trata el Artículo 2.466 del Código Civil y a
+los muebles y accesorios reputados como inmuebles conforme a la Ley. -------------
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+TERCERO: Que la hipoteca que constituyen EL(LA)(LOS) HIPOTECANTE(S)es
+ABIERTA SIN LIMITE DE CUANTÍA y por tanto garantiza todo monto de capital
+principal, comprendiendo y extendiéndose la hipoteca además a sus intereses
+ordinarios y moratorios como los demás gastos que se llegaren a causar con
+ocasión del cobro judicial, tales como honorarios, costas, seguros, cauciones, etc.-
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+CUARTO: ADQUISICION: Que el inmueble sobre el cual constituye(n) la hipoteca,
+lo adquirió(eron) EL(LA)(LOS) HIPOTECANTE(S), por [[TIPO_ADQUISICION_ANTERIOR]]
+efectuada a
+[[VENDEDOR_ANTERIOR]], mediante escritura pública número
+[[NUMERO_ESCRITURA_ANTERIOR]] de fecha [[FECHA_ESCRITURA_ANTERIOR]] de
+[[MES_ESCRITURA_ANTERIOR]]
+del año [[ANO_ESCRITURA_ANTERIOR]],
+otorgada en la Notaría [[NUMERO_NOTARIA_ANTERIOR]] del Círculo de [[CIRCULO_NOTARIA_ANTERIOR]], y debidamente
+registrada en la Oficina de Instrumentos Públicos de <<ORIP>> bajo el folio de
+matrícula inmobiliaria número <<MATR>>
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+QUINTO: Que EL(LA)(LOS) HIPOTECANTE(S), garantiza(n) con esta hipoteca
+el pago a EL(LA)(LOS) ACREEDOR(A)(ES) de toda clase de obligación de
+cualquier naturaleza jurídica y clase, ya figuren en títulos valores o en otra clase
+de documentos, ya se trate de deudas actuales o futuras y que la hipoteca no se
+extingue por el hecho de constituirse nuevas obligaciones, renovarse o ampliarse
+el plazo de pago de cualquiera de ellas.---------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------------------------------------
+SEXTO: La garantía que aquí se constituye es abierta y sin límite de cuantía y
+garantiza a EL(LA)(LOS) ACREEDOR(A)(ES) no solamente el crédito hipotecario
+y sus intereses remuneratorios y moratorios, sino también toda clase de
+obligaciones ya causadas y/o que se causen a cargo de EL(LA)(LOS)
+HIPOTECANTE(S)conjunta, separada o individualmente y sin ninguna limitación,
+respecto a la cuantía de las obligaciones garantizadas, sus intereses, costas,
+gastos y honorarios de abogado, bien sean directas o indirectas y por cualquier
+concepto, adquiridas en su propio nombre o con otra u otras firmas. Esta hipoteca
+garantiza las obligaciones en la forma y condiciones que consten en los
+documentos correspondientes y no se extingue por el solo hecho de prorrogarse,
+cambiarse o renovarse las citadas obligaciones, continuando vigente hasta la
+cancelación total de las mismas. ------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+SÉPTIMO: Que por el hecho de constituirse esta hipoteca, EL(LA)(LOS)
+ACREEDOR(A)(ES) no queda obligada a otorgar a EL(LA)(LOS)
+HIPOTECANTE(S) préstamos ni nuevos créditos, ni a prorrogar los plazos
+vencidos para el pago.-------------------------------------------------------------------------- -----
+---------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------

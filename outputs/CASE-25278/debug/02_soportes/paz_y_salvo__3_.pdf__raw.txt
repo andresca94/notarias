@@ -1,0 +1,30 @@
+```json
+{
+  "datos_inmueble": {
+      "matricula": "NO_DETECTADO",
+      "predial_nacional": "00 03 00 00 0020 0001 0 00 00 0000",
+      "direccion": "VEREDA LAS ARRUGAS, MUNICIPIO DE SAN VICENTE DE CHUCURÍ",
+      "cabida_area": "149 hectáreas 0 metros cuadrados",
+      "linderos": "NO_DETECTADO",
+      "tradicion": "NO_DETECTADO",
+      "afectacion_vivienda": "NO_DETECTADO",
+      "patrimonio_familia": "NO_DETECTADO"
+  },
+  "documento_ep_info": {
+      "numero_ep": null,
+      "fecha": null,
+      "notaria": null
+  },
+  "historia_y_antecedentes": {},
+  "personas_detalle": [
+    {
+      "nombre": "SANDRA MILENA GARNICA CARDENAS",
+      "rol": "PROPIETARIO"
+    }
+  ],
+  "hallazgos_variables": {
+      "nombre_nuevo_predio": null,
+      "fecha_escritura_referenciada": "10/12/2025"
+  }
+}
+```
