@@ -19,7 +19,7 @@ domiciliado(a) en [[CIUDAD_DOMICILIO_VENDEDOR]], identificado(a) con la cédula 
 número <<cedula.otorgante.1>> expedida en [[LUGAR_EXP_CEDULA_VENDEDOR]], de estado civil [[ESTADO_CIVIL_VENDEDOR]], ocupación: [[OCUPACION_VENDEDOR]], obrando en nombre y
 representación propia y <<nombre_otorgante_comprador>>, mayor de edad,
 domiciliado(a) en [[CIUDAD_DOMICILIO_COMPRADOR]], identificado(a) con la cédula de ciudadanía
-número <<cedula.otorgante.2>> expedida en [[LUGAR_EXP_CEDULA_COMPRADOR]], de estado civil [[ESTADO_CIVIL_VENDEDOR]], ocupación: [[OCUPACION_COMPRADOR]], obrando en nombre y
+número <<cedula.otorgante.2>> expedida en [[LUGAR_EXP_CEDULA_COMPRADOR]], de estado civil [[ESTADO_CIVIL_COMPRADOR]], ocupación: [[OCUPACION_COMPRADOR]], obrando en nombre y
 representación propia y manifestaron:
 --------------------------------------------------------------------------------------------------------------
 PRIMERO. Que por escritura pública número [[NUMERO_ESCRITURA_ANTECEDENTE]]

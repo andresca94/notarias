@@ -46,7 +46,8 @@ SALIDA JSON ESTRICTA:
       "numero_radicado": "EXTRAER",
       "total_venta_hoy": 0,
       "actos_a_firmar": [
-          {{ "nombre": "COMPRAVENTA", "cuantia": 0 }}
+          {{ "nombre": "CANCELACION PACTO DE RETROVENTA", "cuantia": 0 }},
+          {{ "nombre": "COMPRAVENTA DE BIENES INMUEBLES", "cuantia": 0 }}
       ]
   }},
   "personas_detalle": [
@@ -59,6 +60,7 @@ SALIDA JSON ESTRICTA:
               "telefono": "EXTRAER",
               "domicilio": "EXTRAER",
               "estado_civil": "EXTRAER",
+              "ocupacion": "EXTRAER si aparece (ej: profesión, actividad económica, oficio)",
               "tipo_persona": "NATURAL"
           }}
       }}
@@ -71,6 +73,7 @@ SALIDA JSON ESTRICTA:
   }}
 }}
 
+⚠️ IMPORTANTE: Extrae TODOS los actos que aparezcan en la hoja de radicación (puede haber 2, 3 o 4 actos distintos: CANCELACION, COMPRAVENTA, CAMBIO DE NOMBRE, HIPOTECA, etc.). Incluye cada uno con su cuantía exacta.
 ⛔ Responde ÚNICAMENTE con JSON.
 """
 
@@ -106,6 +109,7 @@ SALIDA JSON ESTRICTA:
   "datos_inmueble": {{
       "matricula": "EXTRAER",
       "predial_nacional": "EXTRAER",
+      "codigo_catastral_anterior": "EXTRAER código o cédula catastral anterior si aparece, si no null",
       "direccion": "EXTRAER con CORREGIMIENTO/VEREDA si está disponible",
       "cabida_area": "EXTRAER en formato hectareas metros cuadrados",
       "linderos": "EXTRAER linderos actuales en formato cardinal POR EL NORTE/SUR/ORIENTE/OCCIDENTE",
@@ -115,23 +119,42 @@ SALIDA JSON ESTRICTA:
   }},
   "documento_ep_info": {{
       "numero_ep": "EXTRAER numero EP si este documento ES una escritura publica, si no null",
-      "fecha": "EXTRAER fecha del documento si es EP, si no null",
-      "notaria": "EXTRAER notaria del documento si es EP, si no null"
+      "fecha": "EXTRAER fecha del documento si es EP (ej: '03 de marzo de 2025'), si no null",
+      "notaria": "EXTRAER notaria completa del documento si es EP (ej: 'Notaría Quinta del Círculo de Bucaramanga'), si no null",
+      "valor": "EXTRAER valor/precio de la operación si está en el documento, si no null",
+      "vendedor": "EXTRAER nombre(s) del(los) vendedor(es)/otorgante(s) DE de esta EP (quien vende/otorga), si no null"
   }},
   "historia_y_antecedentes": {{}},
-  "personas_detalle": [],
+  "personas_detalle": [
+      {{
+          "nombre": "NOMBRE",
+          "identificacion": "CC 000",
+          "rol_en_hoja": "DE (Vendedor)",
+          "datos": {{
+              "email": "EXTRAER",
+              "telefono": "EXTRAER",
+              "domicilio": "EXTRAER",
+              "estado_civil": "EXTRAER",
+              "ocupacion": "EXTRAER si aparece en el documento (profesión, oficio, actividad)"
+          }}
+      }}
+  ],
   "hallazgos_variables": {{
-      "nombre_nuevo_predio": "EXTRAER si el doc menciona un nombre nuevo para el predio, si no null",
-      "fecha_escritura_referenciada": "EXTRAER fecha del documento si aplica, si no null"
+      "nombre_nuevo_predio": "EXTRAER si el documento menciona el nombre de la hacienda/predio/finca (ej: 'HACIENDA LEJANIAS', 'FINCA EL PALMAR'). Si es una Declaración o Carta de Cupo que menciona el nombre del predio, extraerlo aquí. Si el documento solo hace referencia histórica o usa un nombre anterior que fue cambiado, usar null.",
+      "fecha_escritura_referenciada": "EXTRAER fecha del documento si aplica, si no null",
+      "plazo_retroventa": "EXTRAER si hay pacto de retroventa y se menciona el plazo (ej. 'seis (6) meses'), si no null",
+      "paz_salvo_predial": "EXTRAER número de Paz y Salvo Predial si aparece en el documento, si no null",
+      "paz_salvo_valorizacion": "EXTRAER número de Paz y Salvo de Valorización si aparece en el documento, si no null",
+      "paz_salvo_area_metro": "EXTRAER número de Paz y Salvo de Área Metropolitana si aparece en el documento, si no null"
   }}
 }}
 ⛔ Responde ÚNICAMENTE con JSON.
 """
 
 CEDULA_PROMPT = """Eres un asistente OCR experto.
-Extrae todos los campos de esta cédula en JSON estricto:
-{ "nombre": "...", "cedula": "...", "fecha_nacimiento": "...", "lugar_nacimiento": "...", "fecha_expedicion": "...", "lugar_expedicion": "..." }.
-Si no se lee, usa "ILEGIBLE".
+Si el documento contiene varias cédulas, extrae TODAS en la lista. Devuelve SIEMPRE este formato:
+{"cedulas": [{"nombre": "...", "cedula": "...", "fecha_nacimiento": "...", "lugar_nacimiento": "...", "fecha_expedicion": "...", "lugar_expedicion": "...", "estado_civil": "..."}]}
+Si un campo no se lee, usa "ILEGIBLE". El estado civil normalmente no aparece en la cédula colombiana — usa "ILEGIBLE" si no está.
 ⛔ Responde ÚNICAMENTE con JSON.
 """
 
@@ -148,18 +171,32 @@ REGLAS ESTRICTAS DE FORMATO (EP-LIKE)
 - No cambies el sentido legal del texto. No resumas. No agregues explicaciones.
 - NO inventes datos. Si falta algo, deja el placeholder [[PENDIENTE: ...]] tal cual.
 - Mantén nombres, CC/NIT, ciudad, matricula, valores, etc. EXACTAMENTE como aparecen en el contexto.
-- Si hay persona juridica (empresa con NIT), usa el contexto EMPRESA_RL_MAP para encontrar su
-  representante legal: busca la empresa por nombre en EMPRESA_RL_MAP y usa los datos del RL encontrado
-  (nombre, identificacion, domicilio, estado_civil, ocupacion) para completar la comparecencia.
+- EMPRESA CON NIT: Cuando NOMBRE_{role}_N es el nombre de una empresa y existe RL_{role}_NOMBRE_N
+  en el contexto, la comparecencia debe ser: "[EMPRESA_{role}_N], NIT [NIT_{role}_N], representada
+  por su Representante Legal [RL_{role}_NOMBRE_N], mayor de edad, identificado con CC
+  [RL_{role}_CEDULA_N] expedida en [RL_{role}_LUG_EXP_N], domiciliado en [RL_{role}_CIUDAD_N],
+  obrando en calidad de Representante Legal." Si no hay RL_{role}_NOMBRE_N, usa EMPRESA_RL_MAP.
+- TITULO DE ADQUISICIÓN (acto COMPRAVENTA): en la cláusula de TITULO DE ADQUISICIÓN, usa los campos
+  EP_ANTECEDENTE_NUMERO, EP_ANTECEDENTE_FECHA, EP_ANTECEDENTE_NOTARIA como la escritura mediante la
+  cual los vendedores adquirieron el inmueble — NO uses INMUEBLE.tradicion (historia antigua del predio).
+- SEGUNDO COMPARECIENTE AUSENTE: Si NOMBRE_{role}_2 es cadena vacía (""), omite completamente el
+  párrafo/bloque de texto del segundo compareciente de ese rol. El primero se mantiene intacto.
 - FECHA DE COMPARECENCIA: el campo [[PENDIENTE: FECHA_OTORGAMIENTO]] es la fecha de ESTA escritura
   y NUNCA debe ser reemplazado con una fecha extraída del contexto. Si ves "fecha_escritura_antecedente"
   o "fecha_escritura_referenciada" en el contexto, esa es la fecha del antecedente, NO de esta escritura.
 - CANCELACION PACTO RETROVENTA: cuando el acto sea CANCELACION, en la cláusula PRIMERO usa el campo
-  INMUEBLE.ep_antecedente_pacto (numero_ep, fecha, notaria) para identificar la escritura que se cancela.
-  NO uses INMUEBLE.tradicion (que describe la historia histórica del predio). Si ep_antecedente_pacto
-  no existe, deja [[PENDIENTE: EP_ANTECEDENTE_NUMERO]] y [[PENDIENTE: NOTARIA_ANTECEDENTE]].
+  INMUEBLE.ep_antecedente_pacto (numero_ep, fecha, notaria) — o EP_ANTECEDENTE_NUMERO/FECHA/NOTARIA —
+  para identificar la escritura que se cancela. NO uses INMUEBLE.tradicion (historia histórica del predio).
 - Si hay varios otorgantes/intervinientes, incluyelos en el orden indicado por PERSONAS_ACTIVOS.
 - Para la caratula: transcribe el campo RESUMEN_ACTOS exactamente como aparece en el contexto, sin modificarlo.
+- RESUMEN_ACTOS: transcribir SOLO en la sección de CARÁTULA. En secciones de ACTOS individuales
+  (PRIMER ACTO, SEGUNDO ACTO, etc.) NO incluir ni repetir el listado de todos los actos.
+- GUIONES DE RELLENO: conserva los guiones '---...---' y '===' que aparecen en la plantilla como
+  relleno visual de estilo notarial. Para líneas cortas de encabezado/metadata (VENDEDOR:, COMPRADOR:,
+  VALOR:, etc.) añade guiones al final para completar aprox. 80 caracteres.
+- VARIABLES DE ROL: el contexto incluye variables pre-calculadas como LUGAR_EXP_CEDULA_VENDEDOR_1,
+  ESTADO_CIVIL_VENDEDOR_1, OCUPACION_VENDEDOR_1, CIUDAD_DOMICILIO_VENDEDOR_1, y equivalentes para
+  VENDEDOR_2, COMPRADOR_1, COMPRADOR_2 (y versiones sin sufijo numérico). Úsalas directamente.
 
 OBJETIVO
 - Entregar salida que parezca EP real: formal, consistente, completa y lista para revision notarial.
@@ -175,11 +212,14 @@ DATABINDER_USER = """ERES UN AGENTE DE PROCESAMIENTO DOCUMENTAL INTELIGENTE (DAT
 {plantilla}
 \"\"\"
 
-INSTRUCCIONES:
+INSTRUCCIONES ESPECÍFICAS DE ESTA SECCIÓN:
+{instrucciones}
+
+INSTRUCCIONES GENERALES:
 - Deduce roles: Vendedor/Otorgante/DE, Comprador/A, etc.
 - Dinero con separadores de mil.
 - Fechas a letras si aplica.
 - Si falta, [[PENDIENTE: ...]].
 
-SALIDA: Solo texto final.
+SALIDA: Solo texto final. La plantilla define EXACTAMENTE qué contenido debe generarse.
 """

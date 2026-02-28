@@ -43,7 +43,8 @@
         "email": "MILEGAR4@HOTMAIL.COM",
         "telefono": "3164706470",
         "domicilio": "BUCARAMANGA",
-        "estado_civil": "SOLTERO(A)",
+        "estado_civil": "",
+        "ocupacion": "INDEPENDIENTE",
         "tipo_persona": "NATURAL"
       }
     },
@@ -55,7 +56,8 @@
         "email": "REIMUNDO.GOMEZ@GMAIL.COM",
         "telefono": "3106806656",
         "domicilio": "BARRANCABERMEJA",
-        "estado_civil": null,
+        "estado_civil": "",
+        "ocupacion": "",
         "tipo_persona": "JURIDICA"
       }
     },
@@ -67,7 +69,8 @@
         "email": "REIMUNDO.GOMEZ@GMAIL.COM",
         "telefono": "3106806656",
         "domicilio": "BARRANCABERMEJA",
-        "estado_civil": null,
+        "estado_civil": "",
+        "ocupacion": "EMPLEADO",
         "tipo_persona": "NATURAL"
       }
     },
@@ -76,10 +79,11 @@
       "identificacion": "NI 901244425",
       "rol_en_hoja": "A (Comprador)",
       "datos": {
-        "email": null,
-        "telefono": null,
+        "email": "",
+        "telefono": "",
         "domicilio": "BUCARAMANGA",
-        "estado_civil": null,
+        "estado_civil": "",
+        "ocupacion": "",
         "tipo_persona": "JURIDICA"
       }
     },
@@ -91,7 +95,8 @@
         "email": "delihuevo@hotmail.com",
         "telefono": "3202717248",
         "domicilio": "CALLE 37 N 15 25",
-        "estado_civil": "CASADO(A)",
+        "estado_civil": "",
+        "ocupacion": "INDEPENDIENTE",
         "tipo_persona": "NATURAL"
       }
     }

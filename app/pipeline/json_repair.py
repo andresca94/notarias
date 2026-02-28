@@ -29,7 +29,16 @@ def _schema_min_radicacion() -> Dict[str, Any]:
         "es_hoja_radicacion": True,
         "radicacion": {"numero": "EXTRAER", "fecha": "EXTRAER", "notaria": "EXTRAER", "notario_encargado": "EXTRAER"},
         "datos_inmueble": {"direccion": "EXTRAER", "matricula": "EXTRAER", "ciudad_registro": "EXTRAER"},
-        "negocio_actual": {"numero_radicado": "EXTRAER", "total_venta_hoy": 0, "actos_a_firmar": [{"nombre": "ACTO", "cuantia": 0}]},
+        "negocio_actual": {
+            "numero_radicado": "EXTRAER",
+            "total_venta_hoy": 0,
+            "actos_a_firmar": [
+                {"nombre": "CANCELACION PACTO DE RETROVENTA", "cuantia": 0},
+                {"nombre": "COMPRAVENTA DE BIENES INMUEBLES", "cuantia": 0},
+                {"nombre": "CAMBIO DE NOMBRE DE PREDIO RURAL", "cuantia": 0},
+                {"nombre": "HIPOTECA ABIERTA SIN LIMITE DE CUANTIA", "cuantia": 0},
+            ],
+        },
         "personas_detalle": [],
         "actos_juridicos": [],
         "mapeo_roles": {"vendedores": [], "compradores": [], "representantes": []},
@@ -56,12 +65,17 @@ def _schema_min_docs() -> Dict[str, Any]:
 
 def _schema_min_cedula() -> Dict[str, Any]:
     return {
-        "nombre": "ILEGIBLE",
-        "cedula": "ILEGIBLE",
-        "fecha_nacimiento": "ILEGIBLE",
-        "lugar_nacimiento": "ILEGIBLE",
-        "fecha_expedicion": "ILEGIBLE",
-        "lugar_expedicion": "ILEGIBLE",
+        "cedulas": [
+            {
+                "nombre": "ILEGIBLE",
+                "cedula": "ILEGIBLE",
+                "fecha_nacimiento": "ILEGIBLE",
+                "lugar_nacimiento": "ILEGIBLE",
+                "fecha_expedicion": "ILEGIBLE",
+                "lugar_expedicion": "ILEGIBLE",
+                "estado_civil": "ILEGIBLE",
+            }
+        ]
     }
 
 
@@ -71,18 +85,21 @@ def _strip_fences(s: str) -> str:
     return s
 
 
-def parse_json_strict_or_none(text: str) -> Optional[Dict[str, Any]]:
+def parse_json_strict_or_none(text: str, *, allow_array: bool = False):
+    """Returns parsed JSON (dict or list) or None.
+    allow_array=True enables detecting JSON arrays as start position (only for cedula kind).
+    """
     s = _strip_fences(text)
     if not s:
         return None
-    if not s.startswith("{"):
-        i = s.find("{")
-        if i == -1:
-            return None
-        s = s[i:]
+    obj_pos = s.find("{")
+    arr_pos = s.find("[") if allow_array else -1
+    candidates = [p for p in [obj_pos, arr_pos] if p != -1]
+    if not candidates:
+        return None
+    start = min(candidates)
     try:
-        obj = json.loads(s)
-        return obj if isinstance(obj, dict) else None
+        return json.loads(s[start:])
     except Exception:
         return None
 
@@ -99,7 +116,7 @@ def parse_json_with_repair(
     1) intenta parse estricto
     2) si falla, manda a OpenAI para 'repair'
     """
-    parsed = parse_json_strict_or_none(raw_text)
+    parsed = parse_json_strict_or_none(raw_text, allow_array=(kind == "cedula"))
     if parsed is not None:
         return parsed
 
@@ -121,5 +138,7 @@ def parse_json_with_repair(
         max_tokens=max_tokens,
     )
 
-    parsed2 = parse_json_strict_or_none(repaired)
-    return parsed2 or {}
+    parsed2 = parse_json_strict_or_none(repaired, allow_array=(kind == "cedula"))
+    if parsed2 is None:
+        return {}
+    return parsed2

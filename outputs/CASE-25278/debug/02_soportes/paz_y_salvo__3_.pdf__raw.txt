@@ -1,30 +1,45 @@
 ```json
 {
   "datos_inmueble": {
-      "matricula": "NO_DETECTADO",
-      "predial_nacional": "00 03 00 00 0020 0001 0 00 00 0000",
-      "direccion": "VEREDA LAS ARRUGAS, MUNICIPIO DE SAN VICENTE DE CHUCURÍ",
-      "cabida_area": "149 hectáreas 0 metros cuadrados",
-      "linderos": "NO_DETECTADO",
-      "tradicion": "NO_DETECTADO",
-      "afectacion_vivienda": "NO_DETECTADO",
-      "patrimonio_familia": "NO_DETECTADO"
+    "matricula": null,
+    "predial_nacional": "00 03 00 00 0020 0001 0 00 00 0000",
+    "codigo_catastral_anterior": "00 03 0020 0001 000",
+    "direccion": "VEREDA LAS ARRUGAS, VILLA LUZ, MUNICIPIO DE SAN VICENTE DE CHUCURÍ, SANTANDER",
+    "cabida_area": "149 hectáreas 0 metros cuadrados",
+    "linderos": null,
+    "tradicion": null,
+    "afectacion_vivienda": "NO_DETECTADO",
+    "patrimonio_familia": "NO_DETECTADO"
   },
   "documento_ep_info": {
-      "numero_ep": null,
-      "fecha": null,
-      "notaria": null
+    "numero_ep": null,
+    "fecha": null,
+    "notaria": null,
+    "valor": null,
+    "vendedor": null
   },
   "historia_y_antecedentes": {},
   "personas_detalle": [
     {
       "nombre": "SANDRA MILENA GARNICA CARDENAS",
-      "rol": "PROPIETARIO"
+      "identificacion": "CC 63501152",
+      "rol_en_hoja": "Propietario",
+      "datos": {
+        "email": null,
+        "telefono": null,
+        "domicilio": null,
+        "estado_civil": null,
+        "ocupacion": null
+      }
     }
   ],
   "hallazgos_variables": {
-      "nombre_nuevo_predio": null,
-      "fecha_escritura_referenciada": "10/12/2025"
+    "nombre_nuevo_predio": null,
+    "fecha_escritura_referenciada": "10 de diciembre de 2025",
+    "plazo_retroventa": null,
+    "paz_salvo_predial": "Válido hasta 31/12/2025",
+    "paz_salvo_valorizacion": "NO COBRA IMPUESTO DE VALORIZACION",
+    "paz_salvo_area_metro": null
   }
 }
 ```

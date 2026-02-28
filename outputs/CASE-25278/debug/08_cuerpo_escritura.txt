@@ -8,162 +8,250 @@ FECHA: [[PENDIENTE: FECHA_OTORGAMIENTO]]
 NATURALEZA JURIDICA DEL ACTO:
 
 ACTO 1: CANCELACION PACTO DE RETROVENTA
-OTORGANTE(S): GARNICA CARDENAS SANDRA MILENA - CC 63501152, INGENIERIA DE SERVICIO Y SOLUCIONES - NI 829000872 (RL: GOMEZ VESGA REIMUNDO - CC 13893486)
+OTORGANTE(S): SANDRA MILENA GARNICA CARDENAS - CC 63.501.152, INGENIERIA DE SERVICIO Y SOLUCIONES - NI 829000872 (RL: REIMUNDO GOMEZ VESGA - CC 13.893.486)
 
 ACTO 2: COMPRAVENTA DE BIENES INMUEBLES
-OTORGANTE(S): GARNICA CARDENAS SANDRA MILENA - CC 63501152, INGENIERIA DE SERVICIO Y SOLUCIONES - NI 829000872 (RL: GOMEZ VESGA REIMUNDO - CC 13893486)
+OTORGANTE(S): SANDRA MILENA GARNICA CARDENAS - CC 63.501.152, INGENIERIA DE SERVICIO Y SOLUCIONES - NI 829000872 (RL: REIMUNDO GOMEZ VESGA - CC 13.893.486)
 COMPRADOR(A): INVERSIONES RICAHER SAS - NI 901244425
-REPRESENTANTE LEGAL: RUEDA PINILLA RICARDO - CC 91207193
+REPRESENTANTE LEGAL: RICARDO RUEDA PINILLA - CC 91.207.193
 VALOR: $ 605.000.000
 
 ACTO 3: CAMBIO DE NOMBRE DE PREDIO RURAL
-OTORGANTE(S): INVERSIONES RICAHER SAS - NI 901244425 (RL: RUEDA PINILLA RICARDO - CC 91207193)
+OTORGANTE(S): INVERSIONES RICAHER SAS - NI 901244425 (RL: RICARDO RUEDA PINILLA - CC 91.207.193)
 
 ACTO 4: HIPOTECA ABIERTA SIN LIMITE DE CUANTIA
 VALOR: $ 10.000.000
-DEUDOR: INVERSIONES RICAHER SAS - NI 901244425
-ACREEDOR: INGENIERIA DE SERVICIO Y SOLUCIONES - NI 829000872
+DEUDOR: INVERSIONES RICAHER SAS - NI 901244425 (RL: RICARDO RUEDA PINILLA - CC 91.207.193)
+ACREEDOR: INGENIERIA DE SERVICIO Y SOLUCIONES - NI 829000872 (RL: REIMUNDO GOMEZ VESGA - CC 13.893.486)
 
 INMUEBLE: VEREDA TIERRA BUENA, CORREGIMIENTO DE YARIMA, MUNICIPIO DE SAN VICENTE DE CHUCURÍ, SANTANDER
 MATRICULA INMOBILIARIA: 320-3197
 
+--------------------------------------------------------------------------------------------------------------
+En la ciudad de BUCARAMANGA, Departamento de Santander, República de Colombia, a los [[PENDIENTE: DIA_LETRAS]] ([[PENDIENTE: DIA_NUMERO]]) días del mes de [[PENDIENTE: MES_LETRAS]] del año [[PENDIENTE: ANO_LETRAS]], Ante mí,
+--------------------------------------------------------------------------------------------------------------
+
+
+PRIMER ACTO: CANCELACION PACTO DE RETROVENTA.
 ==============================================================================
 ACTO: CANCELACIÓN PACTO DE RETROVENTA.
 ==============================================================================
+----------------------
 OTORGANTES: --------------------------------------------------------------------------------------
-SANDRA MILENA GARNICA CARDENAS ------------- C.C. N°. 63501152
-INGENIERIA DE SERVICIO Y SOLUCIONES ----------- NIT. 829000872
-VALOR: $ 0 -----------------------------------------------------------------
-MATRICULA(S) INMOBILIARIA(S) N°: 320-3197 -----------------------
---------------------------------------------------------------------------------------------------------------
-En la ciudad de Bucaramanga, Departamento de Santander, República de Colombia, a los [[PENDIENTE: DIA_LETRAS]] ([[PENDIENTE: DIA_NUMERO]]) días del mes de [[PENDIENTE: MES_LETRAS]] del año [[PENDIENTE: ANO_LETRAS]], Ante mí, MARGARITA LÓPEZ CELY, Notaria Tercera, del Círculo de Bucaramanga.
---------------------------------------------------------------------------------------------------------------
-Comparecieron, SANDRA MILENA GARNICA CARDENAS, mayor de edad, domiciliada en BUCARAMANGA, identificada con la cédula de ciudadanía número 63501152 expedida en [[PENDIENTE: LUGAR_EXP_CEDULA_VENDEDOR]], de estado civil SOLTERO(A), ocupación: [[PENDIENTE: OCUPACION_VENDEDOR]], obrando en nombre y representación propia y GOMEZ VESGA REIMUNDO, mayor de edad, domiciliado en BARRANCABERMEJA, identificado con la cédula de ciudadanía número 13893486 expedida en [[PENDIENTE: LUGAR_EXP_CEDULA_COMPRADOR]], de estado civil [[PENDIENTE: ESTADO_CIVIL_COMPRADOR]], ocupación: [[PENDIENTE: OCUPACION_COMPRADOR]], quien obra en calidad de representante legal de INGENIERIA DE SERVICIO Y SOLUCIONES, sociedad identificada con NIT. 829000872, domiciliada en BARRANCABERMEJA, quien actúa en nombre y representación de la citada sociedad, y manifestaron:
---------------------------------------------------------------------------------------------------------------
-PRIMERO. Que por escritura pública número 526 de fecha 03 de marzo de 2025 otorgada en QUINTA DE BUCARAMANGA, debidamente registrada en la Oficina de Registro de Instrumentos Públicos de
-
-BUCARAMANGA al folio de matrícula inmobiliaria número 320-3197, la señora SANDRA MILENA GARNICA CARDENAS transfirió a título de compraventa con pacto de retroventa a favor de INGENIERIA DE SERVICIO Y SOLUCIONES, identificada con NIT. 829000872, representada legalmente por GOMEZ VESGA REIMUNDO, identificado con cédula de ciudadanía número 13893486 expedida en [[PENDIENTE: LUGAR_EXP_CEDULA_COMPRADOR]], el derecho de dominio, propiedad y posesión que tenía del siguiente inmueble:
-
-Un predio rural denominado “VILLA LUZ”, ubicado en la VEREDA TIERRA BUENA, CORREGIMIENTO DE YARIMA, MUNICIPIO DE SAN VICENTE DE CHUCURÍ, SANTANDER, con una cabida superficiaria de 126 hectáreas 1.290 metros cuadrados, cuyos linderos son: POR EL NORTE: En todo este trayecto con el Río Oponcito; POR EL ORIENTE: Con propiedades de PABLO GARCIA Y VICENTE QUIÑONEZ deslindado cerca de alambre al medio; POR EL OCCIDENTE: Con propiedades de SALOMON PEREZ GARCIA y MANUEL DARIO PEREZ deslindado en toda su extensión la Quebrada Las Arrugas y con BALDOMERO RAMON LANDAZABAL, cerca de alambre al medio; POR EL SUR: Con propiedades de ENRIQUE GALVIS, deslindado cerca de alambre al medio y encierra.
-
-A este inmueble le corresponde el folio de matrícula inmobiliaria número 320-3197 de la Oficina de Instrumentos Públicos de BUCARAMANGA y se distingue con el número predial nacional 00 03 0020 0001 000 - CÓDIGO NPN: 00 03 00 00 0020 0001 0 00 00 0000 y la cédula catastral anterior [[PENDIENTE: CODIGO_CATASTRAL_ANTERIOR]].
---------------------------------------------------------------------------------------------------------------
-SEGUNDO: Que el precio de la compraventa fue por la suma de [[PENDIENTE: VALOR_EN_LETRAS]] MONEDA CORRIENTE ($0) recibidos a satisfacción.
---------------------------------------------------------------------------------------------------------------
-TERCERO. Que en la citada escritura pública número 526 de fecha 03 de marzo de 2025 otorgada en QUINTA DE BUCARAMANGA, debidamente registrada en la Oficina de Registro de Instrumentos Públicos de BUCARAMANGA al folio de matrícula inmobiliaria número 320-3197, los comparecientes acordaron un pacto de retroventa en el que la parte vendedora se reservaba la facultad de recobrar el bien inmueble, facultad que podría ser ejercida dentro de un plazo de [[PENDIENTE: PLAZO_RETROVENTA]], contados desde la fecha de otorgamiento de la escritura, es decir, desde el 03 de marzo de 2025.
---------------------------------------------------------------------------------------------------------------
-CUARTO: Que los exponentes obrando en las calidades mencionadas y como ya la señora aún se encuentran dentro del término del pacto de común declaran cancelado el pacto de retroventa que se estableció en la escritura pública número 526 de fecha 03 de marzo de 2025 otorgada en QUINTA DE BUCARAMANGA, cuyo valor fue la suma de [[PENDIENTE: VALOR_EN_LETRAS]] MONEDA CORRIENTE ($0).
---------------------------------------------------------------------------------------------------------------
-QUINTO: Que en consecuencia de lo anterior mediante este mismo instrumento se ratifica a inmueble anteriormente mencionado. SANDRA MILENA GARNICA CARDENAS como propietaria del inmueble anteriormente mencionado.
-
-==============================================================================
-ACTO: COMPRAVENTA DE BIENES INMUEBLES
-==============================================================================
-
-RESUMEN DE ACTOS: CANCELACION PACTO DE RETROVENTA, COMPRAVENTA DE BIENES INMUEBLES, CAMBIO DE NOMBRE DE PREDIO RURAL, HIPOTECA ABIERTA SIN LIMITE DE CUANTIA
-
-PERSONAS QUE COMPARECEN: SANDRA MILENA GARNICA CARDENAS, INGENIERIA DE SERVICIO Y SOLUCIONES, INVERSIONES RICAHER SAS y [[PENDIENTE: NOMBRE.COMPRADOR.2]]
-EL(LA)(LOS) VENDEDOR(A)(ES): -------------------------------------------------------------
-SANDRA MILENA GARNICA CARDENAS --------------------------- C.C. N°. 63501152
-INGENIERIA DE SERVICIO Y SOLUCIONES --------------------------- C.C. N°. NI 829000872
-EL(LA)(LOS) COMPRADOR(A)(ES): ----------------------------------------------------------
-INVERSIONES RICAHER SAS ------------------------ C.C. N°. NI 901244425
-[[PENDIENTE: NOMBRE.COMPRADOR.2]] ------------------------ C.C. N°. [[PENDIENTE: CEDULA.COMPRADOR.2]]
-VALOR VENTA: $ 605.000.000. -----------------------------------------------------
-INMUEBLE(S):
-VEREDA TIERRA BUENA, CORREGIMIENTO DE YARIMA, MUNICIPIO DE SAN VICENTE DE CHUCURÍ, SANTANDER
-MATRICULA(S) INMOBILIARIA(S) N°: 320-3197
-NUMERO PREDIAL NACIONAL: 00 03 0020 0001 000 - CÓDIGO NPN: 00 03 00 00 0020 0001 0 00 00 0000
-CÓDIGO CATASTRAL ANTERIOR: [[PENDIENTE: CODIGO_CATASTRAL_ANTERIOR]]
-AFECTACIÓN A VIVIENDA FAMILIAR: NO. ------------------------------------------------
-PATRIMONIO DE FAMILIA: NO. ---------------------------------------------------------------
---------------------------------------------------------------------------------------------------------------
-
-En la ciudad de Bucaramanga, Departamento de Santander, República de Colombia, a los [[DIA_LETRAS]] ([[DIA_NUMERO]]) días del mes de [[MES_LETRAS]] del año [[ANO_LETRAS]], Ante mí, MARGARITA LÓPEZ CELY, Notaria Tercera, del Círculo de Bucaramanga. ------------------------------------------------------------------------------------------
-
-quien(es) se denominará(n) LA PARTE
-Compareció(eron): SANDRA MILENA GARNICA CARDENAS mayor de edad, domiciliada en BUCARAMANGA, identificada con la cédula de ciudadanía número 63501152 expedida en [[LUGAR_EXP_CEDULA_VENDEDOR_1]], de estado civil SOLTERO(A), obrando en nombre y representación propia y
-INGENIERIA DE SERVICIO Y SOLUCIONES, sociedad identificada con NIT 829000872, representada legalmente por GOMEZ VESGA REIMUNDO, mayor de edad, domiciliado en BARRANCABERMEJA, identificado con la cédula de ciudadanía número CC 13893486 expedida en [[LUGAR_EXP_CEDULA_VENDEDOR_2]], de estado civil [[ESTADO_CIVIL_VENDEDOR_2]], obrando en nombre y representación de la sociedad, VENDEDORA y dijeron: -------------------------------------------------------------------------
-PRIMERO: Que transfiere(n) a título de venta a favor de
-INVERSIONES RICAHER SAS, sociedad identificada con NIT 901244425, representada legalmente por RUEDA PINILLA RICARDO, mayor de edad, domiciliado en CALLE 37 N 15 25, identificado con la cédula de ciudadanía número CC 91207193 expedida en [[LUGAR_EXP_CEDULA_COMPRADOR_1]], de estado civil CASADO(A), obrando en nombre y representación de la sociedad y [[PENDIENTE: NOMBRE.COMPRADOR.2]], mayor de edad, domiciliado(a) en [[PENDIENTE: CIUDAD_DOMICILIO_COMPRADOR_2]],, identificado con la cédula de ciudadanía número [[PENDIENTE: CEDULA.COMPRADOR.2]] expedida en [[PENDIENTE: LUGAR_EXP_CEDULA_COMPRADOR_2]], de estado civil [[PENDIENTE: ESTADO_CIVIL_COMPRADOR_2]], obrando en nombre y representación propia, quien(es) se denomina(rán) LA PARTE COMPRADORA, el derecho de dominio, propiedad y posesión que tiene(n) sobre el(los) siguiente(s) inmueble(s): --------------------------------------------------------------------------------------------
-LA PARTE VENDEDORA transfiere el lote denominado “VILLA LUZ”, ubicado en la VEREDA TIERRA BUENA, CORREGIMIENTO DE YARIMA, MUNICIPIO DE SAN VICENTE DE CHUCURÍ, SANTANDER, con una cabida superficiaria de 126 Hectáreas 1.290 metros cuadrados, cuyos linderos son: POR EL NORTE: En todo este trayecto con el Río Oponcito; POR EL ORIENTE: Con propiedades de PABLO GARCIA Y VICENTEQUIÑONEZ deslindado cerca de alambre al medio; POR EL OCCIDENTE: Con propiedades de SALOMON PEREZ GARCIA y MANUEL DARIO PEREZ deslindado en toda su extensión la Quebrada Las Arrugas y con BALDOMERO RAMON LANDAZABAL, cerca de alambre al medio; POR EL SUR: Con propiedades de ENRIQUE GALVIS, deslindado cerca de alambre al medio y encierra.
-A este inmueble le corresponde el folio de matrícula inmobiliaria número 320-3197, y se distingue con el número predial nacional 00 03 0020 0001 000 - CÓDIGO NPN: 00 03 00 00 0020 0001 0 00 00 0000 y la cédula catastral anterior [[PENDIENTE: CODIGO_CATASTRAL_ANTERIOR]].
-
-PARÁGRAFO PRIMERO: No obstante, la mención de su cabida y linderos la venta se hace como cuerpo cierto. ---------------------------------------------------------------
-
---------------------------------------------------------------------------------------------------------------
---------------------------------------------------------------------------------------------------------------
-SEGUNDO - TITULO DE ADQUISICIÓN: Que el(los) inmueble(s) antes mencionado(s) y que es(son) objeto de la presente compraventa fue adquirido por LA PARTE VENDEDORA, por compraventa efectuada a REIMUNDO GOMEZ VEGA, mediante escritura pública número 592 de fecha 26 de abril de 2016, otorgada en la Notaría Primera del Círculo de Barrancabermeja, y debidamente registrada en la Oficina de Instrumentos Públicos de BUCARAMANGA al folio de matrícula inmobiliaria número 320-3197.
---------------------------------------------------------------------------------------------------------------
---------------------------------------------------------------------------------------------------------------
-TERCERO- LIBERTAD: Que el inmueble que por medio de esta escritura se transfiere se encuentra libre de embargo, pleitos pendientes, condiciones resolutorias del dominio, anticresis, censos, arrendamientos por escritura pública, de hipotecas y de cualquier otro gravamen o limitación del dominio, etc, pero en todo caso se obliga al saneamiento en los casos previstos por la Ley. El inmueble cuenta con una servidumbre de Energía Eléctrica y Telecomunicaciones constituida mediante escritura pública número 376 de fecha 16 de julio de 2018, Notaría Única del Círculo de San Vicente de Chucurí (Sder).
---------------------------------------------------------------------------------------------------------------
-
---------------------------------------------------------------------------------------------------------------
-CUARTO- PRECIO: Que el precio de esta venta es por la suma de SEISCIENTOS CINCO MILLONES DE PESOS ($605.000.000) PESOS MONEDA CORRIENTE, suma que LA PARTE VENDEDORA declara haber recibido de manos de LA PARTE COMPRADORA a su entera satisfacción. ---------------------------------------------------------------------------
-PARÁGRAFO PRIMERO: De conformidad con lo establecido en el Artículo 61 de la Ley 2010 del 27 de diciembre de 2019, los otorgantes declaran bajo gravedad de juramento que el precio de la venta contenido en la presente escritura es real y no ha sido objeto de pactos privados en los que señale un precio diferente, ni existen sumas que se hayan convenido o facturado por fuera del valor aquí estipulado. ---------------------------------------------------------------------------------------
---------------------------------------------------------------------------------------------------------------
---------------------------------------------------------------------------------------------------------------
-QUINTO: Que desde esta fecha LA PARTE VENDEDORA pone a LA PARTE COMPRADORA en posesión material del inmueble vendido con todas sus anexidades y con las servidumbres activas y pasivas que tenga legalmente constituidas y que en los casos previstos por la ley se obliga al saneamiento de esta venta y a responder de cualquier gravamen, acción real o vicios redhibitorios, que resulte contra el derecho de dominio que enajena. ---------------------------------
---------------------------------------------------------------------------------------------------------------
---------------------------------------------------------------------------------------------------------------
-SEXTO: CLÁUSULA REDAM (Registro de Deudores Alimentarios Morosos):
-[[PENDIENTE: NOTA_REDAM]]
-
---------------------------------------------------------------------------------------------------------------
---------------------------------------------------------------------------------------------------------------
-PRESENTE(S), LA PARTE COMPRADORA: INVERSIONES RICAHER SAS Y [[PENDIENTE: NOMBRE.COMPRADOR.2]], de las anotaciones personales antes dichas, expuso(ieron): Que acepta(n) la presente escritura con el contrato de venta en ella contenido a su favor; que ha(n) pagado el precio de lo que compra(n) en la forma pactada en esta escritura y que tiene(n) recibido el inmueble comprado a su entera satisfacción ----------------------------------------------------------------------------------------------
---------------------------------------------------------------------------------------------------------------
---------------------------------------------------------------------------------------------------------------
-CONSTANCIA NOTARIAL DE AFECTACIÓN A VIVIENDA FAMILIAR: LA SUSCRITA NOTARIA DEJA EXPRESA CONSTANCIA QUE EN ESTE ACTO POR TRATARSE DE UN LOTE SIN VIVIENDA, NO ES PROCEDENTE LA AFECTACIÓN A VIVIENDA FAMILIAR, DE CONFORMIDAD CON LO ESTABLECIDO EN LA LEY 258 DE 1.996, MODIFICADA POR LA LEY 854 DEL 25 DE NOVIEMBRE DE 2.003.
-
-==============================================================================
-ACTO: CAMBIO DE NOMBRE DE PREDIO RURAL
-==============================================================================
-
-OTORGANTES: --------------------------------------------------------------------------------------
-INVERSIONES RICAHER SAS ------------------------ NIT. 901244425
+SANDRA MILENA GARNICA CARDENAS ------------- C.C. N°. 63.501.152
+INGENIERIA DE SERVICIO Y SOLUCIONES ----------- C.C. N°. 829.000.872
 VALOR: $ 0 -----------------------------------------------------------------
 MATRICULA(S) INMOBILIARIA(S) N°: 320-3197 -----------------------
 --------------------------------------------------------------------------------------------------------------
 En la ciudad de Bucaramanga, Departamento de Santander, República de
-Colombia, a los [[PENDIENTE: DIA_LETRAS]] ([[PENDIENTE: DIA_NUMERO]]) días del mes de [[PENDIENTE: MES_LETRAS]] del año [[PENDIENTE: ANO_LETRAS]], Ante mí, MARGARITA LÓPEZ CELY,
+Colombia, a los [[DIA_LETRAS]] ([[DIA_NUMERO]]) días del mes de [[MES_LETRAS]] del año [[ANO_LETRAS]], Ante mí, MARGARITA LÓPEZ CELY,
 Notaria Tercera, del Círculo de Bucaramanga. ------------------------------------------------
 --------------------------------------------------------------------------------------------------------------
-Comparecieron, INVERSIONES RICAHER SAS, sociedad legalmente constituida, identificada con NIT. 901244425, con domicilio en Bucaramanga, representada legalmente por el señor Ricardo Rueda Pinilla, mayor de edad, domiciliado en Bucaramanga, identificado con la cédula de ciudadanía número 91.207.193, de estado civil casado, ocupación: [[PENDIENTE: OCUPACION_SOLICITANTE_1]], obrando en nombre y representación de la sociedad, y manifestaron:
+Comparecieron, SANDRA MILENA GARNICA CARDENAS, mayor de edad,
+domiciliada en Cra 16 #89B-19, identificada con la cédula de ciudadanía
+número 63.501.152 expedida en BUCARAMANGA, de estado civil soltera sin unión marital de hecho, ocupación: Contadora, obrando en nombre y
+representación propia y INGENIERIA DE SERVICIO Y SOLUCIONES, NIT 829.000.872, representada
+por su Representante Legal REIMUNDO GOMEZ VESGA, mayor de edad, identificado con CC 13.893.486 expedida en BARRANCABERMEJA, domiciliado en TRV 29 N. 32-53 BRR FLORESTA BAJA, obrando en calidad de Representante Legal, y manifestaron:
 --------------------------------------------------------------------------------------------------------------
-PRIMERO. Que son propietarios del derecho de dominio, propiedad y posesión
+PRIMERO. Que por escritura pública número 526
+de fecha 03 de marzo de 2025 otorgada en Notaría Quinta del Círculo de Bucaramanga,
+debidamente registrada en la Oficina de Registro de Instrumentos Públicos de
+
+BUCARAMANGA al folio de matrícula inmobiliaria número 320-3197, la señora SANDRA MILENA GARNICA CARDENAS transfirió a título de compraventa
+con pacto de retroventa a favor de INGENIERIA DE SERVICIO Y SOLUCIONES,
+identificada con NIT 829.000.872
+expedida en BARRANCABERMEJA, el derecho de dominio, propiedad y posesión que
+tenía del siguiente inmueble:
+Inmueble rural ubicado en la VEREDA TIERRA BUENA, CORREGIMIENTO DE YARIMA, MUNICIPIO DE SAN VICENTE DE CHUCURÍ, SANTANDER, distinguido con el nombre “HACIENDA LEJANIAS”, con una cabida superficiaria de 126 Hectáreas 1.290 metros cuadrados, cuyos linderos son: POR EL NORTE: En todo este trayecto con el Río Oponcito; POR EL ORIENTE: Con propiedades de PABLO GARCIA Y VICENTEQUIÑONEZ deslindado cerca de alambre al medio; POR EL OCCIDENTE: Con propiedades de SALOMON PEREZ GARCIA y MANUEL DARIO PEREZ deslindado en toda su extensión la Quebrada Las Arrugas y con BALDOMERO RAMON LANDAZABAL, cerca de alambre al medio; POR EL SUR: Con propiedades de ENRIQUE GALVIS, deslindado cerca de alambre al medio y encierra.
+A este inmueble le corresponde el folio de matrícula inmobiliaria número
+320-3197 de la Oficina de Instrumentos Públicos de BUCARAMANGA y se
+distingue con el número predial nacional 00 03 00 00 0020 0001 0 00 00 0000 y la
+cédula catastral anterior 00 03 0020 0001 000
+--------------------------------------------------------------------------------------------------------------
+SEGUNDO: Que el precio de la compraventa fue por la suma de
+SEISCIENTOS MILLONES DE PESOS MONEDA CORRIENTE
+($600.000.000) recibidos a satisfacción --------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+TERCERO. Que en la citada escritura pública número 526
+de fecha 03 de marzo de 2025 otorgada en Notaría Quinta del Círculo de Bucaramanga,
+debidamente registrada en la Oficina de Registro de Instrumentos Públicos de
+BUCARAMANGA al folio de matrícula inmobiliaria número 320-3197, los
+comparecientes acordaron un pacto de retroventa en el que la parte vendedora
+se reservaba la facultad de recobrar el bien inmueble, facultad que podría ser
+ejercida dentro de un plazo de UN (1) AÑO, contados desde la
+fecha de otorgamiento de la escritura, es decir, desde el 03 de marzo de 2025.
+--------------------------------------------------------------------------------------------------------------
+CUARTO: Que los exponentes obrando en las calidades mencionadas y como ya
+
+la señora aún se encuentran dentro del término del pacto de común declaran cancelado el
+pacto de retroventa que se estableció en la escritura pública número 526
+de fecha 03 de marzo de 2025 otorgada en Notaría Quinta del Círculo de Bucaramanga, cuyo valor fue la suma de
+SEISCIENTOS MILLONES DE PESOS MONEDA CORRIENTE
+($600.000.000)
+--------------------------------------------------------------------------------------------------------------
+QUINTO: Que en consecuencia de lo anterior mediante este mismo instrumento
+se ratifica a inmueble anteriormente mencionado. SANDRA MILENA GARNICA CARDENAS como propietaria del inmueble anteriormente mencionado.
+
+
+SEGUNDO ACTO: COMPRAVENTA DE BIENES INMUEBLES
+==============================================================================
+
+
+PERSONAS QUE COMPARECEN: SANDRA MILENA GARNICA CARDENAS,
+INGENIERIA DE SERVICIO Y SOLUCIONES, INVERSIONES RICAHER SAS y
+RICARDO RUEDA PINILLA
+EL(LA)(LOS) VENDEDOR(A)(ES): -------------------------------------------------------------
+SANDRA MILENA GARNICA CARDENAS --------------------------- C.C. N°. 63.501.152
+INGENIERIA DE SERVICIO Y SOLUCIONES --------------------------- C.C. N°. 829.000.872
+EL(LA)(LOS) COMPRADOR(A)(ES): ----------------------------------------------------------
+INVERSIONES RICAHER SAS ------------------------ C.C. N°. 901.244.425
+RICARDO RUEDA PINILLA ------------------------ C.C. N°. 91.207.193
+VALOR VENTA: $ 605.000.000. -----------------------------------------------------
+INMUEBLE(S):
+INCLUIR INMUEBLE CON NOMENCLATURA / UBICACIÓN
+MATRICULA(S) INMOBILIARIA(S) N°: 320-3197
+NUMERO PREDIAL NACIONAL: 00 03 00 00 0020 0001 0 00 00 0000
+CÓDIGO CATASTRAL ANTERIOR: 00 03 0020 0001 000
+AFECTACIÓN A VIVIENDA FAMILIAR: NO. ------------------------------------------------
+PATRIMONIO DE FAMILIA: NO. ---------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+
+En la ciudad de Bucaramanga, Departamento de Santander, República de
+Colombia, a los [[DIA_LETRAS]] ([[DIA_NUMERO]]) días del mes de [[MES_LETRAS]] del año [[ANO_LETRAS]], Ante mí, MARGARITA LÓPEZ CELY, Notaria Tercera, del Círculo de
+Bucaramanga. ------------------------------------------------------------------------------------------
+
+quien(es) se denominará(n) LA PARTE
+Compareció(eron): SANDRA MILENA GARNICA CARDENAS, mayor de edad, domiciliada en
+Cra 16 #89B-19, identificada con la cédula de ciudadanía número
+63.501.152 expedida en BUCARAMANGA, de estado civil soltera sin unión marital de hecho, obrando en nombre y representación propia y
+INGENIERIA DE SERVICIO Y SOLUCIONES, NIT 829.000.872, representada
+por su Representante Legal REIMUNDO GOMEZ VESGA, mayor de edad, identificado con CC 13.893.486 expedida en BARRANCABERMEJA, domiciliado en TRV 29 N. 32-53 BRR FLORESTA BAJA, obrando en calidad de Representante Legal, VENDEDORA y dijeron: -------------------------------------------------------------------------
+PRIMERO: Que transfieren a título de venta a favor de
+INVERSIONES RICAHER SAS, NIT 901.244.425, representada por su Representante Legal RICARDO RUEDA PINILLA, mayor de edad, identificado con CC 91.207.193 expedida en BUCARAMANGA, domiciliado en VALLELISA, obrando en calidad de Representante Legal, y
+RICARDO RUEDA PINILLA, mayor de edad,
+domiciliado en VALLELISA, VEREDA RIO FRIO – FLORIDABLANCA - SANTANDER, identificado con la cédula de ciudadanía
+número 91.207.193 expedida en BUCARAMANGA, de estado civil Casado(a) con Sociedad Conyugal Vigente, obrando en nombre y representación propia, quienes se
+denominan LA PARTE COMPRADORA, el derecho de dominio, propiedad y
+posesión que tienen sobre el siguiente
+inmueble: --------------------------------------------------------------------------------------------
+LA PARTE VENDEDORA transfiere el siguiente inmueble: ubicado en la VEREDA TIERRA BUENA, CORREGIMIENTO DE YARIMA, MUNICIPIO DE SAN VICENTE DE CHUCURÍ, SANTANDER, con una cabida superficiaria de 126 Hectáreas 1.290 metros cuadrados, cuyos linderos son: POR EL NORTE: En todo este trayecto con el Río Oponcito; POR EL ORIENTE: Con propiedades de PABLO GARCIA Y VICENTEQUIÑONEZ deslindado cerca de alambre al medio; POR EL OCCIDENTE: Con propiedades de SALOMON PEREZ GARCIA y MANUEL DARIO PEREZ deslindado en toda su extensión la Quebrada Las Arrugas y con BALDOMERO RAMON LANDAZABAL, cerca de alambre al medio; POR EL SUR: Con propiedades de ENRIQUE GALVIS, deslindado cerca de alambre al medio y encierra.
+A este inmueble le corresponde el folio de matrícula inmobiliaria número
+320-3197, y se distingue con el número predial nacional
+00 03 00 00 0020 0001 0 00 00 0000 y la cédula catastral anterior
+00 03 0020 0001 000
+
+PARÁGRAFO PRIMERO: No obstante, la mención de su cabida y linderos la
+venta se hace como cuerpo cierto. ---------------------------------------------------------------
+
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+SEGUNDO - TITULO DE ADQUISICIÓN: Que el inmueble antes
+mencionado y que es objeto de la presente compraventa fue adquirido por
+LA PARTE VENDEDORA, por COMPRAVENTA efectuada a INGENIERIA DE SERVICIOS Y SOLUCIONES ELECTROMECANICAS S.A.S. INSELEM S.A.S., mediante escritura pública número 526 de
+fecha 03 de marzo de 2025, otorgada en la
+Notaría Quinta del Círculo de Bucaramanga, y debidamente registrada en la
+Oficina de Instrumentos Públicos de BUCARAMANGA al folio de matrícula
+inmobiliaria número 320-3197
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+TERCERO- LIBERTAD: Que el inmueble que por medio de esta escritura se
+transfiere se encuentra libre de embargo, pleitos pendientes, condiciones
+resolutorias del dominio, anticresis, censos, arrendamientos por escritura pública,
+de hipotecas y de cualquier otro gravamen o limitación del dominio, etc, pero en
+todo caso se obliga al saneamiento en los casos previstos por la Ley. El inmueble soporta SERVIDUMBRE DE ENERGÍA ELÉCTRICA Y TELECOMUNICACIONES constituida mediante escritura pública número 376 de fecha 16 de julio de 2018 otorgada en la Notaría Única del Círculo de San Vicente de Chucurí (Sder); debidamente registrada.
+--------------------------------------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------------------------------------
+CUARTO- PRECIO: Que el precio de esta venta es por la suma de
+SEISCIENTOS CINCO MILLONES DE PESOS ($605.000.000) PESOS MONEDA CORRIENTE
+MONEDA CORRIENTE, suma que LA PARTE
+VENDEDORA declara haber recibido de manos de LA PARTE COMPRADORA
+a su entera satisfacción. ---------------------------------------------------------------------------
+PARÁGRAFO PRIMERO: De conformidad con lo establecido en el Artículo 61 de
+la Ley 2010 del 27 de diciembre de 2019, los otorgantes declaran bajo gravedad
+de juramento que el precio de la venta contenido en la presente escritura es real y
+no ha sido objeto de pactos privados en los que señale un precio diferente, ni
+existen sumas que se hayan convenido o facturado por fuera del valor aquí
+estipulado. ---------------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+QUINTO: Que desde esta fecha LA PARTE VENDEDORA pone a LA PARTE
+COMPRADORA en posesión material del inmueble vendido con todas sus
+anexidades y con las servidumbres activas y pasivas que tenga legalmente
+constituidas y que en los casos previstos por la ley se obliga al saneamiento de
+esta venta y a responder de cualquier gravamen, acción real o vicios redhibitorios,
+que resulte contra el derecho de dominio que enajena. ---------------------------------
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+SEXTO: CLÁUSULA REDAM (Registro de Deudores Alimentarios Morosos):
+Incluir nota respectiva
+
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+PRESENTES, LA PARTE COMPRADORA: INVERSIONES RICAHER SAS Y
+RICARDO RUEDA PINILLA, de las anotaciones personales antes dichas,
+expusieron: Que aceptan la presente escritura con el contrato de venta en ella
+contenido a su favor; que han pagado el precio de lo que compran en la forma
+pactada en esta escritura y que tienen recibido el inmueble comprado a su entera
+satisfacción ----------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+CONSTANCIA NOTARIAL DE AFECTACIÓN A VIVIENDA FAMILIAR: LA
+SUSCRITA NOTARIA DEJA EXPRESA CONSTANCIA QUE EN ESTE ACTO POR
+TRATARSE DE UN LOTE SIN VIVIENDA, NO ES PROCEDENTE LA
+AFECTACIÓN A VIVIENDA FAMILIAR, DE CONFORMIDAD CON LO
+ESTABLECIDO EN LA LEY 258 DE 1.996, MODIFICADA POR LA LEY 854
+DEL 25 DE NOVIEMBRE DE 2.003.
+
+
+TERCER ACTO: CAMBIO DE NOMBRE DE PREDIO RURAL
+==============================================================================
+
+OTORGANTES: --------------------------------------------------------------------------------------
+INVERSIONES RICAHER SAS ------------------------ C.C. N°. 901.244.425
+RICARDO RUEDA PINILLA ----------------------- C.C. N°. 91.207.193
+VALOR: $ 0 -----------------------------------------------------------------
+MATRICULA(S) INMOBILIARIA(S) N°: 320-3197 -----------------------
+--------------------------------------------------------------------------------------------------------------
+En la ciudad de Bucaramanga, Departamento de Santander, República de
+Colombia, a los [[PENDIENTE: FECHA_OTORGAMIENTO]], Ante mí, MARGARITA LÓPEZ CELY,
+Notaria Tercera, del Círculo de Bucaramanga. ------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+Comparecieron, INVERSIONES RICAHER SAS, NIT 901.244.425, representada por su Representante Legal RICARDO RUEDA PINILLA, mayor de edad, identificado con cédula de ciudadanía número 91.207.193 expedida en BUCARAMANGA, domiciliado en VALLELISA, obrando en calidad de Representante Legal, de estado civil Casado(a) con Sociedad Conyugal Vigente, ocupación: MEDICO VETERINARIO, obrando en nombre y representación propia y manifestó:
+--------------------------------------------------------------------------------------------------------------
+PRIMERO. Que es propietario del derecho de dominio, propiedad y posesión
 material sobre el siguiente bien inmueble:
 
-Un predio rural denominado actualmente “VILLA LUZ”, ubicado en la VEREDA TIERRA BUENA, CORREGIMIENTO DE YARIMA, MUNICIPIO DE SAN VICENTE DE CHUCURÍ, SANTANDER, con una cabida superficiaria de 126 hectáreas 1.290 metros cuadrados, cuyos linderos son: POR EL NORTE: En todo este trayecto con el Río Oponcito; POR EL ORIENTE: Con propiedades de PABLO GARCIA Y VICENTE QUIÑONEZ deslindado cerca de alambre al medio; POR EL OCCIDENTE: Con propiedades de SALOMON PEREZ GARCIA y MANUEL DARIO PEREZ deslindado en toda su extensión la Quebrada Las Arrugas y con BALDOMERO RAMON LANDAZABAL, cerca de alambre al medio; POR EL SUR: Con propiedades de ENRIQUE GALVIS, deslindado cerca de alambre al medio y encierra.
+Un inmueble rural ubicado en la VEREDA TIERRA BUENA, CORREGIMIENTO DE YARIMA, MUNICIPIO DE SAN VICENTE DE CHUCURÍ, SANTANDER, identificado con el folio de matrícula inmobiliaria número 320-3197 de la Oficina de Registro de Instrumentos Públicos de Bucaramanga, con número predial nacional 00 03 00 00 0020 0001 0 00 00 0000 y cédula catastral anterior 00 03 0020 0001 000, con un área de 126 Hectáreas 1.290 metros cuadrados, y con los siguientes linderos: POR EL NORTE: En todo este trayecto con el Río Oponcito; POR EL ORIENTE: Con propiedades de PABLO GARCIA Y VICENTEQUIÑONEZ deslindado cerca de alambre al medio; POR EL OCCIDENTE: Con propiedades de SALOMON PEREZ GARCIA y MANUEL DARIO PEREZ deslindado en toda su extensión la Quebrada Las Arrugas y con BALDOMERO RAMON LANDAZABAL, cerca de alambre al medio; POR EL SUR: Con propiedades de ENRIQUE GALVIS, deslindado cerca de alambre al medio y encierra.
 
-A este inmueble le corresponde el folio de matrícula inmobiliaria número 320-3197 de la Oficina de Instrumentos Públicos de Bucaramanga y se distingue con el número predial nacional 00 03 0020 0001 000 - CÓDIGO NPN: 00 03 00 00 0020 0001 0 00 00 0000 y la cédula catastral anterior [[PENDIENTE: CEDULA_CATASTRAL]].
+A este inmueble le corresponde el folio de matrícula inmobiliaria número 320-3197 de la Oficina de Instrumentos Públicos de Bucaramanga y se distingue con el numero predial nacional 00 03 00 00 0020 0001 0 00 00 0000 y la cedula catastral anterior 00 03 0020 0001 000
 
 --------------------------------------------------------------------------------------------------------------
-SEGUNDO: Que el inmueble antes mencionado fue adquirido por compraventa
-efectuada a Garnica Cardenas Sandra Milena mediante
-escritura pública número 592
-de fecha veintiséis (26) de abril de dos mil dieciséis (2016) otorgada
-en la Notaría Primera del Círculo de Barrancabermeja, debidamente registrada en la
+SEGUNDO: Que el inmueble antes mencionado fue adquirido por COMPRAVENTA
+efectuada a INGENIERIA DE SERVICIOS Y SOLUCIONES ELECTROMECANICAS S.A.S. INSELEM S.A.S. mediante
+escritura pública número 526
+de fecha 03 de marzo de 2025 otorgada
+en Notaría Quinta del Círculo de Bucaramanga, debidamente registrada en la
 Oficina de Registro de Instrumentos Públicos de Bucaramanga al folio de matrícula
-inmobiliaria número 320-3197.
+inmobiliaria número 320-3197
 --------------------------------------------------------------------------------------------------------------
-TERCERO: Por el presente instrumento, los exponentes
-INVERSIONES RICAHER SAS, obrando de común
+TERCERO: Por el presente instrumento, el exponente
+INVERSIONES RICAHER SAS y RICARDO RUEDA PINILLA, obrando de común
 acuerdo, manifiestan que es su voluntad realizar cambio de nombre del inmueble
 de su propiedad. ---------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------------
 CUARTO: En consecuencia, a lo anterior, los comparecientes proceden a realizar
 CAMBIO DE NOMBRE del inmueble anteriormente descrito, el cual de ahora en
-adelante se denominará: VILLA LUZ -----------------------------------------------------------
+adelante se denominará: HACIENDA LEJANIAS -----------------------------------------------------------
 
-==============================================================================
-ACTO: CONSTITUCIÓN DE HIPOTECA ABIERTA SIN LÍMITE DE CUANTÍA.
+
+CUARTO ACTO: HIPOTECA ABIERTA SIN LIMITE DE CUANTIA.
 ==============================================================================
 
-PERSONAS QUE COMPARECEN: INVERSIONES RICAHER SAS Y INGENIERIA DE SERVICIO Y SOLUCIONES -------------
-DEUDOR: INVERSIONES RICAHER SAS, identificada con NIT 901244425, representada legalmente por RUEDA PINILLA RICARDO, mayor de edad, identificado con cédula de ciudadanía número 91.207.193, de estado civil casado(a), domiciliado en CALLE 37 N 15 25, Bucaramanga.
-ACREEDORA: INGENIERIA DE SERVICIO Y SOLUCIONES, identificada con NIT 829000872, representada legalmente por GOMEZ VESGA REIMUNDO, mayor de edad, identificado con cédula de ciudadanía número 13.893.486, domiciliado en Barrancabermeja.
+PERSONAS QUE COMPARECEN: INVERSIONES RICAHER SAS, NIT 901.244.425, representada por su Representante Legal RICARDO RUEDA PINILLA, mayor de edad, identificado con CC 91.207.193 expedida en BUCARAMANGA, domiciliado en VALLELISA, obrando en calidad de Representante Legal, y RICARDO RUEDA PINILLA, mayor de edad, identificado con CC 91.207.193 expedida en BUCARAMANGA, domiciliado en VALLELISA, obrando en calidad de deudor, en adelante EL(LA)(LOS) HIPOTECANTE(S); e INGENIERIA DE SERVICIO Y SOLUCIONES, NIT 829.000.872, representada por su Representante Legal REIMUNDO GOMEZ VESGA, mayor de edad, identificado con CC 13.893.486 expedida en BARRANCABERMEJA, domiciliado en TRV 29 N. 32-53 BRR FLORESTA BAJA, obrando en calidad de Representante Legal, en adelante EL(LA)(LOS) ACREEDOR(A)(ES).
+DEUDOR: INVERSIONES RICAHER SAS, NIT 901.244.425, representada por su Representante Legal RICARDO RUEDA PINILLA, mayor de edad, identificado con CC 91.207.193 expedida en BUCARAMANGA, domiciliado en VALLELISA, y RICARDO RUEDA PINILLA, mayor de edad, identificado con CC 91.207.193 expedida en BUCARAMANGA, domiciliado en VALLELISA. ---------------------------------------------------------------
+ACREEDORA: INGENIERIA DE SERVICIO Y SOLUCIONES, NIT 829.000.872, representada por su Representante Legal REIMUNDO GOMEZ VESGA, mayor de edad, identificado con CC 13.893.486 expedida en BARRANCABERMEJA, domiciliado en TRV 29 N. 32-53 BRR FLORESTA BAJA. ---------------------------------------------------------------
 VALOR HIPOTECA: $ 10.000.000 -----------------------------------------------------------
 MATRICULA INMOBILIARIA Nº.: 320-3197 ----------------------------------------------
 CODIGO CATASTRAL ANTERIOR N°: 00 03 0020 0001 000
@@ -171,40 +259,73 @@ NUMERO PREDIAL NACIONAL: 00 03 00 00 0020 0001 0 00 00 0000
 --------------------------------------------------------------------------------------------------------------
 En la ciudad de Bucaramanga, Departamento de Santander, República de Colombia, a los [[PENDIENTE: DIA_LETRAS]] ([[PENDIENTE: DIA_NUMERO]]) días del mes de [[PENDIENTE: MES_LETRAS]] del año [[PENDIENTE: ANO_LETRAS]], ante mí, MARGARITA LOPEZ CELY, Notaria Tercera del Círculo de Bucaramanga.
 ------------------------------------------------------------
-Compareció: INVERSIONES RICAHER SAS, identificada con NIT 901244425, representada legalmente por RUEDA PINILLA RICARDO, mayor de edad, identificado con cédula de ciudadanía número 91.207.193 expedida en [[PENDIENTE: LUGAR_EXP_CEDULA_DEUDOR]], de estado civil casado(a), domiciliado en Bucaramanga, quien se denominará en el presente instrumento EL HIPOTECANTE y manifestó:
+Comparecieron: INVERSIONES RICAHER SAS, NIT 901.244.425, representada por su Representante Legal RICARDO RUEDA PINILLA, mayor de edad, identificado con CC 91.207.193 expedida en BUCARAMANGA, de estado civil Casado(a) con Sociedad Conyugal Vigente, domiciliado en VALLELISA, y RICARDO RUEDA PINILLA, mayor de edad, identificado con CC 91.207.193 expedida en BUCARAMANGA, de estado civil Casado(a) con Sociedad Conyugal Vigente, domiciliado en VALLELISA, quienes se denominarán en el presente instrumento LOS HIPOTECANTES y manifestaron:
 --------------------------------------------------------------------------------------
-PRIMERO: Que por medio de esta escritura constituye HIPOTECA ABIERTA SIN LIMITE DE CUANTÍA a favor de INGENIERIA DE SERVICIO Y SOLUCIONES, identificada con NIT 829000872, representada legalmente por GOMEZ VESGA REIMUNDO, mayor de edad, identificado con cédula de ciudadanía número 13.893.486 expedida en [[PENDIENTE: LUGAR_EXP_CEDULA_ACREEDOR]], de estado civil [[PENDIENTE: ESTADO_CIVIL_ACREEDOR]], domiciliado en Barrancabermeja, quien en este instrumento se denominará EL ACREEDOR, sobre el siguiente inmueble:
+PRIMERO: Que por medio de esta escritura constituye HIPOTECA ABIERTA SIN LIMITE DE CUANTÍA a favor de INGENIERIA DE SERVICIO Y SOLUCIONES, NIT 829.000.872, representada por su Representante Legal REIMUNDO GOMEZ VESGA, mayor de edad, identificado con CC 13.893.486 expedida en BARRANCABERMEJA, de estado civil [[PENDIENTE: ESTADO_CIVIL_ACREEDOR]], domiciliado en TRV 29 N. 32-53 BRR FLORESTA BAJA, quien en este instrumento se denominará EL ACREEDOR, sobre el siguiente inmueble:
+-----------------------
 
-Inmueble ubicado en la VEREDA TIERRA BUENA, CORREGIMIENTO DE YARIMA, MUNICIPIO DE SAN VICENTE DE CHUCURÍ, SANTANDER, identificado con matrícula inmobiliaria número 320-3197 de la Oficina de Registro de Instrumentos Públicos de Bucaramanga, con número predial nacional 00 03 00 00 0020 0001 0 00 00 0000 y código catastral anterior 00 03 0020 0001 000, con una cabida de 126 Hectáreas 1.290 metros cuadrados, y con los siguientes linderos:
+Un inmueble rural ubicado en la VEREDA TIERRA BUENA, CORREGIMIENTO DE YARIMA, MUNICIPIO DE SAN VICENTE DE CHUCURÍ, SANTANDER, identificado con matrícula inmobiliaria número 320-3197 de la Oficina de Registro de Instrumentos Públicos de BUCARAMANGA, con número predial nacional 00 03 00 00 0020 0001 0 00 00 0000 y código catastral anterior 00 03 0020 0001 000, con cabida superficiaria de 126 Hectáreas 1.290 metros cuadrados, y cuyos linderos son los siguientes:
 
 POR EL NORTE: En todo este trayecto con el Río Oponcito;
 POR EL ORIENTE: Con propiedades de PABLO GARCIA Y VICENTE QUIÑONEZ deslindado cerca de alambre al medio;
 POR EL OCCIDENTE: Con propiedades de SALOMON PEREZ GARCIA y MANUEL DARIO PEREZ deslindado en toda su extensión la Quebrada Las Arrugas y con BALDOMERO RAMON LANDAZABAL, cerca de alambre al medio;
 POR EL SUR: Con propiedades de ENRIQUE GALVIS, deslindado cerca de alambre al medio y encierra.
 
-Le corresponde el folio de Matricula inmobiliaria número 320-3197 de la Oficina de Registro de Instrumentos Públicos de Bucaramanga y se distingue con el número predial nacional 00 03 00 00 0020 0001 0 00 00 0000 y el código catastral anterior 00 03 0020 0001 000.
+Le corresponde el folio de Matricula inmobiliaria número 320-3197 de la Oficina de Registro de Instrumentos Públicos de BUCARAMANGA y se distingue con el numero predial nacional 00 03 00 00 0020 0001 0 00 00 0000 y el código catastral anterior 00 03 0020 0001 000.
 
 PARÁGRAFO PRIMERO: No obstante, la mención de áreas, cabida y linderos, la hipoteca recae sobre cuerpo cierto.
---------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------------
 SEGUNDO: Que la hipoteca que se constituye se extiende a todas las construcciones, los aumentos y mejoras que el inmueble reciba, lo mismo que a las pensiones e indemnizaciones de que trata el Artículo 2.466 del Código Civil y a los muebles y accesorios reputados como inmuebles conforme a la Ley.
 --------------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------------
-TERCERO: Que la hipoteca que constituye EL HIPOTECANTE es ABIERTA SIN LIMITE DE CUANTÍA y por tanto garantiza todo monto de capital principal, comprendiendo y extendiéndose la hipoteca además a sus intereses ordinarios y moratorios como los demás gastos que se llegaren a causar con ocasión del cobro judicial, tales como honorarios, costas, seguros, cauciones, etc.
+TERCERO: Que la hipoteca que constituyen LOS HIPOTECANTES es ABIERTA SIN LIMITE DE CUANTÍA y por tanto garantiza todo monto de capital principal, comprendiendo y extendiéndose la hipoteca además a sus intereses ordinarios y moratorios como los demás gastos que se llegaren a causar con ocasión del cobro judicial, tales como honorarios, costas, seguros, cauciones, etc.
 --------------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------------
-CUARTO: ADQUISICION: Que el inmueble sobre el cual constituye la hipoteca, lo adquirió EL HIPOTECANTE, por compraventa efectuada a GARNICA CARDENAS SANDRA MILENA, mediante escritura pública número 592 de fecha 26 de abril de 2016, otorgada en la Notaría Primera del Círculo de Barrancabermeja, y debidamente registrada en la Oficina de Instrumentos Públicos de Bucaramanga bajo el folio de matrícula inmobiliaria número 320-3197.
+CUARTO: ADQUISICION: Que el inmueble sobre el cual constituye(n) la hipoteca, lo adquirieron LOS HIPOTECANTES, por COMPRAVENTA efectuada a INGENIERIA DE SERVICIOS Y SOLUCIONES ELECTROMECANICAS S.A.S. INSELEM S.A.S., mediante escritura pública número 526 de fecha 03 de marzo de 2025, otorgada en la Notaría Quinta del Círculo de Bucaramanga, y debidamente registrada en la Oficina de Instrumentos Públicos de BUCARAMANGA bajo el folio de matrícula inmobiliaria número 320-3197.
 --------------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------------
-QUINTO: Que EL HIPOTECANTE garantiza con esta hipoteca el pago a EL ACREEDOR de toda clase de obligación de cualquier naturaleza jurídica y clase, ya figuren en títulos valores o en otra clase de documentos, ya se trate de deudas actuales o futuras y que la hipoteca no se extingue por el hecho de constituirse nuevas obligaciones, renovarse o ampliarse el plazo de pago de cualquiera de ellas.
+QUINTO: Que LOS HIPOTECANTES garantizan con esta hipoteca el pago a EL ACREEDOR de toda clase de obligación de cualquier naturaleza jurídica y clase, ya figuren en títulos valores o en otra clase de documentos, ya se trate de deudas actuales o futuras y que la hipoteca no se extingue por el hecho de constituirse nuevas obligaciones, renovarse o ampliarse el plazo de pago de cualquiera de ellas.
 --------------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------------
-SEXTO: La garantía que aquí se constituye es abierta y sin límite de cuantía y garantiza a EL ACREEDOR no solamente el crédito hipotecario y sus intereses remuneratorios y moratorios, sino también toda clase de obligaciones ya causadas y/o que se causen a cargo de EL HIPOTECANTE conjunta, separada o individualmente y sin ninguna limitación, respecto a la cuantía de las obligaciones garantizadas, sus intereses, costas, gastos y honorarios de abogado, bien sean directas o indirectas y por cualquier concepto, adquiridas en su propio nombre o con otra u otras firmas. Esta hipoteca garantiza las obligaciones en la forma y condiciones que consten en los documentos correspondientes y no se extingue por el solo hecho de prorrogarse, cambiarse o renovarse las citadas obligaciones, continuando vigente hasta la cancelación total de las mismas.
+SEXTO: La garantía que aquí se constituye es abierta y sin límite de cuantía y garantiza a EL ACREEDOR no solamente el crédito hipotecario y sus intereses remuneratorios y moratorios, sino también toda clase de obligaciones ya causadas y/o que se causen a cargo de LOS HIPOTECANTES conjunta, separada o individualmente y sin ninguna limitación, respecto a la cuantía de las obligaciones garantizadas, sus intereses, costas, gastos y honorarios de abogado, bien sean directas o indirectas y por cualquier concepto, adquiridas en su propio nombre o con otra u otras firmas. Esta hipoteca garantiza las obligaciones en la forma y condiciones que consten en los documentos correspondientes y no se extingue por el solo hecho de prorrogarse, cambiarse o renovarse las citadas obligaciones, continuando vigente hasta la cancelación total de las mismas.
 --------------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------------
-SÉPTIMO: Que por el hecho de constituirse esta hipoteca, EL ACREEDOR no queda obligada a otorgar a EL HIPOTECANTE préstamos ni nuevos créditos, ni a prorrogar los plazos vencidos para el pago.
+SÉPTIMO: Que por el hecho de constituirse esta hipoteca, EL ACREEDOR no queda obligada a otorgar a LOS HIPOTECANTES préstamos ni nuevos créditos, ni a prorrogar los plazos vencidos para el pago.
 --------------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------------
+OCTAVO: Que el inmueble que se hipoteca es de su exclusiva propiedad, que sobre el ejerce(n) actualmente posesión material y se halla libre de todo gravamen, derecho de usufructo, uso y habitación, limitaciones o condiciones, embargos o litigios pendientes,
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+NOVENO: Que reconoce(n) a EL ACREEDOR el derecho de dar por terminado el plazo fijado para el pago de las obligaciones, o de cualquier de éstas, antes de su vencimiento y exigir el pago total, en los siguientes casos:
+A) En el evento de que el(los) deudor(es) se constituya(n) en mora en el pago de intereses correspondientes a dos o más mensualidades;
+B) En el caso de que sobre el(los) inmueble(s) hipotecado(s) se constituya(n) otra(s) hipoteca(s) sin el consentimiento escrito de EL(LOS) ACREEDOR(ES).
+C) En el caso de que el(los) bien(es) gravado(s) con esta hipoteca fuere(n) perseguido(s) en un proceso judicial y fuere(n) embargado(s) o secuestrado(s) para el pago de otras obligaciones distintas a las garantizadas con esta hipoteca
+D) Si el(los) hipotecante(s) quedara(n) en mora, EL(LOS) ACREEDOR(ES) queda(n) facultado(s) para exigir la totalidad del pago de las obligaciones a cargo de el(los) deudor(es), aún las de plazo no vencido.
+E) Si el (los) bien(es) gravado(s) con hipoteca sufriere(n) desmejora o deprecio tal que, así desmejorado(s) o depreciado(s), no preste(n) suficiente garantía para el pago total de las deudas, a juicio de un perito nombrado por EL(LA)(LOS) ACREEDOR(A)(ES).
+F) Si conociendo LOS HIPOTECANTES el hecho de que el(los) bien(es) gravado(s) con hipoteca se encuentra(n) judicialmente perseguido(s) o ha(n) sido embargado(s) y secuestrado(s), no pusiere(n) tal hecho en conocimiento de EL(LA)(LOS) ACREEDOR(A)(ES).
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+DÉCIMO: En el caso de pérdida o destrucción de la primera copia del presente instrumento que preste mérito ejecutivo, LOS HIPOTECANTES y EL ACREEDOR solicitan por este instrumento se compulse una copia sustitutiva, con la constancia de que presta mérito ejecutivo y autoriza(n) al señor Notario para que de ésta copia se entregue a EL ACREEDOR con solo la solicitud escrita que éste(os) le haga(n).
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+DÉCIMO PRIMERO: Que acepta(n) cualquier cesión o traspaso que EL ACREEDOR hiciere de esta garantía hipotecaria y/o de los créditos que llegare a tener a cargo de LOS HIPOTECANTES.
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+DÉCIMO SEGUNDO: Que la presente hipoteca sólo se extinguirá mediante la cancelación expresa y por escrito que haga EL ACREEDOR y que EL HIPOTECANTE tendrá derecho a que se le cancele la hipoteca en cualquier momento en que estén a paz y salvo con EL ACREEDOR por todo concepto.
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+DÉCIMO TERCERO: Que son de cargo exclusivo de LOS HIPOTECANTES todos los gastos a que diere lugar el otorgamiento de esta escritura, su registro, los de la expedición de una copia registrada y anotada para EL ACREEDOR y los de la posterior cancelación del gravamen hipotecario.
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+PARÁGRAFO: EL INMUEBLE ANTES DESCRITO Y DADO EN GARANTIA POR ESTE INSTRUMENTO, EN LA ACTUALIDAD NO SE ENCUENTRA AFECTADO A VIVIENDA FAMILIAR.
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+ACEPTACION: INGENIERIA DE SERVICIO Y SOLUCIONES, NIT 829.000.872, representada por su Representante Legal REIMUNDO GOMEZ VESGA, de anotaciones civiles y personales anteriormente indicadas y manifestó:
+Que acepta la presente escritura y la hipoteca en ella contenida a favor, de acuerdo con lo estipulado en ella.
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+NOTA: Para dar cumplimiento a lo ordenado en el Decreto 1.681 del 16 de septiembre de 1.996, se agrega a éste instrumento la comunicación sobre el monto del crédito otorgado por INGENIERIA DE SERVICIO Y SOLUCIONES por valor de DIEZ MILLONES DE PESOS MONEDA CORRIENTE ($10.000.000), la cual se anexa para su protocolización.
 
 INSERTOS Y COMPROBANTES: Se protocolizan:
 
@@ -212,8 +333,9 @@ Certificado de Tradición y Libertad N° 320-3197.
 Fotocopias de cédulas / documentos de identificación de los otorgantes.
 Copia de cámara de comercio de INGENIERIA DE SERVICIO Y SOLUCIONES.
 Copia de cámara de comercio de INVERSIONES RICAHER SAS.
-Paz y Salvo Predial N° [[PENDIENTE: PAZ_SALVO_PREDIAL]].
-Paz y Salvo de Valorización N° [[PENDIENTE: PAZ_SALVO_VALORIZACION]] (si aplica).
+Copia de cámara de comercio de INGENIERIA DE SERVICIOS Y SOLUCIONES ELECTROMECANICAS S A S INSELEM S A S.
+Paz y Salvo Predial N° Paz y Salvo con el Tesoro Municipal por Concepto de IMPUESTO PREDIAL UNIFICADO HASTA EL 31/12/2025 (Fecha de expedición: 03/03/2025).
+Paz y Salvo de Valorización N° EL MUNICIPIO DE SAN VICENTE DE CHUCURI SANTANDER NO COBRA IMPUESTO DE VALORIZACION. No aparecen vigentes contribuciones por Valorización Departamental. (si aplica).
 Paz y salvo de Área Metropolitana N° [[PENDIENTE: PAZ_SALVO_AREA_METRO]] (si aplica).
 Certificado REDAM (si aplica).
 
@@ -225,22 +347,6 @@ ADVERTENCIA NOTARIAL: Los comparecientes hacen constar que han verificado cuidad
 ADVERTENCIA DE REGISTRO: Se advirtió a los otorgantes la obligación de registrar esta escritura dentro de los dos (2) meses siguientes.
 
 ADVERTIDOS: Los otorgantes de la formalidad del registro se les leyó la presente escritura y la aprobaron.
-
-CARÁTULA
-
-RESUMEN DE ACTOS: CANCELACION PACTO DE RETROVENTA, COMPRAVENTA DE BIENES INMUEBLES, CAMBIO DE NOMBRE DE PREDIO RURAL, HIPOTECA ABIERTA SIN LIMITE DE CUANTIA
-
-COMPARECENCIA
-
-En la ciudad de [[PENDIENTE: FECHA_OTORGAMIENTO]], ante la Notaria Tercera de Bucaramanga, siendo titular del Despacho la doctora Margarita Lopez Cely, comparecen:
-
-PRIMERO: La señora SANDRA MILENA GARNICA CARDENAS, mayor de edad, identificada con cédula de ciudadanía número 63.501.152 de Bucaramanga, domiciliada en Bucaramanga, de estado civil soltera, quien obra en su propio nombre y derecho.
-
-SEGUNDO: La sociedad INGENIERIA DE SERVICIO Y SOLUCIONES, identificada con NIT 829.000.872, domiciliada en Barrancabermeja, representada legalmente por el señor GOMEZ VESGA REIMUNDO, identificado con cédula de ciudadanía número 13.893.486 de Barrancabermeja, mayor de edad, domiciliado en Barrancabermeja.
-
-TERCERO: La sociedad INVERSIONES RICAHER SAS, identificada con NIT 901.244.425, domiciliada en Bucaramanga, representada legalmente por el señor RUEDA PINILLA RICARDO, identificado con cédula de ciudadanía número 91.207.193, domiciliado en Bucaramanga, de estado civil casado.
-
-Los comparecientes manifiestan que actúan en los siguientes roles: SANDRA MILENA GARNICA CARDENAS e INGENIERIA DE SERVICIO Y SOLUCIONES, en calidad de vendedores/otorgantes; INVERSIONES RICAHER SAS, en calidad de comprador/beneficiario.
 
 OTORGAMIENTO y AUTORIZACIÓN
 
@@ -281,67 +387,112 @@ Fondo Nacional del Notariado: $ [[PENDIENTE: VALOR_FONDO]]
 NOTA: ESTA ESCRITURA FUE EXTENDIDA EN LAS HOJAS DE PAPEL NOTARIAL NÚMEROS:
 [[PENDIENTE: NUMEROS_PAPEL_NOTARIAL]]
 
-NOMBRE: GARNICA CARDENAS SANDRA MILENA  
-DOCUMENTOS DE IDENTIFICACIÓN: 63.501.152  
-TELEFONO: FIJO:  CELULAR: 3164706470  
-DIRECCIÓN: BUCARAMANGA  
-CIUDAD: BUCARAMANGA  
-EMAIL: MILEGAR4@HOTMAIL.COM  
-PROFESIÓN U OFICIO: [[PENDIENTE: OCUPACION]]  
-ACTIVIDAD ECONÓMICA: [[PENDIENTE: ACTIVIDAD_ECONOMICA]]  
-ESTADO CIVIL: SOLTERO(A)  
-PERSONA EXPUESTA POLÍTICAMENTE DECRETO 1674 DE 2016: SI: ___ / NO: X  
-CARGO:  
-FECHA DE VINCULACIÓN:  
-LA ANTERIOR INFORMACIÓN SE TOMA CONFORME LO ORDENADO EN LA INSTRUCCIÓN ADMINISTRATIVA N° 08 DE 07 DE ABRIL DE 2017 DE LA SUPERINTENDENCIA DE NOTARIADO Y REGISTRO.
+###TABLE_START###
+NOMBRE:
+SANDRA MILENA GARNICA CARDENAS
+DOCUMENTOS DE IDENTIFICACIÓN:
+63.501.152
+TELEFONO FIJO:
+###TABLE_END###
 
-NOMBRE: GOMEZ VESGA REIMUNDO  
-DOCUMENTOS DE IDENTIFICACIÓN: 13.893.486  
-TELEFONO: FIJO:  CELULAR: 3106806656  
-DIRECCIÓN: BARRANCABERMEJA  
-CIUDAD: BARRANCABERMEJA  
-EMAIL: REIMUNDO.GOMEZ@GMAIL.COM  
-PROFESIÓN U OFICIO: [[PENDIENTE: OCUPACION]]  
-ACTIVIDAD ECONÓMICA: [[PENDIENTE: ACTIVIDAD_ECONOMICA]]  
-ESTADO CIVIL: [[PENDIENTE: ESTADO_CIVIL]]  
-PERSONA EXPUESTA POLÍTICAMENTE DECRETO 1674 DE 2016: SI: ___ / NO: X  
-CARGO:  
-FECHA DE VINCULACIÓN:  
+###TABLE_START###
+CELULAR:
+3164706470
+DIRECCIÓN:
+Cra 16 #89B-19, Bucaramanga
+CIUDAD:
+Cra 16 #89B-19
+EMAIL:
+milegur4@hotmail.com
+PROFESIÓN U OFICIO:
+Contadora
+ACTIVIDAD ECONÓMICA:
+Contadora
+ESTADO CIVIL:
+soltera sin unión marital de hecho
+PERSONA EXPUESTA POLÍTICAMENTE DECRETO 1674 DE 2016: SI: ___ / NO: X
+CARGO:
+FECHA DE VINCULACIÓN:
 LA ANTERIOR INFORMACIÓN SE TOMA CONFORME LO ORDENADO EN LA INSTRUCCIÓN ADMINISTRATIVA N° 08 DE 07 DE ABRIL DE 2017 DE LA SUPERINTENDENCIA DE NOTARIADO Y REGISTRO.
+###TABLE_END###
 
-NOMBRE: RUEDA PINILLA RICARDO  
-DOCUMENTOS DE IDENTIFICACIÓN: 91.207.193  
-TELEFONO: FIJO:  CELULAR: 3202717248  
-DIRECCIÓN: CALLE 37 N 15 25  
-CIUDAD: CALLE 37 N 15 25  
-EMAIL: delihuevo@hotmail.com  
-PROFESIÓN U OFICIO: [[PENDIENTE: OCUPACION]]  
-ACTIVIDAD ECONÓMICA: [[PENDIENTE: ACTIVIDAD_ECONOMICA]]  
-ESTADO CIVIL: CASADO(A)  
-PERSONA EXPUESTA POLÍTICAMENTE DECRETO 1674 DE 2016: SI: ___ / NO: X  
-CARGO:  
-FECHA DE VINCULACIÓN:  
+###TABLE_START###
+NOMBRE:
+REIMUNDO GOMEZ VESGA
+DOCUMENTOS DE IDENTIFICACIÓN:
+13.893.486
+TELEFONO FIJO:
+###TABLE_END###
+
+###TABLE_START###
+CELULAR:
+3106806656
+DIRECCIÓN:
+TRV 29 N. 32-53 BRR FLORESTA BAJA, LA FLORESTA, Barrancabermeja, Santander
+CIUDAD:
+TRV 29 N. 32-53 BRR FLORESTA BAJA
+EMAIL:
+reimundo.gomez@gmail.com
+PROFESIÓN U OFICIO:
+EMPLEADO
+ACTIVIDAD ECONÓMICA:
+EMPLEADO
+ESTADO CIVIL:
+[[PENDIENTE: ESTADO_CIVIL]]
+PERSONA EXPUESTA POLÍTICAMENTE DECRETO 1674 DE 2016: SI: ___ / NO: X
+CARGO:
+FECHA DE VINCULACIÓN:
 LA ANTERIOR INFORMACIÓN SE TOMA CONFORME LO ORDENADO EN LA INSTRUCCIÓN ADMINISTRATIVA N° 08 DE 07 DE ABRIL DE 2017 DE LA SUPERINTENDENCIA DE NOTARIADO Y REGISTRO.
+###TABLE_END###
+
+###TABLE_START###
+NOMBRE:
+RICARDO RUEDA PINILLA
+DOCUMENTOS DE IDENTIFICACIÓN:
+91.207.193
+TELEFONO FIJO:
+###TABLE_END###
+
+###TABLE_START###
+CELULAR:
+3202716866
+DIRECCIÓN:
+VALLELISA, VEREDA RIO FRIO – FLORIDABLANCA - SANTANDER
+CIUDAD:
+VALLELISA
+EMAIL:
+monica.ortiz@delihuevo.com
+PROFESIÓN U OFICIO:
+MEDICO VETERINARIO
+ACTIVIDAD ECONÓMICA:
+MEDICO VETERINARIO
+ESTADO CIVIL:
+Casado(a) con Sociedad Conyugal Vigente
+PERSONA EXPUESTA POLÍTICAMENTE DECRETO 1674 DE 2016: SI: ___ / NO: X
+CARGO:
+FECHA DE VINCULACIÓN:
+LA ANTERIOR INFORMACIÓN SE TOMA CONFORME LO ORDENADO EN LA INSTRUCCIÓN ADMINISTRATIVA N° 08 DE 07 DE ABRIL DE 2017 DE LA SUPERINTENDENCIA DE NOTARIADO Y REGISTRO.
+###TABLE_END###
 
 EL(LOS) OTORGANTE(S),
 
-(Firma) GARNICA CARDENAS SANDRA MILENA  
-C.C. No. 63.501.152  
+(Firma) SANDRA MILENA GARNICA CARDENAS
+C.C. No. 63.501.152
 Huella: _________
 
-(Firma) GOMEZ VESGA REIMUNDO  
-C.C. No. 13.893.486  
-Obrando en calidad de representante legal de la sociedad INGENIERIA DE SERVICIO Y SOLUCIONES.  
+(Firma) REIMUNDO GOMEZ VESGA
+C.C. No. 13.893.486
+Obrando en calidad de representante legal de la sociedad INGENIERIA DE SERVICIO Y SOLUCIONES.
 Huella: _________
 
-(Firma) RUEDA PINILLA RICARDO  
-C.C. No. 91.207.193  
-Obrando en calidad de representante legal de la sociedad INVERSIONES RICAHER SAS.  
+(Firma) RICARDO RUEDA PINILLA
+C.C. No. 91.207.193
+Obrando en calidad de representante legal de la sociedad INVERSIONES RICAHER SAS.
 Huella: _________
 
 _________
 
 LA NOTARIA,
 
-MARGARITA LOPEZ CELY  
+MARGARITA LOPEZ CELY
 NOTARIA TERCERA DE BUCARAMANGA

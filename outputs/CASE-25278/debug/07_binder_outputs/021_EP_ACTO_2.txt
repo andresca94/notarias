@@ -1,60 +1,110 @@
-==============================================================================
-ACTO: COMPRAVENTA DE BIENES INMUEBLES
+SEGUNDO ACTO: COMPRAVENTA DE BIENES INMUEBLES
 ==============================================================================
 
-RESUMEN DE ACTOS: CANCELACION PACTO DE RETROVENTA, COMPRAVENTA DE BIENES INMUEBLES, CAMBIO DE NOMBRE DE PREDIO RURAL, HIPOTECA ABIERTA SIN LIMITE DE CUANTIA
 
-PERSONAS QUE COMPARECEN: SANDRA MILENA GARNICA CARDENAS, INGENIERIA DE SERVICIO Y SOLUCIONES, INVERSIONES RICAHER SAS y [[PENDIENTE: NOMBRE.COMPRADOR.2]]
+PERSONAS QUE COMPARECEN: SANDRA MILENA GARNICA CARDENAS,
+INGENIERIA DE SERVICIO Y SOLUCIONES, INVERSIONES RICAHER SAS y
+RICARDO RUEDA PINILLA
 EL(LA)(LOS) VENDEDOR(A)(ES): -------------------------------------------------------------
-SANDRA MILENA GARNICA CARDENAS --------------------------- C.C. N°. 63501152
-INGENIERIA DE SERVICIO Y SOLUCIONES --------------------------- C.C. N°. NI 829000872
+SANDRA MILENA GARNICA CARDENAS --------------------------- C.C. N°. 63.501.152
+INGENIERIA DE SERVICIO Y SOLUCIONES --------------------------- C.C. N°. 829.000.872
 EL(LA)(LOS) COMPRADOR(A)(ES): ----------------------------------------------------------
-INVERSIONES RICAHER SAS ------------------------ C.C. N°. NI 901244425
-[[PENDIENTE: NOMBRE.COMPRADOR.2]] ------------------------ C.C. N°. [[PENDIENTE: CEDULA.COMPRADOR.2]]
+INVERSIONES RICAHER SAS ------------------------ C.C. N°. 901.244.425
+RICARDO RUEDA PINILLA ------------------------ C.C. N°. 91.207.193
 VALOR VENTA: $ 605.000.000. -----------------------------------------------------
 INMUEBLE(S):
-VEREDA TIERRA BUENA, CORREGIMIENTO DE YARIMA, MUNICIPIO DE SAN VICENTE DE CHUCURÍ, SANTANDER
+INCLUIR INMUEBLE CON NOMENCLATURA / UBICACIÓN
 MATRICULA(S) INMOBILIARIA(S) N°: 320-3197
-NUMERO PREDIAL NACIONAL: 00 03 0020 0001 000 - CÓDIGO NPN: 00 03 00 00 0020 0001 0 00 00 0000
-CÓDIGO CATASTRAL ANTERIOR: [[PENDIENTE: CODIGO_CATASTRAL_ANTERIOR]]
+NUMERO PREDIAL NACIONAL: 00 03 00 00 0020 0001 0 00 00 0000
+CÓDIGO CATASTRAL ANTERIOR: 00 03 0020 0001 000
 AFECTACIÓN A VIVIENDA FAMILIAR: NO. ------------------------------------------------
 PATRIMONIO DE FAMILIA: NO. ---------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------------
 
-En la ciudad de Bucaramanga, Departamento de Santander, República de Colombia, a los [[DIA_LETRAS]] ([[DIA_NUMERO]]) días del mes de [[MES_LETRAS]] del año [[ANO_LETRAS]], Ante mí, MARGARITA LÓPEZ CELY, Notaria Tercera, del Círculo de Bucaramanga. ------------------------------------------------------------------------------------------
+En la ciudad de Bucaramanga, Departamento de Santander, República de
+Colombia, a los [[DIA_LETRAS]] ([[DIA_NUMERO]]) días del mes de [[MES_LETRAS]] del año [[ANO_LETRAS]], Ante mí, MARGARITA LÓPEZ CELY, Notaria Tercera, del Círculo de
+Bucaramanga. ------------------------------------------------------------------------------------------
 
 quien(es) se denominará(n) LA PARTE
-Compareció(eron): SANDRA MILENA GARNICA CARDENAS mayor de edad, domiciliada en BUCARAMANGA, identificada con la cédula de ciudadanía número 63501152 expedida en [[LUGAR_EXP_CEDULA_VENDEDOR_1]], de estado civil SOLTERO(A), obrando en nombre y representación propia y
-INGENIERIA DE SERVICIO Y SOLUCIONES, sociedad identificada con NIT 829000872, representada legalmente por GOMEZ VESGA REIMUNDO, mayor de edad, domiciliado en BARRANCABERMEJA, identificado con la cédula de ciudadanía número CC 13893486 expedida en [[LUGAR_EXP_CEDULA_VENDEDOR_2]], de estado civil [[ESTADO_CIVIL_VENDEDOR_2]], obrando en nombre y representación de la sociedad, VENDEDORA y dijeron: -------------------------------------------------------------------------
-PRIMERO: Que transfiere(n) a título de venta a favor de
-INVERSIONES RICAHER SAS, sociedad identificada con NIT 901244425, representada legalmente por RUEDA PINILLA RICARDO, mayor de edad, domiciliado en CALLE 37 N 15 25, identificado con la cédula de ciudadanía número CC 91207193 expedida en [[LUGAR_EXP_CEDULA_COMPRADOR_1]], de estado civil CASADO(A), obrando en nombre y representación de la sociedad y [[PENDIENTE: NOMBRE.COMPRADOR.2]], mayor de edad, domiciliado(a) en [[PENDIENTE: CIUDAD_DOMICILIO_COMPRADOR_2]],, identificado con la cédula de ciudadanía número [[PENDIENTE: CEDULA.COMPRADOR.2]] expedida en [[PENDIENTE: LUGAR_EXP_CEDULA_COMPRADOR_2]], de estado civil [[PENDIENTE: ESTADO_CIVIL_COMPRADOR_2]], obrando en nombre y representación propia, quien(es) se denomina(rán) LA PARTE COMPRADORA, el derecho de dominio, propiedad y posesión que tiene(n) sobre el(los) siguiente(s) inmueble(s): --------------------------------------------------------------------------------------------
-LA PARTE VENDEDORA transfiere el lote denominado “VILLA LUZ”, ubicado en la VEREDA TIERRA BUENA, CORREGIMIENTO DE YARIMA, MUNICIPIO DE SAN VICENTE DE CHUCURÍ, SANTANDER, con una cabida superficiaria de 126 Hectáreas 1.290 metros cuadrados, cuyos linderos son: POR EL NORTE: En todo este trayecto con el Río Oponcito; POR EL ORIENTE: Con propiedades de PABLO GARCIA Y VICENTEQUIÑONEZ deslindado cerca de alambre al medio; POR EL OCCIDENTE: Con propiedades de SALOMON PEREZ GARCIA y MANUEL DARIO PEREZ deslindado en toda su extensión la Quebrada Las Arrugas y con BALDOMERO RAMON LANDAZABAL, cerca de alambre al medio; POR EL SUR: Con propiedades de ENRIQUE GALVIS, deslindado cerca de alambre al medio y encierra.
-A este inmueble le corresponde el folio de matrícula inmobiliaria número 320-3197, y se distingue con el número predial nacional 00 03 0020 0001 000 - CÓDIGO NPN: 00 03 00 00 0020 0001 0 00 00 0000 y la cédula catastral anterior [[PENDIENTE: CODIGO_CATASTRAL_ANTERIOR]].
+Compareció(eron): SANDRA MILENA GARNICA CARDENAS, mayor de edad, domiciliada en
+Cra 16 #89B-19, identificada con la cédula de ciudadanía número
+63.501.152 expedida en BUCARAMANGA, de estado civil soltera sin unión marital de hecho, obrando en nombre y representación propia y
+INGENIERIA DE SERVICIO Y SOLUCIONES, NIT 829.000.872, representada
+por su Representante Legal REIMUNDO GOMEZ VESGA, mayor de edad, identificado con CC 13.893.486 expedida en BARRANCABERMEJA, domiciliado en TRV 29 N. 32-53 BRR FLORESTA BAJA, obrando en calidad de Representante Legal, VENDEDORA y dijeron: -------------------------------------------------------------------------
+PRIMERO: Que transfieren a título de venta a favor de
+INVERSIONES RICAHER SAS, NIT 901.244.425, representada por su Representante Legal RICARDO RUEDA PINILLA, mayor de edad, identificado con CC 91.207.193 expedida en BUCARAMANGA, domiciliado en VALLELISA, obrando en calidad de Representante Legal, y
+RICARDO RUEDA PINILLA, mayor de edad,
+domiciliado en VALLELISA, VEREDA RIO FRIO – FLORIDABLANCA - SANTANDER, identificado con la cédula de ciudadanía
+número 91.207.193 expedida en BUCARAMANGA, de estado civil Casado(a) con Sociedad Conyugal Vigente, obrando en nombre y representación propia, quienes se
+denominan LA PARTE COMPRADORA, el derecho de dominio, propiedad y
+posesión que tienen sobre el siguiente
+inmueble: --------------------------------------------------------------------------------------------
+LA PARTE VENDEDORA transfiere el siguiente inmueble: ubicado en la VEREDA TIERRA BUENA, CORREGIMIENTO DE YARIMA, MUNICIPIO DE SAN VICENTE DE CHUCURÍ, SANTANDER, con una cabida superficiaria de 126 Hectáreas 1.290 metros cuadrados, cuyos linderos son: POR EL NORTE: En todo este trayecto con el Río Oponcito; POR EL ORIENTE: Con propiedades de PABLO GARCIA Y VICENTEQUIÑONEZ deslindado cerca de alambre al medio; POR EL OCCIDENTE: Con propiedades de SALOMON PEREZ GARCIA y MANUEL DARIO PEREZ deslindado en toda su extensión la Quebrada Las Arrugas y con BALDOMERO RAMON LANDAZABAL, cerca de alambre al medio; POR EL SUR: Con propiedades de ENRIQUE GALVIS, deslindado cerca de alambre al medio y encierra.
+A este inmueble le corresponde el folio de matrícula inmobiliaria número
+320-3197, y se distingue con el número predial nacional
+00 03 00 00 0020 0001 0 00 00 0000 y la cédula catastral anterior
+00 03 0020 0001 000
 
-PARÁGRAFO PRIMERO: No obstante, la mención de su cabida y linderos la venta se hace como cuerpo cierto. ---------------------------------------------------------------
+PARÁGRAFO PRIMERO: No obstante, la mención de su cabida y linderos la
+venta se hace como cuerpo cierto. ---------------------------------------------------------------
 
 --------------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------------
-SEGUNDO - TITULO DE ADQUISICIÓN: Que el(los) inmueble(s) antes mencionado(s) y que es(son) objeto de la presente compraventa fue adquirido por LA PARTE VENDEDORA, por compraventa efectuada a REIMUNDO GOMEZ VEGA, mediante escritura pública número 592 de fecha 26 de abril de 2016, otorgada en la Notaría Primera del Círculo de Barrancabermeja, y debidamente registrada en la Oficina de Instrumentos Públicos de BUCARAMANGA al folio de matrícula inmobiliaria número 320-3197.
+SEGUNDO - TITULO DE ADQUISICIÓN: Que el inmueble antes
+mencionado y que es objeto de la presente compraventa fue adquirido por
+LA PARTE VENDEDORA, por COMPRAVENTA efectuada a INGENIERIA DE SERVICIOS Y SOLUCIONES ELECTROMECANICAS S.A.S. INSELEM S.A.S., mediante escritura pública número 526 de
+fecha 03 de marzo de 2025, otorgada en la
+Notaría Quinta del Círculo de Bucaramanga, y debidamente registrada en la
+Oficina de Instrumentos Públicos de BUCARAMANGA al folio de matrícula
+inmobiliaria número 320-3197
 --------------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------------
-TERCERO- LIBERTAD: Que el inmueble que por medio de esta escritura se transfiere se encuentra libre de embargo, pleitos pendientes, condiciones resolutorias del dominio, anticresis, censos, arrendamientos por escritura pública, de hipotecas y de cualquier otro gravamen o limitación del dominio, etc, pero en todo caso se obliga al saneamiento en los casos previstos por la Ley. El inmueble cuenta con una servidumbre de Energía Eléctrica y Telecomunicaciones constituida mediante escritura pública número 376 de fecha 16 de julio de 2018, Notaría Única del Círculo de San Vicente de Chucurí (Sder).
+TERCERO- LIBERTAD: Que el inmueble que por medio de esta escritura se
+transfiere se encuentra libre de embargo, pleitos pendientes, condiciones
+resolutorias del dominio, anticresis, censos, arrendamientos por escritura pública,
+de hipotecas y de cualquier otro gravamen o limitación del dominio, etc, pero en
+todo caso se obliga al saneamiento en los casos previstos por la Ley. El inmueble soporta SERVIDUMBRE DE ENERGÍA ELÉCTRICA Y TELECOMUNICACIONES constituida mediante escritura pública número 376 de fecha 16 de julio de 2018 otorgada en la Notaría Única del Círculo de San Vicente de Chucurí (Sder); debidamente registrada.
 --------------------------------------------------------------------------------------------------------------
 
 --------------------------------------------------------------------------------------------------------------
-CUARTO- PRECIO: Que el precio de esta venta es por la suma de SEISCIENTOS CINCO MILLONES DE PESOS ($605.000.000) PESOS MONEDA CORRIENTE, suma que LA PARTE VENDEDORA declara haber recibido de manos de LA PARTE COMPRADORA a su entera satisfacción. ---------------------------------------------------------------------------
-PARÁGRAFO PRIMERO: De conformidad con lo establecido en el Artículo 61 de la Ley 2010 del 27 de diciembre de 2019, los otorgantes declaran bajo gravedad de juramento que el precio de la venta contenido en la presente escritura es real y no ha sido objeto de pactos privados en los que señale un precio diferente, ni existen sumas que se hayan convenido o facturado por fuera del valor aquí estipulado. ---------------------------------------------------------------------------------------
+CUARTO- PRECIO: Que el precio de esta venta es por la suma de
+SEISCIENTOS CINCO MILLONES DE PESOS ($605.000.000) PESOS MONEDA CORRIENTE
+MONEDA CORRIENTE, suma que LA PARTE
+VENDEDORA declara haber recibido de manos de LA PARTE COMPRADORA
+a su entera satisfacción. ---------------------------------------------------------------------------
+PARÁGRAFO PRIMERO: De conformidad con lo establecido en el Artículo 61 de
+la Ley 2010 del 27 de diciembre de 2019, los otorgantes declaran bajo gravedad
+de juramento que el precio de la venta contenido en la presente escritura es real y
+no ha sido objeto de pactos privados en los que señale un precio diferente, ni
+existen sumas que se hayan convenido o facturado por fuera del valor aquí
+estipulado. ---------------------------------------------------------------------------------------
+
 --------------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------------
-QUINTO: Que desde esta fecha LA PARTE VENDEDORA pone a LA PARTE COMPRADORA en posesión material del inmueble vendido con todas sus anexidades y con las servidumbres activas y pasivas que tenga legalmente constituidas y que en los casos previstos por la ley se obliga al saneamiento de esta venta y a responder de cualquier gravamen, acción real o vicios redhibitorios, que resulte contra el derecho de dominio que enajena. ---------------------------------
+QUINTO: Que desde esta fecha LA PARTE VENDEDORA pone a LA PARTE
+COMPRADORA en posesión material del inmueble vendido con todas sus
+anexidades y con las servidumbres activas y pasivas que tenga legalmente
+constituidas y que en los casos previstos por la ley se obliga al saneamiento de
+esta venta y a responder de cualquier gravamen, acción real o vicios redhibitorios,
+que resulte contra el derecho de dominio que enajena. ---------------------------------
 --------------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------------
 SEXTO: CLÁUSULA REDAM (Registro de Deudores Alimentarios Morosos):
-[[PENDIENTE: NOTA_REDAM]]
+Incluir nota respectiva
 
 --------------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------------
-PRESENTE(S), LA PARTE COMPRADORA: INVERSIONES RICAHER SAS Y [[PENDIENTE: NOMBRE.COMPRADOR.2]], de las anotaciones personales antes dichas, expuso(ieron): Que acepta(n) la presente escritura con el contrato de venta en ella contenido a su favor; que ha(n) pagado el precio de lo que compra(n) en la forma pactada en esta escritura y que tiene(n) recibido el inmueble comprado a su entera satisfacción ----------------------------------------------------------------------------------------------
+PRESENTES, LA PARTE COMPRADORA: INVERSIONES RICAHER SAS Y
+RICARDO RUEDA PINILLA, de las anotaciones personales antes dichas,
+expusieron: Que aceptan la presente escritura con el contrato de venta en ella
+contenido a su favor; que han pagado el precio de lo que compran en la forma
+pactada en esta escritura y que tienen recibido el inmueble comprado a su entera
+satisfacción ----------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------------
-CONSTANCIA NOTARIAL DE AFECTACIÓN A VIVIENDA FAMILIAR: LA SUSCRITA NOTARIA DEJA EXPRESA CONSTANCIA QUE EN ESTE ACTO POR TRATARSE DE UN LOTE SIN VIVIENDA, NO ES PROCEDENTE LA AFECTACIÓN A VIVIENDA FAMILIAR, DE CONFORMIDAD CON LO ESTABLECIDO EN LA LEY 258 DE 1.996, MODIFICADA POR LA LEY 854 DEL 25 DE NOVIEMBRE DE 2.003.
+CONSTANCIA NOTARIAL DE AFECTACIÓN A VIVIENDA FAMILIAR: LA
+SUSCRITA NOTARIA DEJA EXPRESA CONSTANCIA QUE EN ESTE ACTO POR
+TRATARSE DE UN LOTE SIN VIVIENDA, NO ES PROCEDENTE LA
+AFECTACIÓN A VIVIENDA FAMILIAR, DE CONFORMIDAD CON LO
+ESTABLECIDO EN LA LEY 258 DE 1.996, MODIFICADA POR LA LEY 854
+DEL 25 DE NOVIEMBRE DE 2.003.

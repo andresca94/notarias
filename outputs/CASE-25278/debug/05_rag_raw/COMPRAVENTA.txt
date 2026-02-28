@@ -1,0 +1,130 @@
+==============================================================================
+ACTO: COMPRAVENTA DE BIENES INMUEBLES
+==============================================================================
+
+
+{Crear metadata para usar en encabezado}
+PERSONAS QUE COMPARECEN: <<nombre.vendedor.1>>,
+<<nombre.vendedor.2>>, <<nombre.comprador.1>> y
+<<nombre.comprador.2>>
+EL(LA)(LOS) VENDEDOR(A)(ES): -------------------------------------------------------------
+<<nombre.vendedor.1>> --------------------------- C.C. N°. <<cedula.vendedor.1>>
+<<nombre.vendedor.2>> --------------------------- C.C. N°. <<cedula.vendedor.2>>
+EL(LA)(LOS) COMPRADOR(A)(ES): ----------------------------------------------------------
+<<nombre.comprador.1>> ------------------------ C.C. N°. <<cedula.comprador.1>>
+<<nombre.comprador.2>> ------------------------ C.C. N°. <<cedula.comprador.2>>
+VALOR VENTA: $ <<valor.de.venta>>. -----------------------------------------------------
+INMUEBLE(S):
+INCLUIR INMUEBLE CON NOMENCLATURA / UBICACIÓN
+MATRICULA(S) INMOBILIARIA(S) N°: <<numero.matricula>>
+NUMERO PREDIAL NACIONAL: <<numero.predial.nacional>>
+CÓDIGO CATASTRAL ANTERIOR: <<codigo.catastral.anterior>>
+AFECTACIÓN A VIVIENDA FAMILIAR: NO. ------------------------------------------------
+PATRIMONIO DE FAMILIA: NO. ---------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+
+{Cuerpo del Acto}
+En la ciudad de Bucaramanga, Departamento de Santander, República de
+Colombia, a los [[DIA_LETRAS]] ([[DIA_NUMERO]]) días del mes de [[MES_LETRAS]] del año [[ANO_LETRAS]], Ante mí, MARGARITA LÓPEZ CELY, Notaria Tercera, del Círculo de
+Bucaramanga. ------------------------------------------------------------------------------------------
+
+quien(es) se denominará(n) LA PARTE
+Compareció(eron): <<nombre.vendedor.1>> mayor de edad, domiciliado(a) en
+[[CIUDAD_DOMICILIO_VENDEDOR_1]], identificado(a) con la cédula de ciudadanía número
+<<cedula.vendedor.1>> expedida en [[LUGAR_EXP_CEDULA_VENDEDOR_1]], de estado civil [[ESTADO_CIVIL_VENDEDOR_1]], obrando en nombre y representación propia y
+<<nombre.vendedor.2>>, mayor de edad, domiciliado(a) en [[CIUDAD_DOMICILIO_VENDEDOR_2]],
+identificado(a) con la cédula de ciudadanía número <<cedula.vendedor.2>>
+expedida en [[LUGAR_EXP_CEDULA_VENDEDOR_2]], de estado civil [[ESTADO_CIVIL_VENDEDOR_2]], obrando en
+nombre y representación propia, VENDEDORA y dijo(eron): -------------------------------------------------------------------------
+PRIMERO: Que transfiere(n) a título de venta a favor de
+<<nombre.comprador.1>>, mayor de edad, domiciliado(a) en [[CIUDAD_DOMICILIO_COMPRADOR_1]],
+identificado(a) con la cédula de ciudadanía número <<cedula.comprador.1>>
+expedida en [[LUGAR_EXP_CEDULA_COMPRADOR_1]], de estado civil [[ESTADO_CIVIL_COMPRADOR_1]], obrando en nombre
+y representación propia y <<nombre.comprador.2>>, mayor de edad,
+domiciliado(a) en [[CIUDAD_DOMICILIO_COMPRADOR_2]],, identificado con la cédula de ciudadanía
+número <<cedula.comprador.2>> expedida en [[LUGAR_EXP_CEDULA_COMPRADOR_2]], de estado civil [[ESTADO_CIVIL_COMPRADOR_2]], obrando en nombre y representación propia, quien(es) se
+denomina(rán) LA PARTE COMPRADORA, el derecho de dominio, propiedad y
+posesión que tiene(n) sobre el(los) siguiente(s)
+inmueble(s): --------------------------------------------------------------------------------------------
+LA PARTE VENDEDORA INCLUIR LOTE JUNTO CON SU NOMENCLATURA, AREA Y LINDEROS
+ESPECIFICOS
+A este inmueble le corresponde el folio de matrícula inmobiliaria número
+<<numero.matricula>>, y se distingue con el numero predial nacional
+<<numero.predial.nacional>> y la cedula catastral anterior
+<<codigo.catastral.anterior>>
+
+PARÁGRAFO PRIMERO: No obstante, la mención de su cabida y linderos la
+venta se hace como cuerpo cierto. ---------------------------------------------------------------
+SI EL TITULO ANTECEDENTE MENCIONA LA LEY 160 DE 1994
+EXPLOTACIÓN AGRICOLA, INCLUIR LA SIGUIENTE NOTA, Y/O MENCIONAR
+LA NOTA Y/O PARAGRAFO COMO ESTE EN EL TITULO ANTECEDENTE ---
+SI NO ESTA INDICADO NO INCLUIR
+NOTA: EL INMUEBLE OBJETO DE LA PRESENTE ESCRITURA ESTA
+DESTINADO PARA VIVIENDA Y/O RECREACIÓN DE CONFORMIDAD CON LA
+EXCEPCIÓN ESTABLECIDA EN LA LEY 160 DE 1.994. -------------------------------------
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+SEGUNDO - TITULO DE ADQUISICIÓN: Que el(los) inmueble(s) antes
+mencionado(s) y que es(son) objeto de la presente compraventa fue adquirido por
+LA PARTE VENDEDORA, por [[TIPO_ADQUISICION_ANTERIOR]] efectuada a [[VENDEDOR_ANTERIOR]], mediante escritura pública número [[NUMERO_ESCRITURA_ANTERIOR]] de
+fecha [[DIA_ESCRITURA_ANTERIOR]] de [[MES_ESCRITURA_ANTERIOR]] del año [[ANO_ESCRITURA_ANTERIOR]], otorgada en la
+Notaría [[NUMERO_NOTARIA_ANTERIOR]] del Círculo de [[CIRCULO_NOTARIA_ANTERIOR]], y debidamente registrada en la
+Oficina de Instrumentos Públicos de [[OFICINA_REGISTRO]] al(los) folio(s) de matrícula
+inmobiliaria número(s) <<numero.matricula>>
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+TERCERO- LIBERTAD: Que el inmueble que por medio de esta escritura se
+transfiere se encuentra libre de embargo, pleitos pendientes, condiciones
+resolutorias del dominio, anticresis, censos, arrendamientos por escritura pública,
+de hipotecas y de cualquier otro gravamen o limitación del dominio, etc, pero en
+todo caso se obliga al saneamiento en los casos previstos por la Ley. INCLUIR SI
+HAY SERVIDUMBRES, HIPOTECAS, MEDIDAS CAUTELARES O ALGUNA
+LIMITACION. -------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------------------------------------
+CUARTO- PRECIO: Que el precio de esta venta es por la suma de
+[[VALOR_VENTA_LETRAS]] PESOS ($<<valor.de.venta>>) PESOS MONEDA CORRIENTE
+MONEDA CORRIENTE, suma que LA PARTE
+VENDEDORA declara(n) haber recibido de manos de LA PARTE COMPRADORA
+a su entera satisfacción. ---------------------------------------------------------------------------
+PARÁGRAFO PRIMERO: De conformidad con lo establecido en el Artículo 61 de
+la Ley 2010 del 27 de diciembre de 2019, los otorgantes declaran bajo gravedad
+de juramento que el precio de la venta contenido en la presente escritura es real y
+no ha sido objeto de pactos privados en los que señale un precio diferente, ni
+existen sumas que se hayan convenido o facturado por fuera del valor aquí
+estipulado. ---------------------------------------------------------------------------------------
+SI EL PAGO ES A CUOTAS O CON ALGUNA FORMA DE PAGO DIFERENTE
+DE CONTADO SE INCLUYE EL SIGUIENTE PARÁGRAFO
+PARÁGRAFO SEGUNDO: No obstante, la forma de pago aquí estipulada, la
+venta se efectúa libre de toda condición resolutoria, pues la parte vendedora
+renuncia expresamente a ella. ---------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+QUINTO: Que desde esta fecha LA PARTE VENDEDORA pone(n) a LA PARTE
+COMPRADORA en posesión material del inmueble vendido con todas sus
+anexidades y con las servidumbres activas y pasivas que tenga legalmente
+constituidas y que en los casos previstos por la ley se obliga(n) al saneamiento de
+esta venta y a responder de cualquier gravamen, acción real o vicios redhibitorios,
+que resulte contra el derecho de dominio que enajena(n). ---------------------------------
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+SEXTO: CLÁUSULA REDAM (Registro de Deudores Alimentarios Morosos):
+Incluir nota respectiva
+
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+PRESENTE(S), LA PARTE COMPRADORA: <<nombre.comprador.1>> Y
+<<nombre.comprador.2>>, de las anotaciones personales antes dichas,
+expuso(ieron): Que acepta(n) la presente escritura con el contrato de venta en ella
+contenido a su favor ; que ha(n) pagado el precio de lo que compra(n) en la forma
+pactada en esta escritura y que tiene(n) recibido el inmueble comprado a su entera
+satisfacción ----------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+CONSTANCIA NOTARIAL DE AFECTACIÓN A VIVIENDA FAMILIAR: LA
+SUSCRITA NOTARIA DEJA EXPRESA CONSTANCIA QUE EN ESTE ACTO POR
+TRATARSE DE UN LOTE SIN VIVIENDA, NO ES PROCEDENTE LA
+AFECTACIÓN A VIVIENDA FAMILIAR, DE CONFORMIDAD CON LO
+ESTABLECIDO EN LA LEY 258 DE 1.996, MODIFICADA POR LA LEY 854
+DEL 25 DE NOVIEMBRE DE 2.003.

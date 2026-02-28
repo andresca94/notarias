@@ -1,39 +1,39 @@
-==============================================================================
-ACTO: CAMBIO DE NOMBRE DE PREDIO RURAL
+TERCER ACTO: CAMBIO DE NOMBRE DE PREDIO RURAL
 ==============================================================================
 
 OTORGANTES: --------------------------------------------------------------------------------------
-INVERSIONES RICAHER SAS ------------------------ NIT. 901244425
+INVERSIONES RICAHER SAS ------------------------ C.C. N°. 901.244.425
+RICARDO RUEDA PINILLA ----------------------- C.C. N°. 91.207.193
 VALOR: $ 0 -----------------------------------------------------------------
 MATRICULA(S) INMOBILIARIA(S) N°: 320-3197 -----------------------
 --------------------------------------------------------------------------------------------------------------
 En la ciudad de Bucaramanga, Departamento de Santander, República de
-Colombia, a los [[PENDIENTE: DIA_LETRAS]] ([[PENDIENTE: DIA_NUMERO]]) días del mes de [[PENDIENTE: MES_LETRAS]] del año [[PENDIENTE: ANO_LETRAS]], Ante mí, MARGARITA LÓPEZ CELY,
+Colombia, a los [[PENDIENTE: FECHA_OTORGAMIENTO]], Ante mí, MARGARITA LÓPEZ CELY,
 Notaria Tercera, del Círculo de Bucaramanga. ------------------------------------------------
 --------------------------------------------------------------------------------------------------------------
-Comparecieron, INVERSIONES RICAHER SAS, sociedad legalmente constituida, identificada con NIT. 901244425, con domicilio en Bucaramanga, representada legalmente por el señor Ricardo Rueda Pinilla, mayor de edad, domiciliado en Bucaramanga, identificado con la cédula de ciudadanía número 91.207.193, de estado civil casado, ocupación: [[PENDIENTE: OCUPACION_SOLICITANTE_1]], obrando en nombre y representación de la sociedad, y manifestaron:
+Comparecieron, INVERSIONES RICAHER SAS, NIT 901.244.425, representada por su Representante Legal RICARDO RUEDA PINILLA, mayor de edad, identificado con cédula de ciudadanía número 91.207.193 expedida en BUCARAMANGA, domiciliado en VALLELISA, obrando en calidad de Representante Legal, de estado civil Casado(a) con Sociedad Conyugal Vigente, ocupación: MEDICO VETERINARIO, obrando en nombre y representación propia y manifestó:
 --------------------------------------------------------------------------------------------------------------
-PRIMERO. Que son propietarios del derecho de dominio, propiedad y posesión
+PRIMERO. Que es propietario del derecho de dominio, propiedad y posesión
 material sobre el siguiente bien inmueble:
 
-Un predio rural denominado actualmente “VILLA LUZ”, ubicado en la VEREDA TIERRA BUENA, CORREGIMIENTO DE YARIMA, MUNICIPIO DE SAN VICENTE DE CHUCURÍ, SANTANDER, con una cabida superficiaria de 126 hectáreas 1.290 metros cuadrados, cuyos linderos son: POR EL NORTE: En todo este trayecto con el Río Oponcito; POR EL ORIENTE: Con propiedades de PABLO GARCIA Y VICENTE QUIÑONEZ deslindado cerca de alambre al medio; POR EL OCCIDENTE: Con propiedades de SALOMON PEREZ GARCIA y MANUEL DARIO PEREZ deslindado en toda su extensión la Quebrada Las Arrugas y con BALDOMERO RAMON LANDAZABAL, cerca de alambre al medio; POR EL SUR: Con propiedades de ENRIQUE GALVIS, deslindado cerca de alambre al medio y encierra.
+Un inmueble rural ubicado en la VEREDA TIERRA BUENA, CORREGIMIENTO DE YARIMA, MUNICIPIO DE SAN VICENTE DE CHUCURÍ, SANTANDER, identificado con el folio de matrícula inmobiliaria número 320-3197 de la Oficina de Registro de Instrumentos Públicos de Bucaramanga, con número predial nacional 00 03 00 00 0020 0001 0 00 00 0000 y cédula catastral anterior 00 03 0020 0001 000, con un área de 126 Hectáreas 1.290 metros cuadrados, y con los siguientes linderos: POR EL NORTE: En todo este trayecto con el Río Oponcito; POR EL ORIENTE: Con propiedades de PABLO GARCIA Y VICENTEQUIÑONEZ deslindado cerca de alambre al medio; POR EL OCCIDENTE: Con propiedades de SALOMON PEREZ GARCIA y MANUEL DARIO PEREZ deslindado en toda su extensión la Quebrada Las Arrugas y con BALDOMERO RAMON LANDAZABAL, cerca de alambre al medio; POR EL SUR: Con propiedades de ENRIQUE GALVIS, deslindado cerca de alambre al medio y encierra.
 
-A este inmueble le corresponde el folio de matrícula inmobiliaria número 320-3197 de la Oficina de Instrumentos Públicos de Bucaramanga y se distingue con el número predial nacional 00 03 0020 0001 000 - CÓDIGO NPN: 00 03 00 00 0020 0001 0 00 00 0000 y la cédula catastral anterior [[PENDIENTE: CEDULA_CATASTRAL]].
+A este inmueble le corresponde el folio de matrícula inmobiliaria número 320-3197 de la Oficina de Instrumentos Públicos de Bucaramanga y se distingue con el numero predial nacional 00 03 00 00 0020 0001 0 00 00 0000 y la cedula catastral anterior 00 03 0020 0001 000
 
 --------------------------------------------------------------------------------------------------------------
-SEGUNDO: Que el inmueble antes mencionado fue adquirido por compraventa
-efectuada a Garnica Cardenas Sandra Milena mediante
-escritura pública número 592
-de fecha veintiséis (26) de abril de dos mil dieciséis (2016) otorgada
-en la Notaría Primera del Círculo de Barrancabermeja, debidamente registrada en la
+SEGUNDO: Que el inmueble antes mencionado fue adquirido por COMPRAVENTA
+efectuada a INGENIERIA DE SERVICIOS Y SOLUCIONES ELECTROMECANICAS S.A.S. INSELEM S.A.S. mediante
+escritura pública número 526
+de fecha 03 de marzo de 2025 otorgada
+en Notaría Quinta del Círculo de Bucaramanga, debidamente registrada en la
 Oficina de Registro de Instrumentos Públicos de Bucaramanga al folio de matrícula
-inmobiliaria número 320-3197.
+inmobiliaria número 320-3197
 --------------------------------------------------------------------------------------------------------------
-TERCERO: Por el presente instrumento, los exponentes
-INVERSIONES RICAHER SAS, obrando de común
+TERCERO: Por el presente instrumento, el exponente
+INVERSIONES RICAHER SAS y RICARDO RUEDA PINILLA, obrando de común
 acuerdo, manifiestan que es su voluntad realizar cambio de nombre del inmueble
 de su propiedad. ---------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------------
 CUARTO: En consecuencia, a lo anterior, los comparecientes proceden a realizar
 CAMBIO DE NOMBRE del inmueble anteriormente descrito, el cual de ahora en
-adelante se denominará: VILLA LUZ -----------------------------------------------------------
+adelante se denominará: HACIENDA LEJANIAS -----------------------------------------------------------

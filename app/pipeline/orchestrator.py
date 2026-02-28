@@ -29,6 +29,7 @@ from app.pipeline.prompts import (
 
 from app.pipeline.boilerplate import (
     EP_CARATULA_TEMPLATE,
+    EP_APERTURA_TEMPLATE,
     EP_INSERTOS_TEMPLATE,
     EP_OTORGAMIENTO_TEMPLATE,
     EP_DERECHOS_TEMPLATE,
@@ -88,7 +89,8 @@ def _is_garbage(v: Any) -> bool:
     if v is None:
         return True
     s = str(v).strip().upper()
-    if s in {"", "NULL", "UNDEFINED"}:
+    if s in {"", "NULL", "UNDEFINED", "N/A", "NA", "EXTRAER", "S/I",
+             "NO APLICA", "ILEGIBLE", "NO DISPONIBLE", "DESCONOCIDO"}:
         return True
     if "NO_DETECTADO" in s or "NO_APLICA" in s or "PENDIENTE" in s:
         return True
@@ -214,10 +216,13 @@ def _merge_cedula_ocr_into_people(personas: List[Dict[str, Any]], cedulas_json_l
         return
 
     idx_by_id: Dict[str, Dict[str, Any]] = {}
+    # Radicacion persons take priority: they are in PERSONAS_ACTIVOS
+    # so cedula data must update their dicts, not soporte copies
     for p in personas:
         pid = _normalize_id(p.get("identificacion") or "")
         if pid:
-            idx_by_id[pid] = p
+            if pid not in idx_by_id or p.get("_source") == "radicacion":
+                idx_by_id[pid] = p
 
     for c in cedulas_json_list:
         if not isinstance(c, dict):
@@ -226,6 +231,7 @@ def _merge_cedula_ocr_into_people(personas: List[Dict[str, Any]], cedulas_json_l
         cname = _normalize_name(c.get("nombre") or "")
         lugar_exp = (c.get("lugar_expedicion") or "").strip()
         ocupacion = (c.get("ocupacion") or "").strip()
+        estado_civil_ced = (c.get("estado_civil") or "").strip()
 
         target = None
         if cid and cid in idx_by_id:
@@ -246,38 +252,36 @@ def _merge_cedula_ocr_into_people(personas: List[Dict[str, Any]], cedulas_json_l
             target["ocupacion"] = ocupacion
         if cid and not _normalize_id(target.get("identificacion") or ""):
             target["identificacion"] = cid
+        if estado_civil_ced and estado_civil_ced.upper() not in ("ILEGIBLE", "") and not target.get("estado_civil"):
+            target["estado_civil"] = estado_civil_ced
 
 
 def _build_empresa_rl_map(
-    radicacion_json: Dict[str, Any],
+    _radicacion_json: Dict[str, Any],
     personas_deduped: List[Dict[str, Any]],
 ) -> Dict[str, Dict[str, Any]]:
-    """Construye mapeo empresa_nombre → persona RL a partir del orden de la radicación."""
+    """
+    Construye mapeo nombre_empresa_normalizado → persona RL.
+    Usa orden secuencial de personas_deduped: la persona RL sigue
+    inmediatamente a la empresa que representa en la lista de radicación.
+    """
     mapping: Dict[str, Dict[str, Any]] = {}
-    rad_personas = (radicacion_json or {}).get("personas_detalle") or []
+    last_empresa: Optional[Dict[str, Any]] = None
 
-    last_empresa_nombre = None
-    for p in rad_personas:
-        pid = (p.get("identificacion") or "").upper()
-        rol = (p.get("rol_en_hoja") or "").upper()
-        nombre = (p.get("nombre") or "").upper().strip()
+    for p in personas_deduped:
+        pid_upper = (p.get("identificacion") or "").upper()
+        rol = (p.get("rol_detectado") or p.get("rol") or p.get("rol_en_hoja") or "").upper()
 
-        if "NI " in pid or pid.startswith("NIT"):
-            last_empresa_nombre = nombre
-        elif "RL" in rol and last_empresa_nombre:
-            # Buscar la persona en la lista deduplicada (por ID o nombre)
-            cc_norm = _normalize_id(pid)
-            found = None
-            for fp in personas_deduped:
-                if cc_norm and _normalize_id(fp.get("identificacion") or "") == cc_norm:
-                    found = fp
-                    break
-                if _normalize_name(fp.get("nombre") or "") == _normalize_name(nombre):
-                    found = fp
-                    break
-            if found:
-                mapping[last_empresa_nombre] = found
-            last_empresa_nombre = None
+        is_emp = "NIT" in pid_upper or pid_upper.startswith("NI ")
+        is_rl  = "REPRESENTANTE" in rol or rol.startswith("RL")
+
+        if is_emp:
+            last_empresa = p
+        elif is_rl and last_empresa is not None:
+            key = _normalize_name(last_empresa.get("nombre") or "")
+            if key:
+                mapping[key] = p
+            last_empresa = None
 
     return mapping
 
@@ -351,13 +355,40 @@ def _build_universal_context(
             if not contexto["INMUEBLE"].get("ep_antecedente_pacto"):
                 contexto["INMUEBLE"]["ep_antecedente_pacto"] = ep_info
 
-        # Extraer nombre_nuevo_predio si está en hallazgos_variables
+        # Extraer nombre_nuevo_predio: last-wins (doc más reciente tiene prioridad)
         nombre_nuevo = (extra or {}).get("nombre_nuevo_predio") or ""
         if nombre_nuevo and not _is_garbage(nombre_nuevo):
-            if not contexto["INMUEBLE"].get("nombre_nuevo"):
-                contexto["INMUEBLE"]["nombre_nuevo"] = nombre_nuevo
+            contexto["INMUEBLE"]["nombre_nuevo"] = nombre_nuevo
+
+        # Extraer plazo_retroventa para actos de CANCELACION
+        plazo = (extra or {}).get("plazo_retroventa") or ""
+        if plazo and not _is_garbage(plazo):
+            if not contexto["DATOS_EXTRA"].get("plazo_retroventa"):
+                contexto["DATOS_EXTRA"]["plazo_retroventa"] = plazo
+
+        # Extraer números de paz y salvo de documentos soporte
+        for _campo in ["paz_salvo_predial", "paz_salvo_valorizacion", "paz_salvo_area_metro"]:
+            _val = str((extra or {}).get(_campo) or "").strip()
+            if _val and not _is_garbage(_val):
+                _key = _campo.upper()
+                if not contexto["DATOS_EXTRA"].get(_key):
+                    contexto["DATOS_EXTRA"][_key] = _val
 
     _merge_cedula_ocr_into_people(contexto["PERSONAS"], cedulas_json_list)
+
+    # Robustez actos_a_firmar: si rad_json tiene más actos que los que quedaron en NEGOCIO, usar los de rad_json
+    rad_actos = (radicacion_json or {}).get("negocio_actual", {}).get("actos_a_firmar") or []
+    existing_actos = contexto["NEGOCIO"].get("actos_a_firmar") or []
+    if isinstance(rad_actos, list) and len(rad_actos) > len(existing_actos):
+        contexto["NEGOCIO"]["actos_a_firmar"] = rad_actos
+
+    # CIUDAD desde radicacion si no viene del campo radicacion.ciudad
+    if not contexto["DATOS_EXTRA"].get("CIUDAD"):
+        contexto["DATOS_EXTRA"]["CIUDAD"] = (
+            (radicacion_json or {}).get("datos_inmueble", {}).get("ciudad_registro")
+            or (radicacion_json or {}).get("radicacion", {}).get("ciudad")
+            or "BUCARAMANGA"
+        )
 
     # Restaurar campos ID canónicos de radicación (evitar que OCR erróneo de soportes los sobreescriba)
     rad_inmueble = (radicacion_json or {}).get("datos_inmueble") or {}
@@ -366,17 +397,15 @@ def _build_universal_context(
         if val and not _is_garbage(val):
             contexto["INMUEBLE"][field] = val
 
+    # Surfacear codigo_catastral_anterior desde el inmueble fusionado
+    cat = contexto["INMUEBLE"].get("codigo_catastral_anterior") or ""
+    if cat and not _is_garbage(cat):
+        contexto["INMUEBLE"]["CODIGO_CATASTRAL_ANTERIOR"] = cat
+        contexto["INMUEBLE"]["CEDULA_CATASTRAL"] = cat
+
     # Neutralizar fecha_otorgamiento proveniente de soportes: pertenece al antecedente, no a esta EP
     if "fecha_otorgamiento" in contexto["DATOS_EXTRA"]:
         contexto["DATOS_EXTRA"]["fecha_escritura_antecedente"] = contexto["DATOS_EXTRA"].pop("fecha_otorgamiento")
-
-    # PERSONAS_ACTIVOS: solo partes del negocio actual (sin colindantes ni históricos)
-    contexto["PERSONAS_ACTIVOS"] = [p for p in contexto["PERSONAS"] if _is_actual_party(p)]
-
-    # EMPRESA_RL_MAP: mapeo empresa → persona RL
-    contexto["EMPRESA_RL_MAP"] = _build_empresa_rl_map(
-        radicacion_json, contexto["PERSONAS"]
-    )
 
     return contexto
 
@@ -484,7 +513,8 @@ def _build_resumen_actos(
         lines.append(f"ACTO {idx + 1}: {nombre}")
 
         roles = infer_roles_por_acto(nombre, personas_activos, None)
-        vendedores = roles.get("VENDEDORES", []) or roles.get("SOLICITANTES", [])
+        raw_vendedores   = roles.get("VENDEDORES", [])
+        raw_solicitantes = roles.get("SOLICITANTES", [])
         compradores = roles.get("COMPRADORES", [])
         deudores = roles.get("DEUDORES", [])
         acreedores = roles.get("ACREEDORES", [])
@@ -495,6 +525,55 @@ def _build_resumen_actos(
             if cc and "NO_DETECTADO" not in cc.upper():
                 return f"{n} - {cc}"
             return n
+
+        # Nombres normalizados de todas las personas que son RL en el mapa
+        rl_names_norm = {_normalize_name(v.get("nombre", "")) for v in empresa_rl_map.values()}
+
+        # Mapa inverso: nombre_rl_normalizado → nombre_empresa_normalizado
+        rl_to_empresa: Dict[str, str] = {
+            _normalize_name(rl.get("nombre", "")): emp_norm
+            for emp_norm, rl in empresa_rl_map.items()
+        }
+
+        def _is_rl(p: Dict) -> bool:
+            return _normalize_name(p.get("nombre", "")) in rl_names_norm
+
+        def _smart_filter(lst: List[Dict]) -> List[Dict]:
+            """
+            Filtra RLs de una lista de personas:
+            - RLs cuya empresa YA está en la lista → excluir (solo son RL, no actúan individualmente)
+            - RLs cuya empresa NO está en la lista → mantener (actúan a título personal, p.ej.
+              REIMUNDO compra siendo RL del vendedor INSELEM)
+            """
+            non_rl_names = {_normalize_name(p.get("nombre", "")) for p in lst if not _is_rl(p)}
+            result = []
+            for p in lst:
+                if not _is_rl(p):
+                    result.append(p)
+                else:
+                    emp_norm = rl_to_empresa.get(_normalize_name(p.get("nombre", "")))
+                    if emp_norm not in non_rl_names:
+                        result.append(p)  # empresa ausente → actúa personalmente
+            return result
+
+        # OTORGANTES puros (COMPRAVENTA, CANCELACION): los RLs solo aparecen via "(RL: X)" de su empresa
+        if raw_vendedores:
+            vendedores = [v for v in raw_vendedores if not _is_rl(v)]
+        # SOLICITANTES (CAMBIO_NOMBRE, CANCELACION como nuevos dueños): aplica smart filter
+        # para mantener RLs que actúan a título personal (p.ej. REIMUNDO en CAMBIO_NOMBRE)
+        elif raw_solicitantes:
+            vendedores = _smart_filter(raw_solicitantes)
+        else:
+            vendedores = []
+
+        # COMPRADORES: smart filter (REIMUNDO puede ser comprador personal siendo RL del vendedor)
+        compradores = _smart_filter(compradores)
+
+        # DEUDORES: mismo smart filter que compradores (REIMUNDO puede ser deudor personal)
+        deudores = _smart_filter(deudores)
+
+        # ACREEDORES: excluir RLs (las empresas acreedoras se representan con su RL vía "(RL: X)")
+        acreedores = [a for a in acreedores if not _is_rl(a)]
 
         if vendedores:
             partes = []
@@ -520,10 +599,18 @@ def _build_resumen_actos(
 
         if deudores:
             for d in deudores:
-                lines.append(f"DEUDOR: {_fmt_persona(d)}")
+                s = _fmt_persona(d)
+                rl = empresa_rl_map.get(_normalize_name(d.get("nombre") or ""))
+                if rl:
+                    s += f" (RL: {rl.get('nombre','')} - {rl.get('identificacion','')})"
+                lines.append(f"DEUDOR: {s}")
         if acreedores:
             for a in acreedores:
-                lines.append(f"ACREEDOR: {_fmt_persona(a)}")
+                s = _fmt_persona(a)
+                rl = empresa_rl_map.get(_normalize_name(a.get("nombre") or ""))
+                if rl:
+                    s += f" (RL: {rl.get('nombre','')} - {rl.get('identificacion','')})"
+                lines.append(f"ACREEDOR: {s}")
 
         lines.append("")  # línea en blanco entre actos
 
@@ -545,6 +632,38 @@ def _prepare_ep_sections(contexto: Dict[str, Any], actos_docs: List[Dict[str, st
 
     # Resumen de actos para carátula (construido en Python, dinámico)
     resumen_actos = _build_resumen_actos(contexto)
+
+    # APERTURA (fórmula notarial de apertura + datos EP — va entre carátula y primer acto)
+    # Resolver ACREEDOR_HIPOTECA para la apertura (nombre del acreedor del acto de hipoteca)
+    acreedor_hipoteca_nombre = ""
+    actos_a_firmar_list = (contexto.get("NEGOCIO") or {}).get("actos_a_firmar") or []
+    for _acto_hip in actos_a_firmar_list:
+        if "HIPOTECA" in (_acto_hip.get("nombre") or "").upper():
+            _ctx_hip = build_act_context(contexto, _acto_hip, actos_a_firmar_list.index(_acto_hip))
+            acreedor_hipoteca_nombre = (
+                _ctx_hip.get("EMPRESA_ACREEDOR_1")
+                or _ctx_hip.get("EMPRESA_ACREEDOR")
+                or _ctx_hip.get("NOMBRE_ACREEDOR_1")
+                or _ctx_hip.get("NOMBRE_ACREEDOR")
+                or ""
+            )
+            break
+    misiones.append({
+        "orden": 10,
+        "descripcion": "EP_APERTURA",
+        "plantilla_con_huecos": EP_APERTURA_TEMPLATE,
+        "contexto_datos": {
+            # MÍNIMO: solo [[CIUDAD]] que tiene la plantilla (EP número y fecha van en la CARÁTULA).
+            # NO pasar PERSONAS ni NEGOCIO para que el LLM no genere contenido extra.
+            "CIUDAD": ciudad,
+        },
+        "instrucciones": (
+            "CRÍTICO: La plantilla de apertura está COMPLETA — solo una línea con [[CIUDAD]]. "
+            "Rellena ÚNICAMENTE el placeholder [[CIUDAD]]. "
+            "NO agregues EP número, NO agregues radicado, NO agregues COMPARECEN, "
+            "NO agregues resumen de actos, NO agregues ningún otro texto. Sin markdown."
+        ),
+    })
 
     # CARÁTULA
     misiones.append({
@@ -593,6 +712,10 @@ def _prepare_ep_sections(contexto: Dict[str, Any], actos_docs: List[Dict[str, st
         # CONTEXTO POR ACTO (motor de roles por acto)
         ctx_acto = build_act_context(contexto, acto, idx)
 
+        # Eliminar NEGOCIO del contexto del acto: evita que DataBinder construya
+        # RESUMEN_ACTOS dentro de la sección del acto (solo va en la carátula).
+        ctx_acto.pop("NEGOCIO", None)
+
         # Propagar PERSONAS_ACTIVOS y EMPRESA_RL_MAP al contexto de acto
         ctx_acto["PERSONAS_ACTIVOS"] = personas_activos
         ctx_acto["EMPRESA_RL_MAP"] = empresa_rl_map
@@ -601,6 +724,28 @@ def _prepare_ep_sections(contexto: Dict[str, Any], actos_docs: List[Dict[str, st
         ctx_acto["CIUDAD"] = ciudad
         ctx_acto["NOTARIA_NOMBRE"] = notaria
 
+        # Propagar ep_antecedente_pacto como variables explícitas para todos los actos
+        ep_ant_global = inmueble.get("ep_antecedente_pacto") or {}
+        ctx_acto["EP_ANTECEDENTE_NUMERO"] = ep_ant_global.get("numero_ep") or "[[PENDIENTE: EP_ANTECEDENTE_NUMERO]]"
+        ctx_acto["EP_ANTECEDENTE_FECHA"] = ep_ant_global.get("fecha") or "[[PENDIENTE: EP_ANTECEDENTE_FECHA]]"
+        ctx_acto["EP_ANTECEDENTE_NOTARIA"] = ep_ant_global.get("notaria") or "[[PENDIENTE: EP_ANTECEDENTE_NOTARIA]]"
+
+        # Variables granulares del antecedente (para templates CUARTO/SEGUNDO TITULO)
+        _ep_fecha  = ep_ant_global.get("fecha") or ""
+        _ep_notaria = ep_ant_global.get("notaria") or ""
+        _fm = re.match(r"(\d{1,2})\s+de\s+(\w+)\s+del?\s+(\d{4})", _ep_fecha, re.IGNORECASE)
+        ctx_acto["DIA_ESCRITURA_ANTERIOR"]    = _fm.group(1) if _fm else "[[PENDIENTE: DIA_ESCRITURA_ANTERIOR]]"
+        ctx_acto["MES_ESCRITURA_ANTERIOR"]    = _fm.group(2) if _fm else "[[PENDIENTE: MES_ESCRITURA_ANTERIOR]]"
+        ctx_acto["ANO_ESCRITURA_ANTERIOR"]    = _fm.group(3) if _fm else "[[PENDIENTE: ANO_ESCRITURA_ANTERIOR]]"
+        ctx_acto["FECHA_ESCRITURA_ANTERIOR"]  = _ep_fecha or "[[PENDIENTE: FECHA_ESCRITURA_ANTERIOR]]"
+        _nm = re.search(r"Notar[íi]a\s+(\w+)(?:\s+del?\s+[Cc][íi]rculo\s+de\s+(.+))?", _ep_notaria, re.IGNORECASE)
+        ctx_acto["NUMERO_NOTARIA_ANTERIOR"]  = (_nm.group(1).strip() if _nm else "[[PENDIENTE: NUMERO_NOTARIA_ANTERIOR]]")
+        ctx_acto["CIRCULO_NOTARIA_ANTERIOR"] = (_nm.group(2).strip() if _nm and _nm.group(2) else (_ep_notaria or "[[PENDIENTE: CIRCULO_NOTARIA_ANTERIOR]]"))
+        ctx_acto["NUMERO_ESCRITURA_ANTERIOR"] = ep_ant_global.get("numero_ep") or "[[PENDIENTE: NUMERO_ESCRITURA_ANTERIOR]]"
+        ctx_acto["VENDEDOR_ANTERIOR"]         = ep_ant_global.get("vendedor") or "[[PENDIENTE: VENDEDOR_ANTERIOR]]"
+        ctx_acto["TIPO_ADQUISICION_ANTERIOR"] = "COMPRAVENTA"
+        ctx_acto["OFICINA_REGISTRO"]          = (inmueble.get("ciudad_registro") or ciudad or "[[PENDIENTE: OFICINA_REGISTRO]]")
+
         from app.pipeline.act_engine import _acto_kind as _ak
         instruccion_acto = (
             f"Encabeza con: {ctx_acto['ORDINAL_ACTO']} ACTO: {nombre_acto.upper()}. "
@@ -608,6 +753,8 @@ def _prepare_ep_sections(contexto: Dict[str, Any], actos_docs: List[Dict[str, st
             "Usa EMPRESA_RL_MAP para completar representantes legales de empresas. "
             "La fecha de comparecencia de ESTA escritura es [[PENDIENTE: FECHA_OTORGAMIENTO]] — "
             "NO uses fechas de escrituras referenciadas en el texto (ej. la fecha del antecedente). "
+            "NO incluir RESUMEN DE ACTOS ni listado de los demás actos en esta sección. "
+            "Conserva los guiones de relleno '---' que aparecen en la plantilla. "
         )
         if _ak(nombre_acto) == "CANCELACION":
             instruccion_acto += (
@@ -615,6 +762,12 @@ def _prepare_ep_sections(contexto: Dict[str, Any], actos_docs: List[Dict[str, st
                 "el campo INMUEBLE.ep_antecedente_pacto (numero_ep, fecha, notaria) como la escritura "
                 "que se cancela — NO uses INMUEBLE.tradicion para obtener el número de EP. "
             )
+            ctx_acto["PLAZO_RETROVENTA"] = (
+                datos_extra.get("plazo_retroventa")
+                or "[[PENDIENTE: PLAZO_RETROVENTA]]"
+            )
+            ep_ant = inmueble.get("ep_antecedente_pacto") or {}
+            ctx_acto["VALOR_ANTECEDENTE"] = ep_ant.get("valor") or "[[PENDIENTE: VALOR_ANTECEDENTE]]"
         elif _ak(nombre_acto) == "CAMBIO_NOMBRE":
             instruccion_acto += (
                 "IMPORTANTE: Este acto tiene UN SOLO compareciente: el nuevo propietario "
@@ -681,14 +834,20 @@ def _prepare_ep_sections(contexto: Dict[str, Any], actos_docs: List[Dict[str, st
 
     # UIAF — solo personas naturales partes del negocio actual
     # Solo agregar si hay personas naturales; template vacío hace que el binder alucine contenido
-    uiaf_template = _build_ui_af_blocks(personas_activos)
-    if uiaf_template:
+    uiaf_blocks = _build_ui_af_blocks(personas_activos)
+    if uiaf_blocks:
+        # Envolver cada bloque persona en marcadores de tabla para que el renderer cree tablas DOCX
+        uiaf_blocks_con_marcadores = "\n\n".join(
+            f"###TABLE_START###\n{bloque}\n###TABLE_END###"
+            for bloque in uiaf_blocks.split("\n\n")
+            if bloque.strip()
+        )
         misiones.append({
             "orden": 96,
             "descripcion": "EP_UIAF",
-            "plantilla_con_huecos": uiaf_template,
+            "plantilla_con_huecos": uiaf_blocks_con_marcadores,
             "contexto_datos": contexto,
-            "instrucciones": "Bloque UIAF ya construido. Transcribe sin modificar.",
+            "instrucciones": "Bloque UIAF ya construido. Transcribe sin modificar incluyendo marcadores ###TABLE_START### y ###TABLE_END###.",
         })
 
     # FIRMAS
@@ -798,7 +957,7 @@ async def run_pipeline(
     # 3) CÉDULAS
     cedulas_json_list: List[Dict[str, Any]] = []
 
-    async def _analyze_cedula(p: str) -> Dict[str, Any]:
+    async def _analyze_cedula(p: str) -> List[Dict[str, Any]]:
         b = Path(p).read_bytes()
         txt = await asyncio.to_thread(
             gemini.analyze_binary,
@@ -807,27 +966,47 @@ async def run_pipeline(
             CEDULA_PROMPT,
             settings.GEMINI_MODEL_VISION,
             0.1,
-            2048,
+            4096,
         )
-        out = parse_json_with_repair(
+        parsed = parse_json_with_repair(
             txt,
             kind="cedula",
             openai_client=openai,
             temperature=0.0,
-            max_tokens=2000,
+            max_tokens=3000,
         )
-        out["_fileName"] = Path(p).name
-        debug.dump_gemini_output("03_cedulas", p, txt, out)
-        return out
+        # Unwrap {"cedulas": [...]} wrapper; also accept bare list or dict
+        if isinstance(parsed, dict) and "cedulas" in parsed:
+            cedula_list = parsed["cedulas"] if isinstance(parsed["cedulas"], list) else [parsed["cedulas"]]
+        elif isinstance(parsed, list):
+            cedula_list = parsed
+        elif isinstance(parsed, dict) and parsed:
+            cedula_list = [parsed]
+        else:
+            cedula_list = []
+        # Tag with source filename
+        for c in cedula_list:
+            if isinstance(c, dict):
+                c.setdefault("_fileName", Path(p).name)
+        debug.dump_gemini_output("03_cedulas", p, txt, cedula_list)
+        return cedula_list
 
     if scanner_paths:
-        cedulas_json_list = await asyncio.gather(*[_analyze_cedula(p) for p in scanner_paths])
+        cedula_results = await asyncio.gather(*[_analyze_cedula(p) for p in scanner_paths])
+        # Flatten list of lists into a single list
+        cedulas_json_list = [c for sublist in cedula_results for c in sublist]
 
     debug.dump_stage_json("03_cedulas.json", cedulas_json_list)
 
     # 4) CONTEXTO UNIVERSAL + DEDUPE
     contexto = _build_universal_context(rad_json, soportes_json_list, cedulas_json_list)
     contexto["PERSONAS"] = dedupe_personas(contexto.get("PERSONAS") or [])
+
+    # Reconstruir PERSONAS_ACTIVOS y EMPRESA_RL_MAP DESPUÉS del dedup para que los
+    # dicts de radicacion ya tengan estado_civil/email/ocupacion enriquecidos desde soportes
+    contexto["PERSONAS_ACTIVOS"] = [p for p in contexto["PERSONAS"] if _is_actual_party(p)]
+    contexto["EMPRESA_RL_MAP"] = _build_empresa_rl_map(rad_json, contexto["PERSONAS"])
+
     debug.dump_stage_json("04_contexto_universal.json", contexto)
 
     # 5) RAG POR ACTOS (en el orden de radicación)
@@ -859,15 +1038,29 @@ async def run_pipeline(
         user = DATABINDER_USER.format(
             contexto_json=json.dumps(m["contexto_datos"], ensure_ascii=False),
             plantilla=m["plantilla_con_huecos"],
+            instrucciones=m.get("instrucciones") or "Rellena los placeholders del texto.",
         )
-        out = await asyncio.to_thread(openai.chat, DATABINDER_SYSTEM, user, 0.1, 8000)
+        # Actos individuales pueden tener templates muy largos (ej. hipoteca con 13 cláusulas)
+        max_tok = 16000 if m["descripcion"].startswith("EP_ACTO") else 8000
+        out = await asyncio.to_thread(openai.chat, DATABINDER_SYSTEM, user, 0.1, max_tok)
         debug.dump_binder_output(m["orden"], m["descripcion"], out)
         return {"orden": m["orden"], "descripcion": m["descripcion"], "texto": out}
 
     results = await asyncio.gather(*[_run_mision(m) for m in misiones])
     results.sort(key=lambda x: x["orden"])
 
-    cuerpo_escritura = "\n\n".join([r["texto"].strip() for r in results if r["texto"].strip()])
+    # Los actos individuales (EP_ACTO_*) reciben un salto de línea extra antes
+    # para que haya separación visual clara entre el inicio de cada acto y la sección anterior.
+    partes_escritura = []
+    for r in results:
+        texto = r["texto"].strip()
+        if not texto:
+            continue
+        if r["descripcion"].startswith("EP_ACTO"):
+            partes_escritura.append("\n" + texto)
+        else:
+            partes_escritura.append(texto)
+    cuerpo_escritura = "\n\n".join(partes_escritura)
     debug.dump_stage_text("08_cuerpo_escritura.txt", cuerpo_escritura)
     debug.write_checklist()
 
