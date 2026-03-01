@@ -7,26 +7,36 @@ from typing import Dict, Optional
 
 from app.core.config import settings
 from app.services.rag_store import LocalRAGStore
+from app.services.rag.knowledge_rag import KnowledgeRAG
 
 
 def split_metadata_and_body(raw: str) -> Dict[str, str]:
     """
-    Permite tener archivos .txt con algo tipo:
+    Permite tener archivos .txt con dos formatos de separador:
 
-    ---METADATA---
-    ...
-    ---BODY---
-    ...
+    Formato 1 (legado):
+      ---METADATA---  ...  ---BODY---  ...
 
-    Si no existe ese formato, todo se va como contenido_legal.
+    Formato 2 (templates de actos notariales):
+      ==...==  ACTO: ...  ==...==  {Crear metadata...}  OTORGANTES: ...  {Cuerpo del Acto}  Compareció...
+
+    Si no existe ningún separador, todo se va como contenido_legal.
     """
     if not raw:
         return {"metadata_especifica": "", "contenido_legal": ""}
 
     s = raw.strip()
+
     if "---BODY---" in s:
         parts = s.split("---BODY---", 1)
         meta = parts[0].replace("---METADATA---", "").strip()
+        body = parts[1].strip()
+        return {"metadata_especifica": meta, "contenido_legal": body}
+
+    # Templates de actos notariales usan {Cuerpo del Acto} como separador de sección
+    if "{Cuerpo del Acto}" in s:
+        parts = s.split("{Cuerpo del Acto}", 1)
+        meta = parts[0].strip()
         body = parts[1].strip()
         return {"metadata_especifica": meta, "contenido_legal": body}
 
@@ -61,6 +71,7 @@ class LocalRAG:
 
         self.store = LocalRAGStore(str(self.store_dir))
         self.store.load()
+        self.knowledge = KnowledgeRAG()
 
     def retrieve_acto_text(self, acto_nombre: str) -> str:
         """

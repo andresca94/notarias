@@ -7,29 +7,51 @@ from typing import Dict, List, Optional
 
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.shared import RGBColor
+from docx.shared import Pt, RGBColor
 
 
 # ── Colores notariales ──────────────────────────────────────────────────────
 _COLOR_PENDIENTE = RGBColor(0xCC, 0x00, 0x00)  # Rojo  → [[PENDIENTE: ...]]
 _COLOR_VARIABLE  = RGBColor(0xE6, 0x4A, 0x00)  # Naranja → [[VARIABLE_LLENA]]
+_COLOR_GRIS      = RGBColor(0xAA, 0xAA, 0xAA)  # Gris → separadores de guiones
 
 # ── Patrones regex ───────────────────────────────────────────────────────────
 # Variables notariales [[...]]
 _VAR_RE = re.compile(r'(\[\[.*?\]\])', re.DOTALL)
 
 # Secuencias de 2+ palabras totalmente en MAYÚSCULAS (nombres/entidades)
-# Acepta letras latinas con tilde. No matchea palabras sueltas (requiere ≥2).
 _CAPS_SEQ = re.compile(
     r'[A-ZÁÉÍÓÚÜÑ]{2,}(?:\s[A-ZÁÉÍÓÚÜÑ]{2,})+'
 )
 
-# Línea de encabezado: "CAMPO: valor" (etiqueta en mayúsculas seguida de dos puntos)
+# Línea de encabezado: "CAMPO: valor"
 _HEADER_LINE_RE = re.compile(r'^[A-ZÁÉÍÓÚÜÑ][A-ZÁÉÍÓÚÜÑ0-9 \(\)\/]{1,50}:\s')
 
+# Título de acto EP: ---PRIMER ACTO--- o ---CANCELACION PACTO DE RETROVENTA---
+_ACT_TITLE_RE = re.compile(r'^-{2,}\s*([A-ZÁÉÍÓÚÜÑ0-9][A-ZÁÉÍÓÚÜÑ0-9 ÁÉÍÓÚ]*[A-ZÁÉÍÓÚÜÑ0-9])\s*-{2,}$')
+
+# Número de cláusula al inicio de bloque (PRIMERO., SEGUNDO:, PARÁGRAFO PRIMERO:, etc.)
+_CLAUSE_NUM_RE = re.compile(
+    r'^(PRIMERO|SEGUNDO|TERCERO|CUARTO|QUINTO|SEXTO|SÉPTIMO|OCTAVO|NOVENO|DÉCIMO'
+    r'|PARÁGRAFO\s+(?:PRIMERO|SEGUNDO|TERCERO|CUARTO|ÚNICO)'
+    r'|CLÁUSULA\s+\w+)[\.\:\-\s]',
+    re.IGNORECASE
+)
+
+# Separador puro de guiones (≥10 guiones, solo guiones)
+_DASH_SEP_RE = re.compile(r'^[-─]{10,}$')
+
+# Guiones al FINAL de un bloque (para extender a relleno de línea completa)
+_TRAILING_DASH_RE = re.compile(r'(-{3,})\s*\t?\s*$', re.MULTILINE)
+
+# Guiones de relleno estándar al estilo EP colombiano
+_LINE_FILL_DASHES = '-' * 90
+
+
+# ── Helpers de detección ─────────────────────────────────────────────────────
 
 def _is_header_block(block: str) -> bool:
-    """True si ≥60% de las líneas son del tipo 'CAMPO: valor' (bloque de metadatos/encabezado)."""
+    """True si ≥60% de las líneas son del tipo 'CAMPO: valor'."""
     lines = [l.strip() for l in block.split('\n') if l.strip()]
     if len(lines) < 2:
         return False
@@ -38,7 +60,7 @@ def _is_header_block(block: str) -> bool:
 
 
 def _is_title_line(line: str) -> bool:
-    """True si la línea es un título de sección corto predominantemente en mayúsculas.
+    """True si la línea es un título de sección predominantemente en mayúsculas.
     Ejemplos: 'OTORGAMIENTO y AUTORIZACIÓN', 'DE LA CAPACIDAD:', 'DERECHOS NOTARIALES:'
     """
     s = line.strip()
@@ -48,7 +70,29 @@ def _is_title_line(line: str) -> bool:
     if len(letters) < 3:
         return False
     upper_ratio = sum(1 for c in letters if c.isupper()) / len(letters)
-    return upper_ratio >= 0.65 and len(s.split()) <= 10
+    return upper_ratio >= 0.65 and len(s.split()) <= 12  # ampliado de 10 → 12
+
+
+def _is_act_title_line(line: str) -> bool:
+    """True si la línea es un título de acto EP: ---PRIMER ACTO--- """
+    return bool(_ACT_TITLE_RE.match(line.strip()))
+
+
+def _is_act_title_block(block: str) -> bool:
+    """True si TODAS las líneas no vacías del bloque son títulos de acto."""
+    lines = [l for l in block.split('\n') if l.strip()]
+    return bool(lines) and all(_is_act_title_line(l) for l in lines)
+
+
+def _is_dash_sep_block(block: str) -> bool:
+    """True si el bloque es exclusivamente guiones (separador visual)."""
+    lines = [l.strip() for l in block.split('\n') if l.strip()]
+    return bool(lines) and all(_DASH_SEP_RE.match(l) for l in lines)
+
+
+def _preprocess_block(block: str) -> str:
+    """Extiende secuencias de guiones finales para completar la línea visual al estilo EP."""
+    return _TRAILING_DASH_RE.sub(_LINE_FILL_DASHES, block)
 
 
 # ── Helpers de formato ───────────────────────────────────────────────────────
@@ -64,7 +108,6 @@ def _add_line_to_para(para, line: str) -> None:
     for seg in segments:
         if not seg:
             continue
-        # ¿Es una variable notarial?
         if re.fullmatch(r'\[\[.*?\]\]', seg, re.DOTALL):
             run = para.add_run(seg)
             run.bold = True
@@ -73,7 +116,6 @@ def _add_line_to_para(para, line: str) -> None:
             else:
                 run.font.color.rgb = _COLOR_VARIABLE
         else:
-            # Texto normal: bold para secuencias en MAYÚSCULAS
             pos = 0
             for m in _CAPS_SEQ.finditer(seg):
                 before = seg[pos:m.start()]
@@ -87,10 +129,19 @@ def _add_line_to_para(para, line: str) -> None:
                 para.add_run(tail)
 
 
+def _set_spacing(para, before_pt: float = 0, after_pt: float = 0) -> None:
+    """Aplica espaciado antes/después a un párrafo."""
+    fmt = para.paragraph_format
+    if before_pt:
+        fmt.space_before = Pt(before_pt)
+    if after_pt:
+        fmt.space_after = Pt(after_pt)
+
+
 def _insert_table_after(paragraph, text_block: str) -> None:
     """
-    Crea una tabla de una columna (sin encabezado) donde cada línea del bloque es una fila.
-    La tabla se inserta en el XML inmediatamente después de 'paragraph'.
+    Crea una tabla de una columna donde cada línea del bloque es una fila.
+    La tabla se inserta inmediatamente después de 'paragraph'.
     """
     lines = [
         l for l in text_block.split("\n")
@@ -120,65 +171,173 @@ def _insert_table_after(paragraph, text_block: str) -> None:
         else:
             _add_line_to_para(para, row_text)
 
-    # Mover la tabla al lugar correcto (después del párrafo de anclaje)
     tbl_xml = table._tbl
     parent.remove(tbl_xml)
     parent.insert(idx + 1, tbl_xml)
 
 
+def _render_block(b: str, doc, parent, idx: int) -> int:
+    """
+    Renderiza un bloque de texto como uno o más párrafos Word con formato notarial.
+    Devuelve el nuevo índice de inserción.
+
+    Jerarquía de tipos:
+    1. Tabla UIAF (###TABLE_START###)
+    2. Separador de guiones puro
+    3. Título de acto EP (---PRIMER ACTO---)
+    4. Bloque de encabezado CAMPO: valor
+    5. Cláusula numerada (PRIMERO., SEGUNDO:, etc.)
+    6. Línea de título corta (OTORGAMIENTO, DE LA CAPACIDAD:, etc.)
+    7. Texto legal justificado (default)
+    """
+    # 1) Tabla UIAF
+    if b.strip().startswith("###TABLE_START###"):
+        anchor = doc.add_paragraph()
+        anchor_xml = anchor._p
+        parent.remove(anchor_xml)
+        parent.insert(idx + 1, anchor_xml)
+        idx += 1
+        _insert_table_after(anchor, b)
+        idx += 1
+        return idx
+
+    # Pre-procesado: extender guiones finales
+    b = _preprocess_block(b)
+
+    # 2) Separador puro de guiones
+    if _is_dash_sep_block(b):
+        new_p = doc.add_paragraph()
+        new_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        run = new_p.add_run(_LINE_FILL_DASHES)
+        run.font.color.rgb = _COLOR_GRIS
+        _set_spacing(new_p, after_pt=0)
+        p_xml = new_p._p
+        parent.remove(p_xml)
+        parent.insert(idx + 1, p_xml)
+        idx += 1
+        return idx
+
+    # 3) Título de acto EP (---PRIMER ACTO--- / ---CANCELACION PACTO DE RETROVENTA---)
+    if _is_act_title_block(b):
+        lines = [l for l in b.split('\n') if l.strip()]
+        first = True
+        for line in lines:
+            m = _ACT_TITLE_RE.match(line.strip())
+            text = m.group(1).strip() if m else line.strip('- ').strip()
+            new_p = doc.add_paragraph()
+            new_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            run = new_p.add_run(text)
+            run.bold = True
+            run.font.size = Pt(13)
+            if first:
+                _set_spacing(new_p, before_pt=18, after_pt=2)
+                first = False
+            else:
+                _set_spacing(new_p, after_pt=6)
+            p_xml = new_p._p
+            parent.remove(p_xml)
+            parent.insert(idx + 1, p_xml)
+            idx += 1
+        return idx
+
+    # 4) Encabezado CAMPO: valor
+    if _is_header_block(b):
+        new_p = doc.add_paragraph()
+        new_p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        lines = b.split('\n')
+        for i, line in enumerate(lines):
+            if i > 0:
+                br_run = new_p.add_run()
+                br_run.add_break()
+            _add_line_to_para(new_p, line)
+        p_xml = new_p._p
+        parent.remove(p_xml)
+        parent.insert(idx + 1, p_xml)
+        idx += 1
+        return idx
+
+    # 5) Cláusula numerada (PRIMERO., SEGUNDO:, PARÁGRAFO PRIMERO:, etc.)
+    first_line = b.split('\n')[0].strip()
+    clause_match = _CLAUSE_NUM_RE.match(first_line)
+    if clause_match:
+        new_p = doc.add_paragraph()
+        new_p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+        _set_spacing(new_p, before_pt=4, after_pt=2)
+        lines = b.split('\n')
+        for i, line in enumerate(lines):
+            if i > 0:
+                br_run = new_p.add_run()
+                br_run.add_break()
+            if i == 0:
+                # Separar el número de cláusula del resto
+                cm = _CLAUSE_NUM_RE.match(line.strip())
+                if cm:
+                    label_end = cm.end()
+                    label = line[:label_end].rstrip()
+                    rest = line[label_end:]
+                    run = new_p.add_run(label)
+                    run.bold = True
+                    if rest:
+                        _add_line_to_para(new_p, rest)
+                else:
+                    _add_line_to_para(new_p, line)
+            else:
+                _add_line_to_para(new_p, line)
+        p_xml = new_p._p
+        parent.remove(p_xml)
+        parent.insert(idx + 1, p_xml)
+        idx += 1
+        return idx
+
+    # 6 + 7) Líneas de título y texto legal (procesado línea a línea)
+    new_p = doc.add_paragraph()
+    is_header = False  # ya descartado arriba
+    new_p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+    _set_spacing(new_p, after_pt=2)
+
+    lines = b.split('\n')
+    for i, line in enumerate(lines):
+        if i > 0:
+            br_run = new_p.add_run()
+            br_run.add_break()
+        if _is_title_line(line):
+            run = new_p.add_run(line.strip())
+            run.bold = True
+            # Si es la única/primera línea del bloque, añadir espacio
+            if i == 0:
+                _set_spacing(new_p, before_pt=8, after_pt=2)
+        else:
+            _add_line_to_para(new_p, line)
+
+    p_xml = new_p._p
+    parent.remove(p_xml)
+    parent.insert(idx + 1, p_xml)
+    idx += 1
+    return idx
+
+
 def _insert_paragraphs_after(paragraph, blocks: List[str]) -> None:
     """
     Inserta bloques como párrafos notariales después de 'paragraph'.
-    - Bloques de encabezado ('CAMPO: valor'): alineación LEFT, etiquetas en negrita.
-    - Líneas de título (cortas, >65% mayúsculas): negrita completa.
-    - Resto: justificado (izquierda y derecha).
-    - Los saltos simples (\\n) se preservan como saltos de línea Word.
+    Aplica formato visual EP colombiano:
+    - Títulos de acto (---PRIMER ACTO---): bold, centrado, 13pt, espaciado
+    - Cláusulas numeradas (PRIMERO., SEGUNDO:): número en negrita
+    - Separadores de guiones: extendidos a 90 chars, color gris
+    - Guiones al final de párrafo: extendidos a 90 chars
+    - Títulos de sección cortos: negrita
+    - Encabezados CAMPO: valor: alineación izquierda
+    - Texto legal: justificado
     """
     parent = paragraph._p.getparent()
     idx = parent.index(paragraph._p)
     doc = paragraph.part.document
 
     for b in blocks:
-        # Bloque de tabla UIAF: crear tabla de una columna en lugar de párrafo
-        if b.strip().startswith("###TABLE_START###"):
-            # Insertar párrafo vacío de anclaje y luego la tabla
-            anchor = doc.add_paragraph()
-            anchor_xml = anchor._p
-            parent.remove(anchor_xml)
-            parent.insert(idx + 1, anchor_xml)
-            idx += 1
-            _insert_table_after(anchor, b)
-            idx += 1
-            continue
-
-        new_p = doc.add_paragraph()
-        is_header = _is_header_block(b)
-        new_p.alignment = WD_ALIGN_PARAGRAPH.LEFT if is_header else WD_ALIGN_PARAGRAPH.JUSTIFY
-
-        lines = b.split('\n')
-        for i, line in enumerate(lines):
-            if i > 0:
-                # Salto de línea dentro del mismo párrafo Word
-                br_run = new_p.add_run()
-                br_run.add_break()
-            # Línea de título: bold completo sin procesamiento adicional
-            if not is_header and _is_title_line(line):
-                run = new_p.add_run(line.strip())
-                run.bold = True
-            else:
-                _add_line_to_para(new_p, line)
-
-        # Mover el XML al lugar correcto
-        p_xml = new_p._p
-        parent.remove(p_xml)
-        parent.insert(idx + 1, p_xml)
-        idx += 1
+        idx = _render_block(b, doc, parent, idx)
 
 
 def _replace_in_paragraph(paragraph, key: str, value: str) -> None:
-    """
-    Reemplaza texto aunque el placeholder esté partido en runs.
-    """
+    """Reemplaza texto aunque el placeholder esté partido en runs."""
     if key not in paragraph.text:
         return
 
@@ -197,10 +356,7 @@ def render_docx(template_path: str, context: Dict, out_docx_path: str) -> str:
     """
     Render DOCX "notarial-friendly".
     - Reemplaza placeholders simples tipo {{RADICADO}} en todo el documento.
-    - Para {{CONTENIDO_IA}}: inserta párrafos justificados con formato notarial:
-        · Variables [[...]] coloreadas.
-        · Nombres / entidades en MAYÚSCULAS en negrita.
-        · Texto justificado.
+    - Para {{CONTENIDO_IA}}: inserta párrafos con formato notarial EP colombiano.
     """
     template_path = str(template_path)
     out_docx_path = str(out_docx_path)
@@ -237,24 +393,10 @@ def render_docx(template_path: str, context: Dict, out_docx_path: str) -> str:
 
     if not placeholder_found:
         doc.add_paragraph("")
+        parent = doc.element.body
+        idx = len(list(parent)) - 1
         for b in blocks:
-            if b.strip().startswith("###TABLE_START###"):
-                anchor = doc.add_paragraph()
-                _insert_table_after(anchor, b)
-                continue
-            new_p = doc.add_paragraph()
-            is_header = _is_header_block(b)
-            new_p.alignment = WD_ALIGN_PARAGRAPH.LEFT if is_header else WD_ALIGN_PARAGRAPH.JUSTIFY
-            lines = b.split('\n')
-            for i, line in enumerate(lines):
-                if i > 0:
-                    br_run = new_p.add_run()
-                    br_run.add_break()
-                if not is_header and _is_title_line(line):
-                    run = new_p.add_run(line.strip())
-                    run.bold = True
-                else:
-                    _add_line_to_para(new_p, line)
+            idx = _render_block(b, doc, parent, idx)
 
     Path(out_docx_path).parent.mkdir(parents=True, exist_ok=True)
     doc.save(out_docx_path)

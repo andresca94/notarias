@@ -1,0 +1,47 @@
+Compareció(eron): <<nombre.vendedor.1>> mayor de edad, domiciliado(a) en ______________, identificado(a) con la cédula de ciudadanía número <<cedula.vendedor.1>> expedida en ___________, de estado civil __________________, obrando en nombre y representación propia y <<nombre.vendedor.2>>, mayor de edad, domiciliado(a) en ______________, identificado(a) con la cédula de ciudadanía número <<cedula.vendedor.2>> expedida en ____________, de estado civil __________________,  obrando en nombre y representación propia, quien(es) se denominará(n) LA PARTE VENDEDORA y dijo(eron): ----------
+PRIMERO: Que transfiere(n) a título de venta a favor de <<nombre.comprador.1>>, mayor de edad, domiciliado(a) en ______________, identificado(a) con la cédula de ciudadanía número <<cedula.comprador.1>> expedida en ___________, de estado civil _______________, obrando en nombre y representación propia  y <<nombre.comprador.2>>, mayor de edad, domiciliado(a) en ______________,, identificado con la cédula de ciudadanía número <<cedula.comprador.2>> expedida en ______________, de estado civil _______________, obrando en nombre y representación propia, quien(es) se denomina(rán) LA PARTE COMPRADORA, el derecho de dominio, propiedad y posesión que LA PARTE VENDEDORA tiene(n) sobre la cuota parte correspondiente al        %  del(los) siguiente(s) inmueble(s): ----------
+
+
+INCLUIR INMUEBLE (APTO) JUNTO CON SU NOMENCLATURA, AREA Y LINDEROS ESPECIFICOS
+
+
+A este inmueble le corresponde el folio de matrícula inmobiliaria número <<numero.matricula>>, y se distingue con el numero predial nacional <<numero.predial.nacional>> y la cedula catastral anterior <<codigo.catastral.anterior>> 
+
+PARÁGRAFO PRIMERO: No obstante la mención de su cabida y linderos la venta se hace como cuerpo cierto. ----------
+LINDEROS GENERALES DEL <<incluir.nombre.del.conjunto>> ---------
+
+
+
+INCLUIR LINDEROS GENERALES
+
+
+
+----------
+RÉGIMEN DE PROPIEDAD HORIZONTAL – <<incluir.nombre.del.conjunto>> del que forma(n) parte el(los) inmueble(s) objeto de este contrato se encuentra sometido al régimen de propiedad horizontal, según escritura pública número ____ de fecha ___ de _______ del año ______________, otorgada en la Notaría ____________ del Círculo de _____________, (incluir aclaraciones, reformas, cambios de régimen de copropiedad), debidamente registrada(s) en el(los) folio(s) de matrícula inmobiliaria individuales número(s) <<numero.matricula>> de la Oficina de Registro de Instrumentos Públicos de _____________. ----------
+SEGUNDO - TITULO DE ADQUISICIÓN: El inmueble anteriormente descrito del cual se transfiere la cuota parte fue adquirido fue adquirido por LA PARTE VENDEDORA, por ______________ efectuada a _______________________, mediante escritura pública número ___________ de fecha ___________ de _____________del año ____________, otorgada en la Notaría __________ del Círculo de ________, y debidamente registrada en la Oficina de Registro de Instrumentos Públicos de _____________ al(los) folio(s) de matrícula inmobiliaria número(s) <<numero.matricula>> 
+----------
+TERCERO- LIBERTAD: Que la cuota parte del inmueble que por medio de esta escritura se transfiere se encuentra libre de embargo, pleitos pendientes, condiciones resolutorias del dominio, anticresis, censos, arrendamientos por escritura pública, de hipotecas y de cualquier otro gravamen o limitación del dominio, pero en todo caso se obliga al saneamiento en los casos previstos por la Ley. INCLUIR SI HAY SERVIDUMBRES, HIPOTECAS, MEDIDAS CAUTELARES O ALGUNA LIMITACION. ----------
+CUARTO-   PRECIO: Que el precio de esta venta es por la suma de XXXXXXXXXXXXXXXXXXXXXXXX PESOS MONEDA CORRIENTE ($<<valor.de.venta>>) PESOS MONEDA CORRIENTE, suma que LA PARTE VENDEDORA declara(n) haber recibido de manos de LA PARTE COMPRADORA a su entera satisfacción.  ----------
+PARÁGRAFO PRIMERO: De conformidad con lo establecido en el Artículo 61 de la Ley 2010 del 27 de diciembre de 2019, los otorgantes declaran bajo gravedad de juramento que el precio de la venta contenido en la presente escritura es real y no ha sido objeto de pactos privados en los que señale un precio diferente, ni existen sumas que se hayan convenido o facturado por fuera del valor aquí estipulado. ----------
+
+SI EL PAGO ES A CUOTAS O CON ALGUNA FORMA DE PAGO DIFERENTE DE CONTADO SE INCLUYE EL SIGUIENTE PARÁGRAFO 
+
+PARÁGRAFO SEGUNDO: No obstante, la forma de pago aquí estipulada, la venta se efectúa libre de toda condición resolutoria, pues la parte vendedora renuncia expresamente a ella. ----------
+QUINTO: Que desde esta fecha LA PARTE VENDEDORA pone(n) a LA PARTE COMPRADORA en posesión material de la cuota parte del inmueble vendido con todas sus anexidades y con las servidumbres activas y pasivas que tenga legalmente constituidas y que en los casos previstos por la ley se obliga(n) al saneamiento de esta venta y a responder de cualquier gravamen, acción real o vicios redhibitorios, que resulte contra el derecho de dominio que enajena(n). ----------
+SEXTO: CLÁUSULA REDAM (Registro de Deudores Alimentarios Morosos):
+
+INCLUIR LA NOTA RESPECTIVA
+
+
+----------
+CLAUSULA ESPECIAL SOBRE SERVICIOS PÚBLICOS: LA PARTE VENDEDORA MANIFIESTA(N) QUE LAS FACTURAS QUE HAN LLEGADO HASTA LA FECHA, CORRESPONDIENTES A LOS SERVICIOS PÚBLICOS DEL INMUEBLE OBJETO DE ESTA VENTA, YA SE ENCUENTRAN CANCELADAS. –
+----------
+NOTA DE ADMINISTRACION: 
+ 
+ANEXAR LA NOTA DE ADMINISTRACION CORRESPONDIENTE
+
+
+----------
+PRESENTE(S), LA PARTE COMPRADORA: <<nombre.comprador.1>> Y <<nombre.comprador.2>>, de las anotaciones personales antes dichas, expuso(ieron): Que acepta(n) la presente escritura con el contrato de venta en ella contenido a su favor ; que ha(n) pagado el precio de lo que compra(n) en la forma pactada en esta escritura y que tiene(n) recibida la cuota parte del inmueble comprado a su entera satisfacción y que conoce, acepta y se obliga a cumplir con el reglamento de propiedad horizontal del cual hace parte el inmueble objeto de venta. ----------
+CONSTANCIA NOTARIAL PARA LA PARTE VENDEDORA: LA SUSCRITA NOTARIA INDAGO A LA PARTE VENDEDORA SOBRE LO DISPUESTO EN EL ART. 6 DE LA LEY 258 DE 1996 MODIFICADA POR LA LEY 854 DE 2.003 Y MANIFESTARON: QUE SU ESTADO CIVIL ES COMO SE CONTEMPLÓ AL COMIENZO DE ESTE INSTRUMENTO Y QUE LA CUOTA PARTE DEL INMUEBLE QUE TRANSFIERE NO SE ENCUENTRA AFECTADA A VIVIENDA FAMILIAR. -----------------------------------------------------------------------------------------------CONSTANCIA NOTARIAL PARA LA PARTE COMPRADORA: LA SUSCRITA NOTARIA INDAGO A LA PARTE COMPRADORA, SOBRE LO DISPUESTO EN EL ARTICULO 6 DE LA LEY 258 DEL 17 DE ENERO DE 1.996, MODIFICADA POR LA LEY 854 DEL 25 DE NOVIEMBRE DE 2.003 Y BAJO LA GRAVEDAD DEL JURAMENTO MANIFESTÓ: QUE SU ESTADO CIVIL ES COMO SE CONTEMPLÓ AL INICIO DE ESTE INSTRUMENTO Y POR TRATARSE DE COMPRA DE CUOTA PARTE, NO ES PROCEDENTE LA AFECTACION A VIVIENDA FAMILIAR, DE CONFORMIDAD CON LAS LEYES ANTES CITADAS. ----------
+NOTA: EL DESPACHO DE LA NOTARIA LE ADVIRTIÓ A LA COMPRADORA QUE POR ADQUIRIR UNA CUOTA PARTE, QUEDA INMERSA DENTRO DE UNA COMUNIDAD EN VIRTUD DEL ARTÍCULO 2322 Y SS. DEL CÓDIGO CIVIL COLOMBIANO DE LA MISMA MANERA SE LE ADVIRTIÓ QUE NO PODRÁ REALIZAR CONSTRUCCIONES SOBRE DICHO PREDIO SIN EL LLENO DE LOS REQUISITOS EXIGIDOS POR EL NUMERAL 1 DEL ARTÍCULO 99 DE LA LEY  388 DE 1.997, ASÍ MISMO LA INTERESADA MANIFIESTA QUE SE HACE RESPONSABLE POR EL PORCENTAJE DE VENTA PLASMADO EN EL PRESENTE INSTRUMENTO PÚBLICO.

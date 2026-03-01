@@ -118,8 +118,7 @@ LA ANTERIOR INFORMACIÓN SE TOMA CONFORME LO ORDENADO EN LA INSTRUCCIÓN ADMINIS
 
 EP_APERTURA_TEMPLATE = """
 --------------------------------------------------------------------------------------------------------------
-En la ciudad de [[CIUDAD]], Departamento de Santander, República de Colombia, a los [[PENDIENTE: DIA_LETRAS]] ([[PENDIENTE: DIA_NUMERO]]) días del mes de [[PENDIENTE: MES_LETRAS]] del año [[PENDIENTE: ANO_LETRAS]], Ante mí,
---------------------------------------------------------------------------------------------------------------
+En la ciudad de [[CIUDAD]], [[DEPARTAMENTO]], República de Colombia, a los [[PENDIENTE: DIA_LETRAS]] ([[PENDIENTE: DIA_NUMERO]]) días del mes de [[PENDIENTE: MES_LETRAS]] del año [[PENDIENTE: ANO_LETRAS]], ante mí, [[NOTARIA_ENCARGADO]], [[NOTARIA_NOMBRE]]. ---------------------------------------------------------------------------------------------------------------
 """.strip()
 
 
@@ -127,11 +126,4 @@ EP_FIRMAS_TEMPLATE = """
 EL(LOS) OTORGANTE(S),
 
 [[BLOQUE_FIRMAS]]
-
-_________
-
-LA NOTARIA,
-
-[[NOTARIA_FIRMA_NOMBRE]]
-[[NOTARIA_CARGO]]
 """.strip()

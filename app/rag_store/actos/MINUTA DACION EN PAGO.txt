@@ -1,0 +1,44 @@
+		Compareció(eron): <<nombre.tradente.1>> mayor de edad, domiciliado(a) en ______________, identificado(a) con la cédula de ciudadanía número <<cedula.adquiriente.1>> expedida en ___________, de estado civil __________________, ocupación: ________________, obrando en nombre y representación propia y <<nombre.tradente.2>>, mayor de edad, domiciliado(a) en ______________, identificado(a) con la cédula de ciudadanía número <<cedula.adquiriente.2>> expedida en ____________, de estado civil __________________, ocupación: ________________,  obrando en nombre y representación propia, quien(es) se denominará(n) EL(LOS) TRADENTE(S) y dijo(eron):	
+	
+PRIMERO: Que a la fecha de la presente escritura, la entidad exponente presenta obligaciones a su cargo y a favor de <<nombre.adquiriente.1>>, mayor de edad, domiciliado(a) en ______________, identificado(a) con la cédula de ciudadanía número <<cedula.adquiriente.1>> expedida en ___________, de estado civil _______________, ocupación: ________________,  obrando en nombre y representación propia  y <<nombre.adquiriente.2>>, mayor de edad, domiciliado(a) en ______________,, identificado con la cédula de ciudadanía número <<cedula.adquiriente.2>> expedida en ______________, de estado civil _______________, ocupación: ________________,  obrando en nombre y representación propia, quien(es) para los efectos legales del presente contrato se denominará(n) EL(LOS) ADQUIRENTE(S), por concepto de obligaciones contraídas, por un valor total de xxxxxxxxxxxxxxxxxxxxxxx MONEDA CORRIENTE ($<<valor.dacion>>) obligación que se encuentra representada en el pagaré suscrito en la ciudad de Bucaramanga el día diecisiete (17) de enero de dos mil veinticinco (2025), mediante el cual se reconoció dicha deuda, derivada de un préstamo de dinero.		
+SEGUNDO: Que con la finalidad de cancelar TOTALMENTE las obligaciones a su cargo, transfiere a título de DACIÓN EN PAGO a favor de <<nombre.adquiriente.1>>, identificado(a) con la cédula de ciudadanía número <<cedula.adquiriente.1>> expedida en ___________, y <<nombre.adquiriente.2>>, identificado con la cédula de ciudadanía número <<cedula.adquiriente.2>> expedida en ______________, por la suma de xxxxxxxxxxxxxxxxxxxxxxx MONEDA CORRIENTE ($<<valor.dacion>>) pleno derecho de dominio y propiedad que tiene y ejerce, con todos sus anexos y sin ninguna reserva ni limitación de dominio, sobre el siguiente inmueble: 	
+
+INCLUIR INMUEBLE (CASA) JUNTO CON SU NOMENCLATURA, AREA Y LINDEROS ESPECIFICOS
+
+
+A este inmueble le corresponde el folio de matrícula inmobiliaria número <<numero.matricula>> de la Oficina de Registro de Instrumentos Públicos de <<orip>>  y se distingue con el numero predial nacional <<numero.predial.nacional>> y la cedula catastral anterior <<codigo.catastral.anterior>> 
+
+
+	
+TERCERO: Que no obstante las especificaciones, cabida y linderos del inmueble antes relacionado, la presente DACIÓN EN PAGO se hace como cuerpo cierto e incluyendo además las mejoras, anexidades, dotaciones, construcciones, instalaciones, servicios y demás accesorios que de conformidad con la Ley se refutan inmuebles. 	
+	
+CUARTO - TITULO DE ADQUISICIÓN: Manifiesta la parte tradente, que el inmueble objeto de la presente dación en pago lo adquirió por ______________ efectuada a _______________________, mediante escritura pública número ___________ de fecha ___________ de _____________del año ____________, otorgada en la Notaría __________ del Círculo de ________, y debidamente registrada en la Oficina de Registro de Instrumentos Públicos de <<orip>> al(los) folio(s) de matrícula inmobiliaria número(s) <<numero.matricula>> 
+
+OJO VERIFICAR LA TRADICIÓN, SI HAY ACLARACIÓN DE LA ESCRITURA SE DEBE MENCIONAR, SI EL TRADENTE COMPRO Y LUEGO EFECTUÓ DECLARACIÓN DE CONSTRUCCIÓN, Y/O ACTUALIZO NOMENCLATURA / LINDEROS, SE DEBE INCLUIR COMO TRADICIÓN
+
+----------
+QUINTO - LIBERTAD: Que el inmueble que por medio de esta escritura se transfiere se encuentra libre de embargo, pleitos pendientes, condiciones resolutorias del dominio, anticresis, censos, arrendamientos por escritura pública, de hipotecas y de cualquier otro gravamen o limitación del dominio, pero en todo caso se obliga al saneamiento en los casos previstos por la Ley. INCLUIR SI HAY SERVIDUMBRES, HIPOTECAS, MEDIDAS CAUTELARES O ALGUNA LIMITACION. ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------SEXTO: Que EL TRADENTE se obliga a entregar el inmueble objeto de la presente DACIÓN EN PAGO, a paz y salvo por concepto de Impuestos, tasas y contribuciones de carácter nacional, Departamental y municipal. ----------
+SÉPTIMO: Que a la fecha de la presente escritura ha hecho entrega real y material del inmueble objeto de esta DACIÓN EN PAGO a <<nombre.adquiriente.1>>, y <<nombre.adquiriente.2>> quien desde este momento entra a ejercer todos los derechos de posesión, goce y disposición como único y legítimo propietario del cien por ciento (100%) del bien anteriormente descrito.	----------
+OCTAVO: Que el valor de la presente DACIÓN EN PAGO, lo han señalado las partes de conformidad con lo estipulado en la cláusula SEGUNDA de éste instrumento, en la suma de xxxxxxxxxxxxxxxxxxxxxxx MONEDA CORRIENTE ($<<valor.dacion>>) suma que será imputada a la deuda existente a cargo de <<nombre.adquiriente.1>>, y <<nombre.adquiriente.2>> en los términos de éste documento. 	
+PARÁGRAFO: De conformidad con lo establecido en el Artículo 61 de la Ley 2010 del 27 de diciembre de 2019, los otorgantes declaran bajo gravedad de juramento que el precio de esta dación en pago contenida en la presente escritura es real y no ha sido objeto de pactos privados en los que señale un precio diferente, ni existen sumas que se hayan convenido o facturado por fuera del valor aquí estipulado. ----------
+NOVENO: Que  los gastos Notariales, de beneficencia y registro así como todos los demás impuestos, tasas, contribuciones y cualesquiera otros gastos que se ocasionen con el  otorgamiento de la presente escritura serán cancelados por <<nombre.adquiriente.1>>, y <<nombre.adquiriente.2>>----------
+DECIMO: CLÁUSULA REDAM (Registro de Deudores Alimentarios Morosos):
+
+INCLUIR LA NOTA RESPECTIVA
+
+
+--------------------------------------------------------------------------------------------------------------ACEPTACION. - PRESENTE: <<nombre.adquiriente.1>> Y <<nombre.adquiriente.2>>, de las anotaciones personales antes dichas, expuso(ieron):	
+1. Que acepta a su favor la DACIÓN EN PAGO que por medio del presente instrumento se efectúa, así como las demás cláusulas que en él constan a su favor.	
+2. Que, a la fecha, ha recibido a entera satisfacción, el inmueble objeto de DACIÓN EN PAGO, con sus mejoras, anexidades, dotaciones, construcciones, instalaciones y servicios, por la suma de xxxxxxxxxxxxxxxxxxxxxxx MONEDA CORRIENTE ($<<valor.dacion>>)	
+3. Que queda propietario del 100% del inmueble anteriormente mencionado. 	
+	
+CONSTANCIA   NOTARIAL PARA EL TRADENTE:  La suscrita notaria indago al tradente, sobre lo dispuesto en el art. 6 de la ley 258 de 1996 modificada por la ley 854 de 2.003 y manifestó: que su estado civil es como se contempló al comienzo de este instrumento y que el inmueble que transfiere no se encuentra afectado a 
+vivienda familiar. ----------
+CONSTANCIA NOTARIAL PARA EL(LOS) ADQUIRENTE(S): La suscrita notaria indaga   a la parte adquiriente sobre lo establecido en la ley  258 de 1.996,  modificada  por  la  ley   854  del   25  de   noviembre de 2.003, quien manifestó:
+
+
+
+
+
+	
+CLAUSULA ESPECIAL SOBRE SERVICIOS PÚBLICOS: La parte tradente manifiesta que las facturas que han llegado hasta la fecha, correspondientes a los servicios públicos del inmueble objeto de esta dación, ya se encuentran canceladas
