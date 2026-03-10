@@ -45,7 +45,8 @@ SALIDA JSON ESTRICTA:
       "ciudad_registro": "EXTRAER ciudad/municipio de la OFICINA DE REGISTRO donde está inscrito el inmueble — puede ser DIFERENTE a la ciudad de la notaría (ej: 'San Vicente de Chucurí' si la matrícula es 320-XXXX)",
       "oficina_registro": "EXTRAER nombre completo de la oficina de registro (ej: 'Oficina de Registro de Instrumentos Públicos de San Vicente de Chucurí')",
       "predial_nacional": "EXTRAER número predial nacional si aparece en el documento (ej: '00-03-00-00-0020-0001-0-00-00-0000')",
-      "codigo_catastral_anterior": "EXTRAER código catastral anterior si aparece en el documento (ej: '00-03-0020-0001-000')"
+      "codigo_catastral_anterior": "EXTRAER código catastral anterior si aparece en el documento (ej: '00-03-0020-0001-000')",
+      "tipo_inmueble": "CLASIFICAR el tipo de inmueble: CASA (vivienda unifamiliar, villa, chalet), LOTE (terreno sin construcción, lote urbano), LOTE_BALDIO (terreno adjudicado como baldío/INCORA/INCODER/ANT), APARTAMENTO (unidad en edificio sin PH), PROPIEDAD_HORIZONTAL (apto/casa en PH o conjunto cerrado), AERONAVE, RURAL (finca/hacienda/vereda/hectáreas que no sea baldío). Si no se puede determinar, null."
   }},
   "negocio_actual": {{
       "numero_radicado": "EXTRAER",
@@ -85,7 +86,7 @@ SALIDA JSON ESTRICTA:
           "identificacion": "CC 000",
           "rol_en_hoja": "DE (Vendedor)",
           "estado_civil": "EXTRAER estado civil si aparece explícitamente en el documento (ej: 'Soltero/a', 'Casado/a', 'Soltera, sin unión marital de hecho', 'Casado con sociedad conyugal vigente'). Si no aparece, null.",
-          "representa_a": "NOMBRE COMPLETO DE LA EMPRESA si esta persona actúa como representante legal, si no null",
+          "representa_a": "NOMBRE COMPLETO de la empresa (si es Representante Legal/RL) o de la persona natural (si es Apoderado/AP) que esta persona representa. Si no actúa como RL ni AP, null.",
           "datos": {{
               "email": "EXTRAER",
               "telefono": "EXTRAER",
@@ -109,7 +110,7 @@ SALIDA JSON ESTRICTA:
 1. ACTOS OBLIGATORIOS: Toda hoja de radicación tiene AL MENOS 1 acto. Si el documento tiene 4 actos, DEBES extraerlos todos. NUNCA devuelvas "actos_a_firmar": [] — si hay actos, inclúyelos todos.
 2. PERSONAS OBLIGATORIAS: NUNCA devuelvas "personas_detalle": [] si hay personas mencionadas en el documento. Extrae CADA persona que aparezca (natural o jurídica).
 3. OTORGANTES/BENEFICIARIOS OBLIGATORIOS: Para cada acto en "actos_a_firmar", los campos "otorgantes" y "beneficiarios" NUNCA deben ser null — usa [] si no hay ninguno. Lista en "otorgantes" SOLO las personas/empresas que actúan como otorgantes/vendedores EN ESE ACTO ESPECÍFICO, y en "beneficiarios" las que actúan como compradores/beneficiarios. Usa los nombres EXACTOS como aparecen en el documento.
-4. REPRESENTA_A CRÍTICO: Si una persona natural (CC) aparece como Representante Legal de una empresa (NIT), DEBES llenar el campo "representa_a" con el nombre EXACTO completo de esa empresa tal como aparece en el documento. Ej: si "JUAN PÉREZ" actúa como RL de "CONSTRUCTORA ABC S.A.S.", entonces representa_a = "CONSTRUCTORA ABC S.A.S.". NUNCA dejes este campo null si la persona es RL. NUNCA copies ejemplos de estas instrucciones.
+4. REPRESENTA_A CRÍTICO: (a) Si una persona natural (CC) aparece como Representante Legal de una empresa (NIT), DEBES llenar el campo "representa_a" con el nombre EXACTO completo de esa empresa. Ej: "JUAN PÉREZ" es RL de "CONSTRUCTORA ABC S.A.S." → representa_a = "CONSTRUCTORA ABC S.A.S.". (b) Si una persona aparece con rol 'AP' (Apoderado), llenar "representa_a" con el nombre EXACTO completo de la persona natural que representa. Ej: si "MICHAEL RESTREPO" es AP de "EDITH JAIME URIBE" → representa_a = "EDITH JAIME URIBE". NUNCA dejes este campo null si la persona es RL o AP. NUNCA copies ejemplos de estas instrucciones.
 5. Nombres de PERSONAS JURÍDICAS: extrae el nombre COMPLETO y EXACTO incluyendo todos los sufijos legales (S.A.S., LTDA., S.A., E.U., y el nombre corto si lo tiene, ej: "CONSTRUCTORA DEL NORTE LTDA.").
 6. NITs: incluye SIEMPRE el dígito de verificación separado por guión (ej: "NIT 829000872-3", NO "829000872").
 7. "ciudad_registro" es la ciudad de la OFICINA DE REGISTRO del inmueble — diferente a la ciudad de la notaría.
@@ -170,7 +171,8 @@ SALIDA JSON ESTRICTA:
       "numero_ep": "EXTRAER numero EP si este documento ES una escritura publica, si no null",
       "fecha": "EXTRAER fecha del documento si es EP (ej: '03 de marzo de 2025'), si no null",
       "notaria": "EXTRAER notaria completa del documento si es EP (ej: 'Notaría Quinta del Círculo de Bucaramanga'), si no null",
-      "valor": "EXTRAER valor/precio de la operación si está en el documento, si no null",
+      "precio_compraventa_original": "EXTRAER el precio TOTAL de la compraventa tal como figura en el documento (ej: '$605.000.000'). Si hay pacto de retroventa, este es el precio de la venta original, que puede diferir del valor del pacto. Si no aparece explícitamente, null.",
+      "valor": "EXTRAER valor del pacto de retroventa o monto acordado para re-compra si hay pacto. Si no hay pacto, usar el precio de la compraventa. Si no hay nada, null.",
       "vendedor": "EXTRAER nombre(s) del(los) vendedor(es)/otorgante(s) DE de esta EP (quien vende/otorga), si no null"
   }},
   "historia_y_antecedentes": {{}},
@@ -282,6 +284,14 @@ REGLAS ESTRICTAS DE FORMATO (EP-LIKE)
   civil que declara bajo juramento". Si del contexto del documento se infiere que es casado
   (p.ej., firmó con cónyuge, o la cédula indica matrimonio), usar "casado(a) con sociedad
   conyugal vigente". NUNCA dejar el estado civil como [[PENDIENTE: ESTADO_CIVIL]].
+- ESTADO CIVIL — UNIÓN LIBRE (EC-1): El término "unión libre" NO existe en el derecho notarial
+  colombiano. Reemplazar SIEMPRE por la frase COMPLETA EXACTA: "soltero(a) con unión marital de hecho".
+  NO simplificar a "soltero" o "soltera" solamente — la frase "con unión marital de hecho" es OBLIGATORIA.
+  Esto aplica para TODOS los comparecientes sin excepción.
+- ESTADO CIVIL — VIUDEZ (EC-2): "cónyuge sobreviviente", "viuda", "viudo" NO son estados civiles
+  válidos en la comparecencia notarial colombiana. Usar siempre "Soltera por viudez" (si es mujer)
+  o "Soltero por viudez" (si es hombre). NUNCA escribir "de estado civil cónyuge sobreviviente"
+  ni "de estado civil viuda/viudo".
 
 OBJETIVO
 - Entregar salida que parezca EP real: formal, consistente, completa y lista para revision notarial.

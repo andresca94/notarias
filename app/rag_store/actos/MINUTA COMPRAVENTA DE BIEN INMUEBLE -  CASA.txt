@@ -1,8 +1,15 @@
+Escritura pública que da cuenta de la compraventa del siguiente bien inmueble:
+
+FOLIO DE MATRÍCULA INMOBILIARIA: <<numero.matricula>> de la Oficina de Registro de Instrumentos Públicos de <<orip>>. NÚMERO PREDIAL NACIONAL: <<numero.predial.nacional>>. CÉDULA CATASTRAL ANTERIOR: <<codigo.catastral.anterior>>.
+
+AFECTACIÓN A VIVIENDA FAMILIAR: [[PENDIENTE: AFECTACION_VIVIENDA_FAMILIAR]]. PATRIMONIO DE FAMILIA INEMBARGABLE: [[PENDIENTE: PATRIMONIO_FAMILIA_INEMBARGABLE]].
+
+----------
 Compareció(eron): <<nombre.vendedor.1>> mayor de edad, domiciliado(a) en ______________, identificado(a) con la cédula de ciudadanía número <<cedula.vendedor.1>> expedida en ___________, de estado civil __________________, ocupación: ________________, obrando en nombre y representación propia y <<nombre.vendedor.2>>, mayor de edad, domiciliado(a) en ______________, identificado(a) con la cédula de ciudadanía número <<cedula.vendedor.2>> expedida en ____________, de estado civil __________________, ocupación: ________________,  obrando en nombre y representación propia, quien(es) se denominará(n) LA PARTE VENDEDORA y dijo(eron): ----------
 PRIMERO. OBJETO: Que transfiere(n) a título de venta a favor de <<nombre.comprador.1>>, mayor de edad, domiciliado(a) en ______________, identificado(a) con la cédula de ciudadanía número <<cedula.comprador.1>> expedida en ___________, de estado civil _______________, ocupación: ________________,  obrando en nombre y representación propia  y <<nombre.comprador.2>>, mayor de edad, domiciliado(a) en ______________,, identificado con la cédula de ciudadanía número <<cedula.comprador.2>> expedida en ______________, de estado civil _______________, ocupación: ________________,  obrando en nombre y representación propia, quien(es) se denomina(rán) LA PARTE COMPRADORA, del derecho de dominio, propiedad y posesión que LA PARTE VENDEDORA tiene(n) sobre el(los) siguiente(s) inmueble(s): ----------
 
 
-INCLUIR INMUEBLE (CASA) JUNTO CON SU NOMENCLATURA, AREA Y LINDEROS ESPECIFICOS
+INCLUIR DESCRIPCIÓN DEL INMUEBLE (CASA): nomenclatura, área y LINDEROS ESPECÍFICOS ÚNICAMENTE. NO incluir linderos generales de la urbanización. NO agregar cláusula de RÉGIMEN DE PROPIEDAD HORIZONTAL. NO agregar NOTA DE ADMINISTRACIÓN. Esta CASA NO está en propiedad horizontal.
 
 
 A este inmueble le corresponde el folio de matrícula inmobiliaria número <<numero.matricula>> de la Oficina de Registro de Instrumentos Públicos de <<orip>>  y se distingue con el numero predial nacional <<numero.predial.nacional>> y la cedula catastral anterior <<codigo.catastral.anterior>> 
@@ -29,7 +36,5 @@ INCLUIR LA NOTA RESPECTIVA
 ----------
 CLAUSULA ESPECIAL SOBRE SERVICIOS PÚBLICOS: la parte vendedora manifiesta(n) que las facturas que han llegado hasta la fecha, correspondientes a los servicios públicos del inmueble objeto de esta venta, ya se encuentran canceladas. ----------
 PRESENTE(S), LA PARTE COMPRADORA: <<nombre.comprador.1>> Y <<nombre.comprador.2>>, de las anotaciones personales antes dichas, expuso(ieron): Que acepta(n) la presente escritura con el contrato de venta en ella contenido a su favor ; que ha(n) pagado el precio de lo que compra(n) en la forma pactada en esta escritura y que tiene(n) recibido el inmueble comprado a su entera satisfacción ----------
-CONSTANCIA NOTARIAL PARA EL(LA)(LOS) VENDEDOR(A)(ES): La suscrita notaria indago a la parte vendedora, sobre lo dispuesto en el art. 6 de la ley 258 de 1996 modificada por la ley 854 de 2.003 y manifestó: que su estado civil es como se contempló al comienzo de este instrumento y que el inmueble que transfiere no se encuentra afectado a vivienda familiar. --------------------------------------------------CONSTANCIA NOTARIAL PARA EL(LA)(LOS) COMPRADOR(A)(ES): La suscrita notaria indago a la parte compradora, sobre lo dispuesto en el art. 6 de la ley 258 de 1996 modificada por la ley 854 de 2.003 y bajo la gravedad de juramento manifestó:
-
-
-INCLUIR RESPECTIVA NOTA
+CONSTANCIA NOTARIAL PARA EL(LA)(LOS) VENDEDOR(A)(ES): La suscrita notaria indagó a la parte vendedora, sobre lo dispuesto en el art. 6 de la ley 258 de 1996 modificada por la ley 854 de 2.003 y manifestó: que su estado civil es como se contempló al comienzo de este instrumento y que el inmueble que transfiere no se encuentra afectado a vivienda familiar. ----------
+CONSTANCIA NOTARIAL PARA EL(LA)(LOS) COMPRADOR(A)(ES): La suscrita notaria indagó a la parte compradora, sobre lo dispuesto en el art. 6 de la ley 258 de 1996 modificada por la ley 854 de 2.003 y bajo la gravedad de juramento manifestó: que el inmueble que adquieren [[PENDIENTE: CONSTITUYE_VIVIENDA_FAMILIAR]]. ----------

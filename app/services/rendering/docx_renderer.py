@@ -129,6 +129,23 @@ def _add_line_to_para(para, line: str) -> None:
                 para.add_run(tail)
 
 
+def _add_header_line_to_para(para, line: str) -> None:
+    """Como _add_line_to_para pero también bold en el label 'CAMPO:' de líneas de encabezado.
+    FIX v40-MMFL1: _CAPS_SEQ requiere 2+ palabras → 'RADICADO', 'FECHA', 'VALOR' (1 palabra) no se boldan.
+    Esta función bold el label explícitamente para encabezados tipo 'CAMPO: valor'.
+    """
+    m = _HEADER_LINE_RE.match(line)
+    if m:
+        label = line[:m.end()].rstrip()  # e.g. "RADICADO:" o "OTORGANTE(S):"
+        rest = line[m.end():]
+        run = para.add_run(label)
+        run.bold = True
+        if rest:
+            _add_line_to_para(para, rest)
+    else:
+        _add_line_to_para(para, line)
+
+
 def _set_spacing(para, before_pt: float = 0, after_pt: float = 0) -> None:
     """Aplica espaciado antes/después a un párrafo."""
     fmt = para.paragraph_format
@@ -201,6 +218,14 @@ def _render_block(b: str, doc, parent, idx: int) -> int:
         idx += 1
         return idx
 
+    # Fix 3 v33: Limpiar marcadores TABLE que aparecen INLINE (no detectados como bloques tabla)
+    # Causa: DataBinder o binder concatena marcadores en la misma línea que contenido real
+    # Ejemplo del artifact PDF-32: "DIRECCIÓN: ###TABLETABLE_START### CIUDAD: ###TABLE_END### EMAIL:..."
+    if "###TABLE" in b:
+        b = re.sub(r'###TABLE[A-Z_]*###', '', b).strip()
+        if not b:
+            return idx
+
     # Pre-procesado: extender guiones finales
     b = _preprocess_block(b)
 
@@ -249,7 +274,7 @@ def _render_block(b: str, doc, parent, idx: int) -> int:
             if i > 0:
                 br_run = new_p.add_run()
                 br_run.add_break()
-            _add_line_to_para(new_p, line)
+            _add_header_line_to_para(new_p, line)  # FIX v40-MMFL1: bold labels como RADICADO:, FECHA:
         p_xml = new_p._p
         parent.remove(p_xml)
         parent.insert(idx + 1, p_xml)
@@ -275,8 +300,26 @@ def _render_block(b: str, doc, parent, idx: int) -> int:
                     label_end = cm.end()
                     label = line[:label_end].rstrip()
                     rest = line[label_end:]
-                    run = new_p.add_run(label)
-                    run.bold = True
+                    # E-03: Extender bold al subtítulo all-caps hasta el primer ":"
+                    # Ejemplo: "TERCERO-" + " LIBERTAD: ..." → bold "TERCERO- LIBERTAD:"
+                    _rest_s = rest.lstrip('- \t')
+                    _col = _rest_s[:60].find(':')
+                    if _col >= 0:
+                        _sub = _rest_s[:_col].strip()
+                        if _sub and re.match(r'^[A-ZÁÉÍÓÚÜÑ\s]+$', _sub):
+                            _lead = rest[:len(rest) - len(_rest_s)]
+                            run = new_p.add_run(label + _lead + _rest_s[:_col + 1])
+                            run.bold = True
+                            run.font.bold = True  # Fix-3 v13: forzar a nivel font para override de estilo
+                            rest = _rest_s[_col + 1:]
+                        else:
+                            run = new_p.add_run(label)
+                            run.bold = True
+                            run.font.bold = True  # Fix-3 v13
+                    else:
+                        run = new_p.add_run(label)
+                        run.bold = True
+                        run.font.bold = True  # Fix-3 v13
                     if rest:
                         _add_line_to_para(new_p, rest)
                 else:
@@ -374,12 +417,58 @@ def render_docx(template_path: str, context: Dict, out_docx_path: str) -> str:
     # 2) Contenido IA → párrafos
     contenido = context.get("CONTENIDO_IA") or ""
     contenido = str(contenido).replace("\r\n", "\n").replace("\r", "\n").strip()
+    # Fix 5 v32: NFC normalize + regex \bDECONOCIMIENTO\b (cubre Unicode decomposed y variantes de spacing)
+    import unicodedata as _ud_rend
+    contenido = _ud_rend.normalize('NFC', contenido)
+    # Fix 2 v33: sin \b — captura DECONOCIMIENTO incluso pegado a otro carácter (edge cases encoding)
+    contenido = re.sub(r'DECONOCIMIENTO', 'DE CONOCIMIENTO', contenido, flags=re.IGNORECASE)
+    # A-02 adicional: cobertura extra para "CLAUSULA DECONOCIMIENTO" como frase completa
+    contenido = re.sub(r'CL[ÁA]USULA\s+DECONOCIMIENTO', 'CLÁUSULA DE CONOCIMIENTO', contenido, flags=re.IGNORECASE)
+    # FIX v40-MMFL1: Garantizar bloque separado para cada cláusula numerada.
+    # DataBinder a veces no inserta línea en blanco entre cláusulas → todo queda en un bloque →
+    # solo la primera línea se evalúa como clause_match → TERCERO/CUARTO/QUINTO/SEXTO sin bold.
+    _CLAUSE_SEP_RE = re.compile(
+        r'(?<!\n)\n((?:PRIMERO|SEGUNDO|TERCERO|CUARTO|QUINTO|SEXTO|S[EÉ]PTIMO|OCTAVO|NOVENO|D[EÉ]CIMO'
+        r'|PAR[ÁA]GRAFO\s+(?:PRIMERO|SEGUNDO|TERCERO|CUARTO|[ÚU]NICO)'
+        r'|CL[ÁA]USULA\s+\w+)[\.\:\-\s])',
+        re.IGNORECASE
+    )
+    contenido = _CLAUSE_SEP_RE.sub(r'\n\n\1', contenido)
+    contenido = re.sub(r'\n{3,}', '\n\n', contenido)  # limpiar triple saltos
     blocks = [b.strip() for b in contenido.split("\n\n") if b.strip()]
 
     for p in doc.paragraphs:
         for ph, val in simple_keys:
             if ph in p.text:
                 _replace_in_paragraph(p, ph, val)
+        # A-01: Fix "CLÁUSULA DECONOCIMIENTO" hardcoded in template DOCX paragraphs
+        if "DECONOCIMIENTO" in p.text.upper():
+            _replace_in_paragraph(p, "DECONOCIMIENTO", "DE CONOCIMIENTO")
+
+    # FIX 3 v39: iterar w:t XML directamente — funciona con y sin w:r wrapper.
+    # Fix E v38 usaba _tp_e.runs (solo w:r), pero si el texto está en w:t directo sin w:r,
+    # _tp_e.runs=[] → _full_e="" → no reemplazaba nada. w:t.iter() alcanza todos los nodos de texto.
+    _W_T_NS = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}t'
+    for _tbl_3 in doc.tables:
+        for _trow_3 in _tbl_3.rows:
+            for _tcell_3 in _trow_3.cells:
+                if "DECONOCIMIENTO" not in _tcell_3.text.upper():
+                    continue
+                for _wt_3 in _tcell_3._tc.iter(_W_T_NS):
+                    if _wt_3.text and "DECONOCIMIENTO" in _wt_3.text.upper():
+                        _wt_3.text = re.sub(
+                            r'DECONOCIMIENTO', 'DE CONOCIMIENTO',
+                            _wt_3.text, flags=re.IGNORECASE
+                        )
+    # FIX 3b v39: mismo fix para párrafos regulares (complementa A-01 que usa _replace_in_paragraph)
+    for _p_3 in doc.paragraphs:
+        if "DECONOCIMIENTO" in _p_3.text.upper():
+            for _wt_3 in _p_3._p.iter(_W_T_NS):
+                if _wt_3.text and "DECONOCIMIENTO" in _wt_3.text.upper():
+                    _wt_3.text = re.sub(
+                        r'DECONOCIMIENTO', 'DE CONOCIMIENTO',
+                        _wt_3.text, flags=re.IGNORECASE
+                    )
 
     # Busca el párrafo donde está el placeholder de contenido
     placeholder_found = False

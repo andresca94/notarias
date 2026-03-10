@@ -127,6 +127,17 @@ class DebugDumper:
         _safe_write_text(out_dir / f"{fname}__raw.txt", raw_text or "")
         _safe_write_json(out_dir / f"{fname}__json.json", parsed_json)
 
+    def clear_binder_outputs(self) -> None:
+        """Elimina todos los archivos del directorio 07_binder_outputs para evitar
+        contaminación de runs anteriores con secciones de órden diferente."""
+        if not self.enabled:
+            return
+        import shutil
+        _bo_dir = self.debug_dir / "07_binder_outputs"
+        if _bo_dir.exists():
+            shutil.rmtree(_bo_dir)
+        _bo_dir.mkdir(parents=True, exist_ok=True)
+
     def dump_binder_output(self, orden: int, descripcion: str, text: str) -> None:
         if not self.enabled:
             return

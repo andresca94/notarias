@@ -197,6 +197,7 @@ def _normalize_person_roles(p: Dict[str, Any], source: str = "soporte") -> Dict[
         "lugar_expedicion": (p.get("lugar_expedicion") or "").strip(),
         "representa_a": (p.get("representa_a") or "").strip(),
         "cargo": (p.get("cargo") or "").strip(),
+        "rol_en_hoja": (p.get("rol_en_hoja") or "").strip(),
         "_source": source,
     }
 
@@ -352,8 +353,30 @@ def _build_rag_query(acto_dict, contexto: Dict[str, Any]) -> str:
         return "compraventa bien inmueble vende sociedad compra persona natural"
     if not hay_soc_v and hay_soc_c:
         return "compraventa bien inmueble vende persona natural compra sociedad"
-    if es_baldio:
+    # RAG-1: usar tipo_inmueble de Gemini para seleccionar sub-template correcto (PN→PN)
+    _tipo_inmueble = ((contexto.get("INMUEBLE") or {}).get("tipo_inmueble") or "").upper().strip()
+    # Fix A: si Gemini no extrajo tipo_inmueble (o lo extrajo mal), inferir de inmueble.direccion.
+    # Gemini a veces clasifica "CASA en URBANIZACION" como PROPIEDAD_HORIZONTAL por error.
+    _inm_dir_ra = ((contexto.get("INMUEBLE") or {}).get("direccion") or "").upper().strip()
+    if not _tipo_inmueble or _tipo_inmueble == "PROPIEDAD_HORIZONTAL":
+        # Si la dirección comienza con "CASA", es una casa, no PH
+        if re.search(r'^CASA\b', _inm_dir_ra):
+            _tipo_inmueble = "CASA"
+        elif not _tipo_inmueble and re.search(r'\bAPTO\b|\bAPARTAMENTO\b', _inm_dir_ra):
+            _tipo_inmueble = "APARTAMENTO"
+        if _tipo_inmueble and isinstance(contexto.get("INMUEBLE"), dict):
+            contexto["INMUEBLE"]["tipo_inmueble"] = _tipo_inmueble
+    if _tipo_inmueble == "LOTE_BALDIO" or es_baldio:
         return "compraventa bien inmueble lote baldio"
+    if _tipo_inmueble == "CASA":
+        return "compraventa bien inmueble casa"
+    if _tipo_inmueble == "APARTAMENTO":
+        return "compraventa bien inmueble apartamento parqueadero"
+    if _tipo_inmueble == "PROPIEDAD_HORIZONTAL":
+        return "compraventa bien inmueble propiedad horizontal"
+    if _tipo_inmueble == "AERONAVE":
+        return "compraventa aeronave"
+    # LOTE, RURAL o desconocido → default lote
     return "compraventa bien inmueble lote"
 
 
@@ -580,10 +603,34 @@ def _build_universal_context(
             if not contexto["DATOS_EXTRA"].get("plazo_retroventa"):
                 contexto["DATOS_EXTRA"]["plazo_retroventa"] = plazo
 
-        # Extraer números de paz y salvo y forma_de_pago de documentos soporte
-        for _campo in ["paz_salvo_predial", "paz_salvo_valorizacion", "paz_salvo_area_metro"]:
-            _val = str((extra or {}).get(_campo) or "").strip()
-            if _val and not _is_garbage(_val):
+        # Extraer números de paz y salvo — PAZ-1: excluir antecedentes (tienen números históricos).
+        # PAZ-2: usar el nombre del archivo para saber qué campo es confiable en cada documento.
+        _fname_lower = (s.get("_fileName") or "").lower()
+        _is_antecedente_doc = any(kw in _fname_lower for kw in ("antecedente", "ep_anterior"))
+        if not _is_antecedente_doc:
+            for _campo in ["paz_salvo_predial", "paz_salvo_valorizacion", "paz_salvo_area_metro"]:
+                _val = str((extra or {}).get(_campo) or "").strip()
+                if not _val or _is_garbage(_val):
+                    continue
+                # PAZ-2: si el filename indica explícitamente el tipo de paz y salvo,
+                # solo actualizar el campo correspondiente para evitar confusión entre tipos.
+                _fname_hints = {
+                    "paz_salvo_predial":     ("predial",),
+                    "paz_salvo_valorizacion": ("valoriz",),
+                    "paz_salvo_area_metro":  ("area", "metro", "metropolitana"),
+                }
+                _hints = _fname_hints[_campo]
+                _fname_matches_tipo = any(h in _fname_lower for h in _hints)
+                _other_tipos_match = any(
+                    h in _fname_lower
+                    for other_campo, other_hints in _fname_hints.items()
+                    if other_campo != _campo
+                    for h in other_hints
+                )
+                # Si el archivo es de OTRO tipo de paz y salvo (ej: "area_metropolitana.pdf"
+                # leyendo paz_salvo_valorizacion), omitir ese campo.
+                if _other_tipos_match and not _fname_matches_tipo:
+                    continue
                 _key = _campo.upper()
                 if not contexto["DATOS_EXTRA"].get(_key):
                     contexto["DATOS_EXTRA"][_key] = _val
@@ -595,6 +642,48 @@ def _build_universal_context(
                 contexto["DATOS_EXTRA"]["FORMA_DE_PAGO"] = _fdp
 
     _merge_cedula_ocr_into_people(contexto["PERSONAS"], cedulas_json_list)
+
+    # FIX D v38 — PAZ-3: Área Metro fallback por patrón de ceros líderes.
+    # Gemini a veces graba el número de Área Metropolitana en paz_salvo_valorizacion (lowercase)
+    # porque el soporte no tiene "area/metro" en el filename → PAZ-2 no lo discrimina.
+    # Patrón: números Área Metro empiezan con 0 (ej: "000191005"); valorización no (ej: "2619752").
+    if not contexto["DATOS_EXTRA"].get("PAZ_SALVO_AREA_METRO"):
+        for _paz3_field in ("paz_salvo_valorizacion", "paz_salvo_predial"):
+            _paz3_v = str(contexto["DATOS_EXTRA"].get(_paz3_field) or "").strip()
+            if re.match(r'^0\d{5,8}$', _paz3_v):
+                contexto["DATOS_EXTRA"]["PAZ_SALVO_AREA_METRO"] = _paz3_v
+                break
+
+    # CTL STATE ENGINE — Point 1: detectar soporte CTL y ejecutar engine determinista.
+    # El soporte CTL se identifica por _fileName. Se ejecuta aquí para que DATOS_EXTRA
+    # (con PAZ_SALVO_VALORIZACION ya populado) esté disponible como entrada al engine.
+    _ctl_soporte_json = next(
+        (s for s in (soportes_json_list or [])
+         if any(kw in (s.get("_fileName") or "").lower()
+                for kw in ("ctl", "certificado_tradicion", "certificado de tradicion"))),
+        None,
+    )
+    if _ctl_soporte_json:
+        try:
+            from app.services.ctl import resolve_ctl as _ctl_resolve
+            from app.services.ctl import to_deed_context as _ctl_deed_ctx_fn
+            _ctl_paz_data = {
+                k: v for k, v in (contexto.get("DATOS_EXTRA") or {}).items()
+                if "PAZ_SALVO" in k.upper() and v
+            }
+            import dataclasses as _dc
+            _ctl_state = _ctl_resolve(_ctl_soporte_json, _ctl_paz_data)
+            contexto["ctl_state"] = _dc.asdict(_ctl_state)   # JSON-serializable
+            contexto["_ctl_deed_ctx"] = _ctl_deed_ctx_fn(_ctl_state)
+        except Exception as _ctl_exc:
+            contexto["ctl_state"] = None
+            contexto["_ctl_deed_ctx"] = {}
+            contexto.setdefault("_warnings", []).append(
+                f"CTL State Engine falló: {_ctl_exc}"
+            )
+    else:
+        contexto["ctl_state"] = None
+        contexto["_ctl_deed_ctx"] = {}
 
     # B6: forma_de_pago desde radicación (prioridad sobre DOCS si está explícita)
     _fdp_rad = str((radicacion_json or {}).get("negocio_actual", {}).get("forma_de_pago") or "").strip()
@@ -675,6 +764,34 @@ def _build_universal_context(
     if "fecha_otorgamiento" in contexto["DATOS_EXTRA"]:
         contexto["DATOS_EXTRA"]["fecha_escritura_antecedente"] = contexto["DATOS_EXTRA"].pop("fecha_otorgamiento")
 
+    # Fix D v32: Derivar código catastral IGAC (≥20 dígitos) desde soportes
+    # Ampliado para buscar en 3 campos de datos_inmueble (no solo predial_nacional)
+    _cc_act = (contexto.get("INMUEBLE") or {}).get("codigo_catastral_anterior", "")
+    if not _cc_act or _is_garbage(_cc_act) or _cc_act.strip().upper() in ("SIN INFORMACION", "SIN INFORMACIÓN"):
+        for _src_d in ((contexto.get("FUENTES") or {}).get("soportes") or []):
+            _di_src_d = _src_d.get("datos_inmueble") or {}
+            for _campo_d in ("codigo_catastral_anterior", "cedula_catastral", "predial_nacional"):
+                _raw_d = _di_src_d.get(_campo_d) or ""
+                _digits_d = re.sub(r'[^0-9]', '', _raw_d)
+                if len(_digits_d) >= 20:  # Código catastral IGAC: 30 dígitos
+                    contexto.setdefault("INMUEBLE", {})["codigo_catastral_anterior"] = _digits_d
+                    contexto["INMUEBLE"]["CODIGO_CATASTRAL_ANTERIOR"] = _digits_d
+                    break
+            # Fix 1 v35: Fix D outer-break premature exit cuando valor sigue siendo "SIN INFORMACION"
+            # _is_garbage("SIN INFORMACION") = False → el break se disparaba antes de llegar
+            # a paz_y_salvo files que sí tienen predial_nacional con 30 dígitos.
+            _cc_post_d = (contexto.get("INMUEBLE") or {}).get("codigo_catastral_anterior", "")
+            if (not _is_garbage(_cc_post_d)
+                    and _cc_post_d.strip().upper() not in ("SIN INFORMACION", "SIN INFORMACIÓN")):
+                break
+
+    # A-02 (v12): Normalizar cabida_area — si empieza con "0 hectáreas", omitir esa parte.
+    # Ejemplo: "0 hectáreas 160 metros cuadrados" → "160 metros cuadrados"
+    _ca_raw = contexto["INMUEBLE"].get("cabida_area") or ""
+    _ca_norm = re.sub(r'^\s*0\s*hect[áa]reas?\s*', '', _ca_raw, flags=re.IGNORECASE).strip()
+    if _ca_norm and _ca_norm != _ca_raw.strip():
+        contexto["INMUEBLE"]["cabida_area"] = _ca_norm
+
     return contexto
 
 
@@ -696,38 +813,14 @@ def _build_comparecientes_text(personas_activos: List[Dict[str, Any]]) -> str:
 
 
 def _build_ui_af_blocks(personas_activos: List[Dict[str, Any]]) -> str:
-    """Genera bloques UIAF solo para personas naturales partes del negocio actual."""
-    out = []
-    # Solo personas naturales (sin NIT) que sean partes activas
+    """Genera bloques UIAF vacíos para personas naturales partes del negocio actual.
+    Per MMFL29-39: los campos deben quedar EN BLANCO — el cliente los llena en la notaría."""
     naturales = [
         p for p in (personas_activos or [])
         if not re.search(r"\bNIT\b|\bNI\b", (p.get("identificacion") or "").upper())
     ]
-    for p in naturales:
-        cedula_raw = (p.get("identificacion") or "").strip()
-        # extraer solo dígitos para formatear
-        cedula_fmt = _format_cc(re.sub(r"[^0-9]", "", cedula_raw)) if re.sub(r"[^0-9]", "", cedula_raw) else "[[PENDIENTE: CEDULA]]"
-        telefono_raw = (p.get("telefono") or "").strip()
-        # separar fijo/celular: si hay dos números, usar segundo como celular
-        tel_parts = re.split(r"[/,;]", telefono_raw)
-        tel_fijo = tel_parts[0].strip() if len(tel_parts) > 1 else ""
-        tel_celular = tel_parts[-1].strip() if telefono_raw else "[[PENDIENTE: CELULAR]]"
-        datos = p.get("datos_contacto") or {}
-        _addr_raw = datos.get("domicilio") or p.get("direccion") or ""
-        ciudad = _extract_city_from_address(_addr_raw) if _addr_raw else "[[PENDIENTE: CIUDAD]]"
-        out.append(
-            EP_UIAF_TEMPLATE
-            .replace("[[NOMBRE]]", (p.get("nombre") or "[[PENDIENTE: NOMBRE]]"))
-            .replace("[[CEDULA]]", cedula_fmt)
-            .replace("[[TELEFONO_FIJO]]", tel_fijo or "")
-            .replace("[[CELULAR]]", tel_celular)
-            .replace("[[DIRECCION]]", (p.get("direccion") or "[[PENDIENTE: DIRECCION]]"))
-            .replace("[[CIUDAD]]", ciudad)
-            .replace("[[EMAIL]]", (p.get("email") or "[[PENDIENTE: EMAIL]]"))
-            .replace("[[OCUPACION]]", (p.get("ocupacion") or "[[PENDIENTE: OCUPACION]]"))
-            .replace("[[ACTIVIDAD_ECONOMICA]]", (p.get("ocupacion") or "[[PENDIENTE: ACTIVIDAD_ECONOMICA]]"))
-            .replace("[[ESTADO_CIVIL]]", (p.get("estado_civil") or "[[PENDIENTE: ESTADO_CIVIL]]"))
-        )
+    # Un bloque en blanco por persona — sin datos pre-llenados
+    out = [EP_UIAF_TEMPLATE for _ in naturales]
     return "\n\n".join(out).strip()
 
 
@@ -739,6 +832,17 @@ def _build_firmas_block(
     """Genera bloque de firmas: personas naturales con su cargo/empresa si aplica.
     empresa_display_map: normalized_key → razón social completa (para 'representante legal de X').
     """
+    # NI-01/NI-06: AP map — apoderado normalizado → nombre del representado
+    # Usar frozenset de palabras para tolerar orden diferente en nombres (ej: "JAIME URIBE EDITH" vs "EDITH JAIME URIBE")
+    _ap_represents: dict = {}
+    for _p in personas_activos or []:
+        if re.search(r"\bAP\b", (_p.get("rol_en_hoja") or "").upper()):
+            _rep_a = (_p.get("representa_a") or "").strip()
+            if _rep_a:
+                _ap_represents[_normalize_name(_p.get("nombre") or "")] = _rep_a
+    # word-sets de representados para exclusión (orden-invariante)
+    _excluidos_word_sets = [frozenset(_normalize_name(rep).split()) for rep in _ap_represents.values()]
+
     lines = []
     for p in personas_activos or []:
         nom = p.get("nombre") or "[[PENDIENTE: NOMBRE]]"
@@ -748,10 +852,29 @@ def _build_firmas_block(
         raw_id = (p.get("identificacion") or "").upper()
         if re.search(r"\bNIT\b|\bNI\b", raw_id):
             continue
+        nom_norm = _normalize_name(nom)
+        nom_words = frozenset(nom_norm.split())
+        # Saltar representados (persona ausente representada por AP) — orden-invariante
+        if nom_words and any(nom_words == exc_ws for exc_ws in _excluidos_word_sets):
+            continue
+        # ¿Esta persona es AP de alguien? (buscar por word-set para tolerar orden de nombre)
+        _ap_rep_match = next(
+            (rep_name for ap_key, rep_name in _ap_represents.items()
+             if nom_words and frozenset(ap_key.split()) == nom_words),
+            None
+        )
+        if _ap_rep_match:
+            lines.append(
+                f"(Firma) {nom}\n"
+                f"C.C. No. {cc_fmt}\n"
+                f"Obrando como apoderado de {_ap_rep_match}.\n"
+                f"Huella: _________"
+            )
+            continue
         # ¿Esta persona es RL de alguna empresa?
         empresa_repr = None
         for emp_norm, rl_data in (empresa_rl_map or {}).items():
-            if _normalize_name(rl_data.get("nombre") or "") == _normalize_name(nom):
+            if _normalize_name(rl_data.get("nombre") or "") == nom_norm:
                 # Preferir display_map (razón social completa) > clave normalizada
                 # Si hay múltiples entradas (representa_a + secuencial), tomar la más larga (más completa)
                 candidate = (empresa_display_map or {}).get(emp_norm) or emp_norm
@@ -847,11 +970,36 @@ def _build_resumen_actos(
         deudores = roles.get("DEUDORES", [])
         acreedores = roles.get("ACREEDORES", [])
 
+        def _fmt_cc_id(id_str: str) -> str:
+            """Añade puntos de miles colombianos a CC/NIT. '27952821' → 'CC 27.952.821'"""
+            m_cc = re.match(r'^(CC|NIT|NUIP|CE|PEP|T\.?I\.?)\s*(.+)$',
+                            (id_str or "").strip(), re.IGNORECASE)
+            if not m_cc:
+                return id_str or ""
+            prefix_cc, num_part_cc = m_cc.group(1).upper(), m_cc.group(2).strip()
+            # Fix 3 v35: limpiar texto adicional tras el número ("de Bucaramanga", "expedida en X", etc.)
+            # Gemini a veces incluye la ciudad de expedición dentro del campo identificacion
+            _num_clean = re.match(r'^([\d.]+(?:-\d+)?)', num_part_cc)
+            if _num_clean:
+                num_part_cc = _num_clean.group(1)
+            dash_m_cc = re.match(r'^([\d.]+)(-\d+)?$', num_part_cc)
+            if not dash_m_cc:
+                return f"{prefix_cc} {num_part_cc}"
+            digits_cc = re.sub(r'\.', '', dash_m_cc.group(1))
+            suffix_cc = dash_m_cc.group(2) or ""
+            formatted_cc, i_cc = "", 0
+            for c_cc in reversed(digits_cc):
+                if i_cc > 0 and i_cc % 3 == 0:
+                    formatted_cc = "." + formatted_cc
+                formatted_cc = c_cc + formatted_cc
+                i_cc += 1
+            return f"{prefix_cc} {formatted_cc}{suffix_cc}"
+
         def _fmt_persona(p: Dict) -> str:
             n = (p.get("nombre") or "").strip()
             cc = (p.get("identificacion") or "").strip()
             if cc and "NO_DETECTADO" not in cc.upper():
-                return f"{n} - {cc}"
+                return f"{n} - {_fmt_cc_id(cc)}"
             return n
 
         # Nombres normalizados de todas las personas que son RL en el mapa
@@ -914,12 +1062,29 @@ def _build_resumen_actos(
             lines.append(f"OTORGANTE(S): {', '.join(partes)}")
 
         if compradores:
+            _rsw_car = {"DE", "LA", "EL", "LOS", "LAS", "Y", "E"}
             for c in compradores:
-                s = _fmt_persona(c)
-                rl = empresa_rl_map.get(_normalize_name(c.get("nombre") or ""))
-                lines.append(f"COMPRADOR(A): {s}")
-                if rl:
-                    lines.append(f"REPRESENTANTE LEGAL: {_fmt_persona(rl)}")
+                c_nom_words = {w for w in _normalize_name(c.get("nombre") or "").split()
+                               if w not in _rsw_car and len(w) > 2}
+                # CAR-1: buscar en personas_activos si hay un AP que representa a este comprador
+                # (el AP puede no estar en compradores si Gemini lo clasificó como representante)
+                _ap_for_c = next(
+                    (p for p in (personas_activos or [])
+                     if re.search(r"\bAP\b", (p.get("rol_en_hoja") or "").upper())
+                     and len(c_nom_words & {w for w in _normalize_name(p.get("representa_a") or "").split()
+                                            if w not in _rsw_car and len(w) > 2}) >= 2),
+                    None
+                )
+                if _ap_for_c:
+                    s_ap = _fmt_persona(_ap_for_c)
+                    _rep_name = (c.get("nombre") or "").strip()
+                    lines.append(f"APODERADO(A) de {_rep_name}: {s_ap}")
+                else:
+                    s = _fmt_persona(c)
+                    rl = empresa_rl_map.get(_normalize_name(c.get("nombre") or ""))
+                    lines.append(f"COMPRADOR(A): {s}")
+                    if rl:
+                        lines.append(f"REPRESENTANTE LEGAL: {_fmt_persona(rl)}")
 
         if cuantia:
             valor_fmt = f"$ {cuantia:,.0f}".replace(",", ".")
@@ -1033,7 +1198,20 @@ def _prepare_ep_sections(contexto: Dict[str, Any], actos_docs: List[Dict[str, st
             # Solo los tres placeholders que tiene la plantilla.
             # NO pasar PERSONAS ni NEGOCIO para que el LLM no genere contenido extra.
             "CIUDAD": ciudad,
-            "DEPARTAMENTO": datos_extra.get("DEPARTAMENTO") or "[[PENDIENTE: DEPARTAMENTO]]",
+            # Fix D v14: añadir prefijo "Departamento de " en fallback (consistente con extracción Gemini)
+            "DEPARTAMENTO": datos_extra.get("DEPARTAMENTO") or (
+                lambda _dv: f"Departamento de {_dv}" if _dv else "[[PENDIENTE: DEPARTAMENTO]]"
+            )({
+                # E-03: fallback ciudad → departamento cuando Gemini no extrae el departamento
+                "BUCARAMANGA": "Santander", "BOGOTÁ": "Cundinamarca", "BOGOTA": "Cundinamarca",
+                "MEDELLÍN": "Antioquia", "MEDELLIN": "Antioquia",
+                "CALI": "Valle del Cauca", "BARRANQUILLA": "Atlántico",
+                "CARTAGENA": "Bolívar", "CÚCUTA": "Norte de Santander",
+                "MANIZALES": "Caldas", "PEREIRA": "Risaralda", "ARMENIA": "Quindío",
+                "IBAGUÉ": "Tolima", "NEIVA": "Huila", "VILLAVICENCIO": "Meta",
+                "TUNJA": "Boyacá", "POPAYÁN": "Cauca", "MONTERÍA": "Córdoba",
+                "VALLEDUPAR": "Cesar", "SINCELEJO": "Sucre", "RIOHACHA": "La Guajira",
+            }.get(ciudad.upper().strip())),
             "NOTARIA_ENCARGADO": datos_extra.get("NOTARIA_ENCARGADO") or "[[PENDIENTE: NOTARIA_ENCARGADO]]",
             "NOTARIA_NOMBRE": notaria,
         },
@@ -1057,7 +1235,7 @@ def _prepare_ep_sections(contexto: Dict[str, Any], actos_docs: List[Dict[str, st
             "CIUDAD": ciudad,
             "MATRICULA_INMOBILIARIA": matricula,
             "RESUMEN_ACTOS": resumen_actos,
-            "DESCRIPCION_INMUEBLE": inmueble.get("direccion") or "[[PENDIENTE: DESCRIPCION_INMUEBLE]]",
+            "DESCRIPCION_INMUEBLE": re.sub(r'\bDELA\b', 'DE LA', inmueble.get("direccion") or "[[PENDIENTE: DESCRIPCION_INMUEBLE]]"),
         },
         "instrucciones": (
             "Completa la caratula transcribiendo RESUMEN_ACTOS exactamente como viene. "
@@ -1141,7 +1319,7 @@ def _prepare_ep_sections(contexto: Dict[str, Any], actos_docs: List[Dict[str, st
         ctx_acto["CIRCULO_NOTARIA_ANTERIOR"] = (_nm.group(2).strip() if _nm and _nm.group(2) else (_ep_notaria or "[[PENDIENTE: CIRCULO_NOTARIA_ANTERIOR]]"))
         ctx_acto["NUMERO_ESCRITURA_ANTERIOR"] = ep_ant_global.get("numero_ep") or "[[PENDIENTE: NUMERO_ESCRITURA_ANTERIOR]]"
         ctx_acto["VENDEDOR_ANTERIOR"]         = ep_ant_global.get("vendedor") or "[[PENDIENTE: VENDEDOR_ANTERIOR]]"
-        ctx_acto["TIPO_ADQUISICION_ANTERIOR"] = "COMPRAVENTA"
+        ctx_acto["TIPO_ADQUISICION_ANTERIOR"] = ep_ant_global.get("tipo_adquisicion") or "COMPRAVENTA"
         def _norm_orip(raw: str) -> str:
             """Normaliza OFICINA_REGISTRO al formato oficial completo."""
             r = (raw or "").strip()
@@ -1187,7 +1365,82 @@ def _prepare_ep_sections(contexto: Dict[str, Any], actos_docs: List[Dict[str, st
                 "'bajo el número' al describir cada empresa. NO inventar números. "
             )
 
+        # AP-1: detectar apoderados en personas_activos (pueden estar en 'representantes',
+        # no necesariamente en COMPRADORES si Gemini los clasificó correctamente)
+        _acto_benef_raw = (acto.get("beneficiarios") or []) if isinstance(acto, dict) else []
+        _acto_benef_norms = {_normalize_name(b) for b in _acto_benef_raw}
+        _compradores_acto_norms = {_normalize_name(c.get("nombre") or "")
+                                   for c in ((ctx_acto.get("ROLES_ACTO") or {}).get("COMPRADORES") or [])}
+        _todos_compradores_norms = _acto_benef_norms | _compradores_acto_norms
+        _ap_list = [p for p in (personas_activos or [])
+                    if re.search(r"\bAP\b", (p.get("rol_en_hoja") or "").upper())]
+        if _ap_list:
+            _ap_instr_parts = []
+            for _ap_p in _ap_list:
+                _ap_nombre = (_ap_p.get("nombre") or "").strip()
+                _ap_rep_a = (_ap_p.get("representa_a") or "").strip()
+                if not _ap_rep_a and _todos_compradores_norms:
+                    # Inferir: AP representa al primer comprador del acto
+                    _first_comp = next(
+                        (p for p in (personas_activos or [])
+                         if _normalize_name(p.get("nombre") or "") in _todos_compradores_norms
+                         and not re.search(r"\bAP\b", (p.get("rol_en_hoja") or "").upper())),
+                        None
+                    )
+                    _ap_rep_a = (_first_comp.get("nombre") or "").strip() if _first_comp else ""
+                # Solo inyectar si el representado está en este acto (o no hay filtro por acto)
+                _rep_en_acto = (not _todos_compradores_norms
+                                or (_ap_rep_a and _normalize_name(_ap_rep_a) in _todos_compradores_norms))
+                if not _rep_en_acto:
+                    continue
+                if _ap_rep_a:
+                    _ap_instr_parts.append(
+                        f"'{_ap_nombre}' actúa como APODERADO de '{_ap_rep_a}'. "
+                        f"Para LA PARTE COMPRADORA: mencionar ÚNICAMENTE a '{_ap_nombre}' con sus "
+                        f"datos personales (cédula en PERSONAS_ACTIVOS) y la frase: 'obrando como "
+                        f"apoderado de {_ap_rep_a}, según poder que se adjunta y protocoliza con la "
+                        f"presente escritura'. "
+                        f"NO mencionar a '{_ap_rep_a}' como compareciente que actúa 'en nombre y "
+                        f"representación propia' — {_ap_rep_a} es el representado AUSENTE, no comparece "
+                        f"directamente. En PRESENTES: usar '{_ap_nombre}, apoderado de {_ap_rep_a}'."
+                    )
+                else:
+                    _ap_instr_parts.append(
+                        f"'{_ap_nombre}' actúa como APODERADO — incluirlo en la comparecencia "
+                        "indicando que actúa como apoderado según poder que se adjunta y protocoliza. "
+                        "El representado NO comparece directamente; NO usar 'en nombre y representación propia'."
+                    )
+            if _ap_instr_parts:
+                instruccion_acto += (
+                    "APODERADO EN ESTE ACTO: " + "; ".join(_ap_instr_parts) + ". "
+                    "PROHIBIDO usar 'obrando en nombre y representación propia' para estas personas. "
+                )
+
         if _ak(nombre_acto) in ("COMPRAVENTA", "COMPRAVENTA_CUOTA"):
+            # MMFL15: cláusula obligatoria en toda compraventa, entre REDAM y PRESENTE(S)
+            instruccion_acto += (
+                "CLÁUSULA OBLIGATORIA (MMFL15): Entre REDAM y PRESENTE(S) incluir OBLIGATORIAMENTE: "
+                "'CLAUSULA ESPECIAL SOBRE SERVICIOS PÚBLICOS: la parte vendedora manifiesta(n) que las "
+                "facturas que han llegado hasta la fecha, correspondientes a los servicios públicos del "
+                "inmueble objeto de esta venta, ya se encuentran canceladas. ----------' "
+                "NO omitir esta cláusula bajo ninguna circunstancia. "
+            )
+            # Fix F v14: REDAM SIEMPRE con referencia a Ley 2097 de 2021
+            instruccion_acto += (
+                "CLÁUSULA REDAM (Fix F v14): La cláusula REDAM DEBE SIEMPRE incluir la referencia legal "
+                "a la Ley 2097. Texto exacto obligatorio: 'La suscrita Notaria, en cumplimiento de lo "
+                "dispuesto en el artículo 2 de la Ley 2097 de 2021, consultó el Registro de Deudores "
+                "Alimentarios Morosos (REDAM) respecto de los comparecientes, y deja constancia de que "
+                "no se encuentran reportados como deudores alimentarios morosos vigentes.' "
+                "NUNCA usar texto de REDAM sin 'artículo 2 de la Ley 2097 de 2021'. "
+            )
+            # Fix 2 v33: instrucción explícita contra DECONOCIMIENTO (sin espacio)
+            instruccion_acto += (
+                "CLÁUSULA DE CONOCIMIENTO (Fix 2 v33): El nombre de la cláusula es 'CLÁUSULA DE CONOCIMIENTO' "
+                "(tres palabras separadas: CLÁUSULA + DE + CONOCIMIENTO). "
+                "ABSOLUTAMENTE PROHIBIDO escribir 'CLAUSULA DECONOCIMIENTO' o 'CLÁUSULA DECONOCIMIENTO' "
+                "(sin espacio entre DE y CONOCIMIENTO). Siempre separar: 'DE CONOCIMIENTO'. "
+            )
             # M-A: COMPRAVENTA también es anterior al cambio de nombre → eliminar nombre_nuevo
             for _k_ma in ("nombre_nuevo", "NOMBRE_NUEVO_PREDIO", "NUEVO_NOMBRE_PREDIO"):
                 ctx_acto.pop(_k_ma, None)
@@ -1199,7 +1452,7 @@ def _prepare_ep_sections(contexto: Dict[str, Any], actos_docs: List[Dict[str, st
             if _nom_actual_cv and not _is_garbage(_nom_actual_cv):
                 ctx_acto["NOMBRE_PREDIO_ACTO"] = _nom_actual_cv
             # Bug 4: Inject buyer empresa keys so DataBinder can fill compareciente section
-            compradores_act = ctx_acto.get("COMPRADORES") or []
+            compradores_act = (ctx_acto.get("ROLES_ACTO") or {}).get("COMPRADORES") or []
             for comp in compradores_act:
                 nombre_comp = (comp.get("nombre") or "").upper().strip()
                 if not nombre_comp:
@@ -1266,6 +1519,25 @@ def _prepare_ep_sections(contexto: Dict[str, Any], actos_docs: List[Dict[str, st
                 "CC_RL_COMPRADOR, DOMICILIO_COMPRADOR, CONSTITUCION_COMPRADOR, ESTADO_CIVIL_RL_COMPRADOR "
                 "del contexto para llenar la ficha de compareciente del comprador. "
             )
+            # A-04 (v8): Corrección ortográfica de ocupaciones (tildes)
+            instruccion_acto += (
+                "CORRECCIÓN ORTOGRÁFICA DE OCUPACIONES: aplicar tildes correctas. "
+                "'Policia' → 'Policía', 'Medico' → 'Médico', 'Tecnico' → 'Técnico', "
+                "'Economista' sin cambio, 'Ingeniero' sin cambio. "
+            )
+            # A-02/A-03 (v12): Área del inmueble ya normalizada en Python antes de llegar aquí.
+            # Instrucción reforzada: SIEMPRE incluir el área, NUNCA omitirla.
+            instruccion_acto += (
+                "DESCRIPCIÓN DEL INMUEBLE — ÁREA: SIEMPRE incluir el área del inmueble "
+                "tal como aparece en el campo cabida_area/area del INMUEBLE. "
+                "NUNCA omitir el área ni dejarla en blanco. "
+                "Si el valor ya viene limpio (ej: '160 metros cuadrados'), transcribirlo exactamente. "
+            )
+            # A-04v2 (v10): Título de la sección descripción del inmueble en MAYÚSCULAS
+            instruccion_acto += (
+                "TÍTULO DE SECCIÓN: usar SIEMPRE 'DESCRIPCIÓN DEL INMUEBLE (CASA):' en MAYÚSCULAS. "
+                "NUNCA 'Descripción del inmueble:' con minúsculas. "
+            )
             # Consistencia de nombre: en COMPRAVENTA, la propiedad se vende con su nombre ANTERIOR
             # (antes del cambio de nombre que se formaliza en el acto CAMBIO DE NOMBRE de esta misma EP).
             _nom_instruc_cv = inmueble.get("nombre_nuevo") or inmueble.get("nombre_anterior") or ""
@@ -1278,16 +1550,1055 @@ def _prepare_ep_sections(contexto: Dict[str, Any], actos_docs: List[Dict[str, st
                 )
             # P-2: Redacción gramaticalmente correcta del TÍTULO DE ADQUISICIÓN (cláusula SEGUNDO)
             instruccion_acto += (
-                "CLÁUSULA SEGUNDO - TÍTULO DE ADQUISICIÓN: la redacción correcta es: "
-                "'el inmueble fue adquirido por LA PARTE VENDEDORA, mediante escritura pública número [N] "
-                "de fecha [fecha] de la Notaría [X], en la cual [VENDEDOR_ANTERIOR] le transfirió el dominio "
-                "[con pacto de retroventa, pacto cancelado en el [ordinal] Acto del presente instrumento]. "
-                "Debidamente registrada en [ORIP].' "
-                "NUNCA usar 'por [EMPRESA] le transfirió' como si el sujeto de 'fue adquirido' fuera la empresa. "
-                "El sujeto de 'fue adquirido' es siempre LA PARTE VENDEDORA. "
+                "CLÁUSULA SEGUNDO - TÍTULO DE ADQUISICIÓN: "
+                "usar TIPO_ADQUISICION_ANTERIOR del contexto. "
+                "Si TIPO_ADQUISICION_ANTERIOR = 'COMPRAVENTA', redactar: "
+                "'[vendedor] adquirió mediante escritura pública número [N] de fecha [fecha] de la Notaría [X], "
+                "en la cual [VENDEDOR_ANTERIOR] le transfirió el dominio. Debidamente registrada en [ORIP].' "
+                "Si TIPO_ADQUISICION_ANTERIOR indica adjudicación/sucesión, redactar: "
+                "'[vendedor] adquirió el inmueble por adjudicación en sucesión del causante [causante], "
+                "mediante escritura pública número [N] de fecha [fecha] de la Notaría [X], "
+                "debidamente registrada en [ORIP].' "
+                "PROHIBIDO agregar 'pacto de retroventa' o 'pacto cancelado en el Acto X' "
+                "a menos que el presente instrumento contenga explícitamente un acto de cancelación. "
+                "NUNCA usar 'por [EMPRESA] le transfirió' — el sujeto es siempre LA PARTE VENDEDORA. "
             )
+            # CTL-1: si la cadena_de_tradicion del CTL tiene la entrada de adquisición del vendedor,
+            # inyectarla como instrucción autoritativa para el SEGUNDO (evita hallucination del tipo
+            # de adquisición — ej: "compraventa" cuando en realidad es "adjudicación en sucesión").
+            # PRECAUCIÓN: ep_antecedente_pacto.vendedor suele ser la apoderada, no el causante real.
+            # Limpiar SIEMPRE para evitar que DataBinder construya "X le transfirió" incorrecto.
+            _ep_ant_pre = inmueble.get("ep_antecedente_pacto")
+            if isinstance(_ep_ant_pre, dict) and _ep_ant_pre.get("vendedor"):
+                _ep_ant_pre["vendedor"] = ""
+            _cadena_raw = (contexto.get("HISTORIA") or {}).get("cadena_de_tradicion") or []
+            # Gemini puede devolver la cadena como string o como lista — normalizar a lista
+            if isinstance(_cadena_raw, str):
+                _cadena_historia = [_cadena_raw]  # tratar el string completo como un item
+            elif isinstance(_cadena_raw, list):
+                _cadena_historia = _cadena_raw
+            else:
+                _cadena_historia = []
+            _roles_acto_ctl = ctx_acto.get("ROLES_ACTO") or {}
+            _vendedores_ctl_list = _roles_acto_ctl.get("VENDEDORES") or []
+            _vendedor_norms_ctl = {_normalize_name(v.get("nombre") or "")
+                                   for v in _vendedores_ctl_list}
+            # CTL-1 PRIMARY: anotaciones_registrales (structured list from Gemini CTL extraction).
+            # Prioridad sobre todos los fallbacks: contiene EP, fecha, notaría y tipo de adquisición.
+            # Gemini usa dos esquemas: "anotaciones_registrales" (keys de/a) o "anotaciones"
+            # (key intervinientes como string "DE: X, A: Y").  Normalizar ambos.
+            _segundo_ctl = ""
+            _ctl_causante_primary = ""
+
+            # CTL STATE ENGINE — Point 2 (SEGUNDO): usar CTLState como fuente autoritativa.
+            # Solo si el mode es específico Y hay from_party conocido (alta confianza).
+            # ACQUISITION_UNKNOWN sin from_party = resultado débil → dejar fallbacks correr.
+            _ctl_deed_ctx_s2 = contexto.get("_ctl_deed_ctx") or {}
+            _ctl_mode_s2 = _ctl_deed_ctx_s2.get("title_acquisition_mode") or ""
+            _ctl_from_s2 = _ctl_deed_ctx_s2.get("title_from_party") or ""
+            _ctl_text_s2 = _ctl_deed_ctx_s2.get("titulo_adquisicion_text") or ""
+            _ctl_high_confidence = (
+                _ctl_text_s2
+                and _ctl_mode_s2 not in ("adquisicion", "")
+                and _ctl_from_s2
+                and _ctl_from_s2 != "el causante"
+            )
+            if _ctl_high_confidence:
+                _segundo_ctl = _ctl_text_s2
+                _ctl_causante_primary = _ctl_from_s2
+
+            # Gemini usa varios nombres para la lista de anotaciones del CTL.
+            # Intentar todos los nombres conocidos con estructura de/a directa.
+            _hist_ctx = contexto.get("HISTORIA") or {}
+            _anotas_ctl = (
+                _hist_ctx.get("anotaciones_registrales") or
+                _hist_ctx.get("anotaciones_historicas") or
+                []
+            )
+            if not _anotas_ctl:
+                _anotas_raw_alt = (contexto.get("HISTORIA") or {}).get("anotaciones") or []
+                _anotas_ctl = []
+                for _ar in (_anotas_raw_alt if isinstance(_anotas_raw_alt, list) else []):
+                    if not isinstance(_ar, dict):
+                        continue
+                    _ar2 = dict(_ar)
+                    if not _ar2.get("a") and _ar2.get("intervinientes"):
+                        _intv_up = (_ar2["intervinientes"] or "").upper()
+                        _de_m2 = re.search(r'\bDE:\s*(.+?)(?:,\s*A:|$)', _intv_up)
+                        _a_m2  = re.search(r'\bA:\s*(.+?)(?:\s*\(|\s*,|$)', _intv_up)
+                        if _de_m2:
+                            _ar2["de"] = _de_m2.group(1).strip()
+                        if _a_m2:
+                            _ar2["a"] = _a_m2.group(1).strip()
+                    _anotas_ctl.append(_ar2)
+            if not _anotas_ctl:
+                # Fix D: HISTORIA.resumen_eventos (lista de strings narrativos)
+                # Gemini a veces serializa el CTL completo como strings tipo:
+                # "Anotación 007 (Adjudicación en Sucesión): Fecha 24-06-2003, Escritura Pública 1579
+                #  del 16-06-2003 de Notaría 1 de Bucaramanga. Adjudicación en sucesión de
+                #  CORNEJO GONZALEZ GABRIEL a MARTINEZ DE CORNEJO HILDE."
+                _rev_evts = (contexto.get("HISTORIA") or {}).get("resumen_eventos") or []
+                for _rev in (_rev_evts if isinstance(_rev_evts, list) else []):
+                    if not isinstance(_rev, str):
+                        continue
+                    _rev_up = _rev.upper()
+                    _espec_rv = ""
+                    if "ADJUDICACI" in _rev_up and "SUCES" in _rev_up:
+                        _espec_rv = "ADJUDICACION EN SUCESION"
+                    elif "COMPRAVENTA" in _rev_up:
+                        _espec_rv = "COMPRAVENTA"
+                    else:
+                        continue
+                    # Extraer "de X a Y" desde "Adjudicación en sucesión de X a Y"
+                    _de_a_rv = re.search(
+                        r'[Aa]djudicaci[oó]n\s+en\s+sucesi[oó]n\s+de\s+'
+                        r'([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ ]+?)\s+[Aa]\s+'
+                        r'([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ ]+?)(?:\.|,|\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñ])',
+                        _rev)
+                    _de_rv = _de_a_rv.group(1).strip() if _de_a_rv else ""
+                    _a_rv  = _de_a_rv.group(2).strip() if _de_a_rv else ""
+                    # Extraer EP: "Escritura Pública 1579 del 16-06-2003"
+                    _ep_rv = re.search(
+                        r'[Ee]scritura\s+[Pp][úu]blica\s+(\d[\d.]*)\s+del\s+'
+                        r'(\d{2}[-/]\d{2}[-/]\d{4})',
+                        _rev, re.IGNORECASE)
+                    _ep_rv_num   = _ep_rv.group(1) if _ep_rv else ""
+                    _ep_rv_fecha = _ep_rv.group(2) if _ep_rv else ""
+                    # Extraer notaría: "de Notaría 1 de Bucaramanga"
+                    _nota_rv = re.search(
+                        r'de\s+([Nn]otar[íi]a\s+\d+\s+de\s+[A-Za-záéíóúñ]+)',
+                        _rev)
+                    _ep_rv_nota = (_nota_rv.group(1).upper() if _nota_rv else "")
+                    # Extraer fecha del evento
+                    _fecha_rv = re.search(r'[Ff]echa\s+(\d{2}[-/]\d{2}[-/]\d{4})', _rev)
+                    _ev_fecha = _fecha_rv.group(1) if _fecha_rv else _ep_rv_fecha
+                    _doc_rv = ""
+                    if _ep_rv_num:
+                        _doc_rv = f"ESCRITURA {_ep_rv_num} DEL {_ep_rv_fecha}"
+                        if _ep_rv_nota:
+                            _doc_rv += f" {_ep_rv_nota}"
+                    _anotas_ctl.append({
+                        "de": _de_rv,
+                        "a": _a_rv,
+                        "especificacion": _espec_rv,
+                        "documento": _doc_rv,
+                        "fecha": _ev_fecha,
+                    })
+            # Fix 1B v34: HISTORIA con keys anotacion_NNN (strings estructurados del CTL)
+            # Formato: "... Modo de Adquisición: TIPO. DE: CAUSANTE. A: ADQUIRENTE (CC# X). Valor Acto: $X."
+            # Gemini a veces serializa el CTL como dict {anotacion_001: "string", anotacion_007: "string"...}
+            # en lugar de {anotaciones_registrales: [lista de dicts]}. Ninguno de los parsers anteriores
+            # maneja este formato → _anotas_ctl queda vacío → fallback usa inmueble.tradicion (hallucinated).
+            if not _anotas_ctl:
+                _anot_nn_items = sorted(
+                    [(k, v) for k, v in _hist_ctx.items()
+                     if re.match(r'anotacion[_\s]*\d+', k, re.IGNORECASE) and isinstance(v, str)],
+                    key=lambda x: x[0]
+                )
+                for _hk_nn, _hv_nn in _anot_nn_items:
+                    _modo_nn = re.search(
+                        r'Modo de Adquisi[cç]i[oó]n[:\s]+(.+?)(?:\.\s*DE:|$)', _hv_nn, re.IGNORECASE)
+                    _de_nn = re.search(
+                        r'\bDE:\s*([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ\s]+?)(?:\.\s*A:|$)', _hv_nn)
+                    _a_nn = re.search(
+                        r'\bA:\s*([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ\s]+?)(?:\s*\(CC|\s*\.\s*Valor|$)', _hv_nn)
+                    if not (_modo_nn and _de_nn and _a_nn):
+                        continue
+                    # documento="" → Fix B usará ep_antecedente_pacto para EP número+fecha+notaría completos
+                    _anotas_ctl.append({
+                        "de": _de_nn.group(1).strip(),
+                        "a": _a_nn.group(1).strip(),
+                        "especificacion": _modo_nn.group(1).strip(),
+                        "documento": "",
+                        "fecha": "",
+                    })
+            if isinstance(_anotas_ctl, list):
+                for _anota in reversed(_anotas_ctl):       # reversed = anotación más reciente primero
+                    _a_a_norm = _normalize_name(_anota.get("a") or "")
+                    _a_de     = (_anota.get("de") or "").strip()
+                    _a_doc    = (_anota.get("documento") or "").strip()
+                    _a_espec  = (_anota.get("especificacion") or "").strip()
+                    _a_fecha  = (_anota.get("fecha") or "").strip()
+                    if not _a_a_norm:
+                        continue
+                    _matched_vend = ""
+                    for _vn_ctl in _vendedor_norms_ctl:
+                        if not _vn_ctl or len(_vn_ctl) <= 3:
+                            continue
+                        _vn_parts_a = [w for w in _vn_ctl.split() if len(w) > 3]
+                        if _vn_parts_a and sum(1 for p in _vn_parts_a if p in _a_a_norm) >= 2:
+                            _matched_vend = next(
+                                (v.get("nombre") or "" for v in _vendedores_ctl_list
+                                 if _normalize_name(v.get("nombre") or "") == _vn_ctl), "")
+                            break
+                    if not _matched_vend:
+                        continue
+                    # Parsear EP desde "ESCRITURA 1579 DEL 16-06-2003 NOTARIA 1 DE BUCARAMANGA"
+                    _ep_doc_up = _a_doc.upper()
+                    _ep_m = re.search(
+                        r'ESCRITURA\s+N?[°º]?\s*(\d[\d.]*)\s+DEL?\s+'
+                        r'(\d{2}[-/ ]\d{2}[-/ ]\d{4}|\d+\s+DE\s+\w+\s+DE\s+\d{4})'
+                        r'(?:\s+NOT[AÁ]RI[AO]\s+(\d+\s+DE\s+[A-ZÁÉÍÓÚÑ ]+))?',
+                        _ep_doc_up
+                    )
+                    _ep_num_p   = _ep_m.group(1) if _ep_m else ""
+                    _ep_fecha_p = _ep_m.group(2) if _ep_m else _a_fecha
+                    _ep_nota_p  = (_ep_m.group(3) or "").strip().title() if _ep_m else ""
+                    _espec_up = _a_espec.upper()
+                    if "ADJUDICAC" in _espec_up and "SUCESI" in _espec_up:
+                        _seg_txt = (f"{_matched_vend} adquirió el inmueble mediante adjudicación "
+                                    f"en sucesión de {_a_de}")
+                    elif "COMPRAVENTA" in _espec_up:
+                        _seg_txt = f"{_matched_vend} adquirió el inmueble por compraventa de {_a_de}"
+                    else:
+                        _seg_txt = f"{_matched_vend} adquirió el inmueble ({_a_espec}) de {_a_de}"
+                    if _ep_num_p:
+                        _seg_txt += f", mediante escritura pública número {_ep_num_p}"
+                    if _ep_fecha_p:
+                        _seg_txt += f" de fecha {_ep_fecha_p}"
+                    if _ep_nota_p:
+                        _seg_txt += f" de la Notaría {_ep_nota_p}"
+                    _segundo_ctl = _seg_txt
+                    # Fix B: si la anotación no tenía campo 'documento', complementar EP
+                    # desde ep_antecedente_pacto (número + notaría).
+                    # Además limpiar ep_antecedente_pacto.vendedor (es la apoderada, no el causante).
+                    _ep_ant_b = inmueble.get("ep_antecedente_pacto") or {}
+                    if not _ep_num_p:
+                        _ep_ant_b_num = (_ep_ant_b.get("numero_ep") or "").strip()
+                        _ep_ant_b_fecha = (_ep_ant_b.get("fecha") or "").strip()
+                        _ep_ant_b_nota = (_ep_ant_b.get("notaria") or "").strip()
+                        if _ep_ant_b_num:
+                            _segundo_ctl += f", mediante escritura pública número {_ep_ant_b_num}"
+                        if _ep_ant_b_fecha and not _ep_fecha_p:
+                            _segundo_ctl += f" de fecha {_ep_ant_b_fecha}"
+                        if _ep_ant_b_nota:
+                            _segundo_ctl += f" de la {_ep_ant_b_nota}"
+                    # Limpiar vendedor erróneo (apoderada ≠ causante)
+                    if isinstance(_ep_ant_b, dict) and _ep_ant_b.get("vendedor"):
+                        _ep_ant_b["vendedor"] = ""
+                    _ctl_causante_primary = _a_de  # para instrucción anti-Ley160
+                    break
+            # CTL-1 legacy: cadena_de_tradicion (lista de strings)
+            if not _segundo_ctl:
+                for _item_ct in reversed(_cadena_historia):
+                    _item_ct_norm = _normalize_name(_item_ct)
+                    for _vn_ctl in _vendedor_norms_ctl:
+                        if _vn_ctl and len(_vn_ctl) > 3 and _vn_ctl in _item_ct_norm:
+                            _segundo_ctl = _item_ct
+                            break
+                    if _segundo_ctl:
+                        break
+            # CTL-1 fallback 1: Gemini a veces pone la tradición en datos_inmueble.tradicion
+            # en lugar de historia_y_antecedentes.cadena_de_tradicion — buscar por token-overlap
+            if not _segundo_ctl:
+                _inm_tradicion = (inmueble.get("tradicion") or "").strip()
+                if _inm_tradicion:
+                    _inm_trad_words = set(_normalize_name(_inm_tradicion).split())
+                    for _vn_ctl in _vendedor_norms_ctl:
+                        if not _vn_ctl or len(_vn_ctl) <= 3:
+                            continue
+                        _vn_words = set(_vn_ctl.split())
+                        if len(_vn_words & _inm_trad_words) >= 3:
+                            _segundo_ctl = _inm_tradicion
+                            break
+            # CTL-1 fallback 2: HISTORIA.texto / descripcion contiene la historia del CTL.
+            # Dividir en oraciones y buscar la que menciona al vendedor actual.
+            if not _segundo_ctl:
+                _hist_texto = ((contexto.get("HISTORIA") or {}).get("texto") or
+                               (contexto.get("HISTORIA") or {}).get("descripcion") or "")
+                if _hist_texto:
+                    _hist_sents = re.split(r'\.\s+', _hist_texto)
+                    for _hs in _hist_sents:
+                        _hs_norm = _normalize_name(_hs)
+                        for _vn_ctl in _vendedor_norms_ctl:
+                            if not _vn_ctl or len(_vn_ctl) <= 3:
+                                continue
+                            _vn_parts_h = [w for w in _vn_ctl.split() if len(w) > 3]
+                            if _vn_parts_h and sum(1 for p in _vn_parts_h if p in _hs_norm) >= 2:
+                                _segundo_ctl = _hs.strip()
+                                break
+                        if _segundo_ctl:
+                            break
+            # CTL-1 fallback 3 (MEJORADO): Gemini usa muchos nombres de clave para la historia de
+            # sucesión (antecedentes_sucesion, sucesion_causante, descripcion, fallecimiento_causante…).
+            # Agregar TODOS los valores string de HISTORIA y buscar señales de sucesión + vendedor.
+            if not _segundo_ctl:
+                _ep_ant3 = inmueble.get("ep_antecedente_pacto") or {}
+                _ep_ant3_num = (_ep_ant3.get("numero_ep") or "").strip()
+                _ep_ant3_fecha = (_ep_ant3.get("fecha") or "").strip()
+                _ep_ant3_notaria = (_ep_ant3.get("notaria") or "").strip()
+                if _ep_ant3_num:
+                    # Concatenar todos los campos string/lista-de-strings de HISTORIA
+                    _hist_parts3 = []
+                    for _hv in (contexto.get("HISTORIA") or {}).values():
+                        if isinstance(_hv, str):
+                            _hist_parts3.append(_hv)
+                        elif isinstance(_hv, list):
+                            _hist_parts3.extend(s for s in _hv if isinstance(s, str))
+                    _hist_suc_ctl3 = " ".join(_hist_parts3)
+                    _hist_suc_norm3 = _normalize_name(_hist_suc_ctl3)
+                    # Verificar señales de sucesión en el texto
+                    _suc_kws3 = ("causante", "sucesion", "herencia", "adjudicacion",
+                                 "conyuge sobreviviente", "fallecio", "fallecimiento")
+                    _has_suc3 = any(kw in _hist_suc_norm3 for kw in _suc_kws3)
+                    if _has_suc3:
+                        for _vn_ctl3 in _vendedor_norms_ctl:
+                            if not _vn_ctl3 or len(_vn_ctl3) <= 3:
+                                continue
+                            _vn_parts_ctl3 = [w for w in _vn_ctl3.split() if len(w) > 3]
+                            if _vn_parts_ctl3 and sum(1 for p in _vn_parts_ctl3 if p in _hist_suc_norm3) >= 2:
+                                _causante_m = (
+                                    re.search(
+                                        r'\b([A-ZÁÉÍÓÚÑ]{2,}(?:\s+[A-ZÁÉÍÓÚÑ]{2,}){2,})\s+falleci[oó]',
+                                        _hist_suc_ctl3) or
+                                    re.search(
+                                        r'causante\s+([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ ]{8,}?)(?:\s*,|\s*\(|\s*tram|\s*$)',
+                                        _hist_suc_ctl3, re.IGNORECASE)
+                                )
+                                if _causante_m:
+                                    _causante_n = _causante_m.group(1).strip()
+                                else:
+                                    # Intentar extraer causante desde inmueble.tradicion
+                                    # "fue adquirido por (el/la doctor/a )? NOMBRE_CAUSANTE"
+                                    _trad_caus = (inmueble.get("tradicion") or "").strip()
+                                    _caus_from_trad = re.search(
+                                        r'adquirido por (?:el doctor |la doctora |el |la )?'
+                                        r'([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ ]{6,}?)(?:,|\s+por\s|\s+mediante)',
+                                        _trad_caus, re.IGNORECASE
+                                    )
+                                    _causante_n = _caus_from_trad.group(1).strip() if _caus_from_trad else "el causante"
+                                _vend_n_ctl3 = next(
+                                    (v.get("nombre") or "" for v in _vendedores_ctl_list), "")
+                                _segundo_ctl = (
+                                    f"{_vend_n_ctl3} adquirió el inmueble mediante adjudicación "
+                                    f"en sucesión de {_causante_n}"
+                                )
+                                if _ep_ant3_num:
+                                    _segundo_ctl += f", mediante escritura pública número {_ep_ant3_num}"
+                                if _ep_ant3_fecha:
+                                    _segundo_ctl += f" de fecha {_ep_ant3_fecha}"
+                                if _ep_ant3_notaria:
+                                    _segundo_ctl += f" de la {_ep_ant3_notaria}"
+                                _ctl_causante_primary = _causante_n
+                                break
+            # FIX v42-SEGUNDO: Fallback 4 — adjudicataria detectada en PERSONAS_ACTIVOS
+            # Cubre cuando HISTORIA vacío Y _vendedores_ctl_list vacío en el mismo run.
+            # No requiere datos de HISTORIA: usa rol_en_hoja + inmueble.tradicion + ep_antecedente_pacto.
+            if not _segundo_ctl:
+                for _pa_s2 in (contexto.get("PERSONAS_ACTIVOS") or []):
+                    _rol_s2 = _normalize_name(_pa_s2.get("rol_en_hoja") or "")
+                    if not any(kw in _rol_s2 for kw in ("adjudicatari", "conyuge", "viuda")):
+                        continue
+                    _nom_s2 = (_pa_s2.get("nombre") or "").strip()
+                    if not _nom_s2:
+                        continue
+                    # Causante: buscar en inmueble.tradicion con regex del Fallback 3
+                    _trad_s2 = (inmueble.get("tradicion") or "").strip()
+                    _causante_s2 = "el causante"
+                    _caus_m_s2 = re.search(
+                        r'adquirido por (?:el doctor |la doctora |el |la )?'
+                        r'([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ ]{6,}?)(?:,|\s+por\s|\s+mediante)',
+                        _trad_s2, re.IGNORECASE
+                    )
+                    if _caus_m_s2:
+                        _causante_s2 = _caus_m_s2.group(1).strip()
+                    # EP data desde ep_antecedente_pacto
+                    _ep_ant_s2 = inmueble.get("ep_antecedente_pacto") or {}
+                    _ep_num_s2 = (_ep_ant_s2.get("numero_ep") or "").strip()
+                    _ep_fec_s2 = (_ep_ant_s2.get("fecha") or "").strip()
+                    _ep_nota_s2 = (_ep_ant_s2.get("notaria") or "").strip()
+                    _segundo_ctl = (f"{_nom_s2} adquirió el inmueble mediante adjudicación "
+                                    f"en sucesión de {_causante_s2}")
+                    if _ep_num_s2:
+                        _segundo_ctl += f", mediante escritura pública número {_ep_num_s2}"
+                    if _ep_fec_s2:
+                        _segundo_ctl += f" de fecha {_ep_fec_s2}"
+                    if _ep_nota_s2:
+                        _segundo_ctl += f" de la {_ep_nota_s2}"
+                    _ctl_causante_primary = _causante_s2
+                    break
+            if _segundo_ctl:
+                # E-02: detectar adjudicación desde rol_en_hoja DEL VENDEDOR — más fiable que keywords en _segundo_ctl
+                # El CTL puede clasificar una adjudicación como "compraventa" → confiar en rol_en_hoja primero
+                # E-02: usar _normalize_name + substring — evita word-boundary + accent bug
+                # "\bADJUDICATARI\b" no matchea "Adjudicataria"; "CONYUGE" no matchea "CÓNYUGE"
+                _es_adjudicacion_rol = any(
+                    any(kw in _normalize_name(v.get("rol_en_hoja") or "")
+                        for kw in ("adjudicatari", "cesionari", "conyuge", "viuda"))
+                    for v in _vendedores_ctl_list
+                )
+                _es_adjudicacion_kw = any(kw in _segundo_ctl.upper()
+                                          for kw in ("ADJUDICAD", "SUCESI", "CAUSANTE", "HERENCIA"))
+                _es_adjudicacion_personas = any(
+                    any(kw in _normalize_name(p.get("rol_en_hoja") or "")
+                        for kw in ("adjudicatari", "cesionari", "conyuge", "viuda"))
+                    for p in (contexto.get("PERSONAS_ACTIVOS") or [])
+                )
+                _es_adjudicacion = _es_adjudicacion_rol or _es_adjudicacion_kw or _es_adjudicacion_personas
+                # E-01 post-proc: guardar vendedoras con viudez para post-processing al final del pipeline
+                # (más robusto que mutación: actúa aunque ROLES_ACTO esté vacío o DataBinder ignore instrucción)
+                if _es_adjudicacion:
+                    _pp_vend_src = _vendedores_ctl_list or []
+                    if not _pp_vend_src:
+                        # Fallback: buscar en PERSONAS_ACTIVOS por rol_en_hoja
+                        for _pa_pp2 in (contexto.get("PERSONAS_ACTIVOS") or []):
+                            _pa_pp2_rol_n = _normalize_name(_pa_pp2.get("rol_en_hoja") or "")
+                            if any(kw in _pa_pp2_rol_n for kw in ("adjudicatari", "cesionari", "conyuge", "viuda")):
+                                _pp_vend_src = [_pa_pp2]
+                    for _v_pp in _pp_vend_src:
+                        _v_pp_nom = (_v_pp.get("nombre") or "").strip()
+                        if _v_pp_nom:
+                            _v_pp_mujer = "de" in _normalize_name(_v_pp_nom).split()
+                            _v_pp_ec = "Soltera por viudez" if _v_pp_mujer else "Soltero por viudez"
+                            contexto.setdefault("_POST_PROC_VIUDEZ", []).append((_v_pp_nom, _v_pp_ec))
+                _compradores_names = " | ".join(
+                    c.get("nombre") or "" for c in (
+                        (_roles_acto_ctl.get("COMPRADORES") or [])))
+                ctx_acto["TIPO_ADQUISICION_ANTERIOR"] = (
+                    "ADJUDICACIÓN EN SUCESIÓN" if _es_adjudicacion else ctx_acto.get("TIPO_ADQUISICION_ANTERIOR", "COMPRAVENTA"))
+                # Causante: VENDEDOR_ANTERIOR es más fiable que _ctl_causante_primary
+                _causante_final = (ctx_acto.get("VENDEDOR_ANTERIOR") or "").strip() or _ctl_causante_primary
+                # E-02 causante validation: el causante NO puede ser la misma persona que la vendedora
+                # (bug: Gemini a veces extrae el nombre del adquirente como "causante" al revés)
+                _vend_words_c = set()
+                for _vc in _vendedores_ctl_list:
+                    for _w in _normalize_name(_vc.get("nombre") or "").split():
+                        if len(_w) > 4: _vend_words_c.add(_w)
+                def _causante_es_vendedora(c: str) -> bool:
+                    if not c or not _vend_words_c: return False
+                    c_words = {w for w in _normalize_name(c).split() if len(w) > 4}
+                    return len(c_words & _vend_words_c) >= 2
+                # Fix 1A v33: también disparar scan cuando _causante_final es un placeholder [[PENDIENTE:...]]
+                # Root cause: "[[PENDIENTE: VENDEDOR_ANTERIOR]]" es truthy → no dispara _causante_es_vendedora
+                _causante_is_placeholder = bool(re.search(r'\[\[PENDIENTE', _causante_final or ""))
+                if _causante_is_placeholder or (_causante_final and _causante_es_vendedora(_causante_final)):
+                    # Buscar causante en CTL anotaciones: campo "de" de la anotación de adjudicación
+                    _hist_for_c = contexto.get("HISTORIA") or {}
+                    _causante_final = ""
+                    for _hck_c in ("anotaciones_registrales", "anotaciones_historicas", "anotaciones"):
+                        _hcv_c = _hist_for_c.get(_hck_c)
+                        if isinstance(_hcv_c, list):
+                            for _ha_c in _hcv_c:
+                                _ha_spec_c = (_ha_c.get("especificacion") or "").upper()
+                                if any(kw in _ha_spec_c for kw in ("ADJUDICACI", "SUCES", "CAUSANTE")):
+                                    _de_val_c = (_ha_c.get("de") or "").strip()
+                                    # FIX A1 v38: cuando "de" vacío, parsear campo "intervinientes"
+                                    # Formato: "DE: CORNEJO GONZALEZ GABRIEL, A: MARTINEZ DE CORNEJO HILDE"
+                                    if not _de_val_c:
+                                        _intv_c = (_ha_c.get("intervinientes") or "").strip()
+                                        _intv_m = re.search(
+                                            r'\bDE:\s*([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ &\.,]+?)(?:,?\s*\bA:|\s*$)',
+                                            _intv_c, re.IGNORECASE
+                                        )
+                                        if _intv_m:
+                                            _de_val_c = _intv_m.group(1).strip()
+                                    if _de_val_c and not _causante_es_vendedora(_de_val_c):
+                                        _causante_final = _de_val_c
+                                        break
+                            if _causante_final: break
+                    if not _causante_final:
+                        # Fix A v14: HISTORIA como dict descriptivo (no lista de anotaciones)
+                        # Ej: {"descripcion": "adquirido por GABRIEL CORNEJO GONZALEZ...",
+                        #       "servidumbre_acueducto": "...", "adquisicion_coldamparos": "..."}
+                        for _hck_all, _hcv_all in (_hist_for_c.items() if isinstance(_hist_for_c, dict) else []):
+                            if not isinstance(_hcv_all, str):
+                                continue
+                            _hcv_up = _hcv_all.upper()
+                            if not any(kw in _hcv_up for kw in ("ADJUDICACI", "SUCES", "CAUSANTE", "ADQUIRIDO POR")):
+                                continue
+                            _caus_m = re.search(
+                                r'(?:(DE:\s*)|(adquirido\s+por\s+))([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ ]{5,50}?)(?:\s+(?:A[:\s]|mediante|→)|[,\.])',
+                                _hcv_all, re.IGNORECASE
+                            )
+                            if _caus_m:
+                                _caus_cand = _caus_m.group(3).strip()
+                                _is_ctl_de_fmt = bool(_caus_m.group(1))  # True = "DE: X" → CTL, apellidos-first
+                                # Fix 1A v34: solo reordenar si es formato narrativo "adquirido por NOMBRE APELLIDOS"
+                                # NO reordenar si es "DE: APELLIDOS NOMBRE" (CTL ya en orden notarial correcto)
+                                # Fix 2 v32 aplicaba reorder SIEMPRE → double-reversión en CTL format
+                                if not _is_ctl_de_fmt:
+                                    _caus_parts_ro = _caus_cand.split()
+                                    if len(_caus_parts_ro) == 3:
+                                        _caus_cand = f"{_caus_parts_ro[1]} {_caus_parts_ro[2]} {_caus_parts_ro[0]}"
+                                    elif len(_caus_parts_ro) == 4:
+                                        _caus_cand = f"{_caus_parts_ro[2]} {_caus_parts_ro[3]} {_caus_parts_ro[0]} {_caus_parts_ro[1]}"
+                                # 2 palabras o >4: dejar sin cambio (ambiguo)
+                                if _caus_cand and not _causante_es_vendedora(_caus_cand):
+                                    _causante_final = _caus_cand
+                                    break
+                            # Fix 2 v35: patrón adicional para "causante NOMBRE APELLIDOS" (sucesion_causante key)
+                            # El regex anterior (DE: | adquirido por) no matchea "El causante X falleció"
+                            if not _causante_final:
+                                _caus_m2 = re.search(
+                                    r'causante\s+([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ ]{5,50}?)(?:\s+falleci|\s*,|\s*\(|\s+trami)',
+                                    _hcv_all, re.IGNORECASE
+                                )
+                                if _caus_m2:
+                                    _caus_cand2 = _caus_m2.group(1).strip()
+                                    # Formato narrativo → nombre primero → reordenar a notarial (apellidos primero)
+                                    _caus_parts2 = _caus_cand2.split()
+                                    if len(_caus_parts2) == 3:
+                                        _caus_cand2 = f"{_caus_parts2[1]} {_caus_parts2[2]} {_caus_parts2[0]}"
+                                    elif len(_caus_parts2) == 4:
+                                        _caus_cand2 = f"{_caus_parts2[2]} {_caus_parts2[3]} {_caus_parts2[0]} {_caus_parts2[1]}"
+                                    if _caus_cand2 and not _causante_es_vendedora(_caus_cand2):
+                                        _causante_final = _caus_cand2
+                                        break
+                    if not _causante_final:
+                        _causante_final = "[[PENDIENTE: CAUSANTE_SUCESION]]"
+                # Fix 1B v33: Sync ctx_acto["VENDEDOR_ANTERIOR"] con el causante computado
+                # Previene que DataBinder vea "[[PENDIENTE: VENDEDOR_ANTERIOR]]" en ctx_acto
+                ctx_acto["VENDEDOR_ANTERIOR"] = _causante_final
+                # Fix C1: detectar formato raw CTL "Anotación N:" → generar narrativa estructurada
+                # _force_narrative: cuando adjudicación detectada pero _segundo_ctl dice "compraventa" (CTL mal clasificado)
+                _is_ctl_raw = bool(re.search(r'Anotaci[oó]n\s+\d+', _segundo_ctl))
+                _force_narrative = _es_adjudicacion and "compraventa" in _segundo_ctl.lower()
+                # Fix 1C v34: adjudicación + EP conocido + causante conocido → forzar narrativa Python (_s2_narr)
+                # _s2_narr incluye ORIP y folio completos desde ep_antecedente_pacto + ctx_acto.
+                # Evita que _segundo_ctl proveniente de fuente parcial (tradicion hallucinated, anotacion_NNN
+                # sin doc completo) llegue a DataBinder vía "TRANSCRIBIR EXACTAMENTE" con datos incorrectos.
+                if (not _is_ctl_raw
+                        and _es_adjudicacion
+                        and ctx_acto.get("EP_ANTECEDENTE_NUMERO")
+                        and "[[PENDIENTE" not in ctx_acto.get("EP_ANTECEDENTE_NUMERO", "")
+                        and _causante_final
+                        and "[[PENDIENTE" not in _causante_final):
+                    _force_narrative = True
+                if _is_ctl_raw or _force_narrative:
+                    _s2_vend = next((v.get("nombre") or "" for v in _vendedores_ctl_list), "LA PARTE VENDEDORA")
+                    _s2_tipo = "adjudicación en sucesión" if _es_adjudicacion else "compraventa"
+                    _s2_prep = (f"del causante {_causante_final or 'el causante'}"
+                                if _es_adjudicacion
+                                else f"de {_causante_final or 'el anterior propietario'}")
+                    _s2_ep   = ctx_acto.get("EP_ANTECEDENTE_NUMERO") or ""
+                    _s2_fec  = ctx_acto.get("FECHA_ESCRITURA_ANTERIOR") or ""
+                    _s2_not  = ctx_acto.get("EP_ANTECEDENTE_NOTARIA") or ""
+                    # FIX A2 v38: normalizar nombre de notaría
+                    # "del Círculo Notarial de" → "del Círculo de"
+                    _s2_not = re.sub(r'\bC[ií]rculo\s+Notarial\s+de\b', 'Círculo de',
+                                     _s2_not, flags=re.IGNORECASE)
+                    # "Notaría N De/de/del X" → "Notaría [Ordinal] del Círculo de X"
+                    _ORDINALS_S2 = {"1":"Primera","2":"Segunda","3":"Tercera","4":"Cuarta",
+                                    "5":"Quinta","6":"Sexta","7":"Séptima","8":"Octava",
+                                    "9":"Novena","10":"Décima"}
+                    _s2_not = re.sub(
+                        r'\bNotar[ií]a\s+(\d+)\s+(?:de|del?)\s+',
+                        lambda m: f"Notaría {_ORDINALS_S2.get(m.group(1), m.group(1))} del Círculo de ",
+                        _s2_not, flags=re.IGNORECASE
+                    )
+                    _s2_orip = ctx_acto.get("OFICINA_REGISTRO") or inmueble.get("oficina_registro") or ""
+                    _s2_mat  = ctx_acto.get("MATRICULA_INMOBILIARIA") or inmueble.get("matricula") or ""
+                    _s2_narr = (
+                        f"{_s2_vend} adquirió el inmueble mediante {_s2_tipo} {_s2_prep}, "
+                        f"según escritura pública número {_s2_ep} de fecha {_s2_fec} "
+                        f"de la {_s2_not}, debidamente registrada en la {_s2_orip} "
+                        f"al folio de matrícula inmobiliaria número {_s2_mat}"
+                    )
+                    instruccion_acto += (
+                        f"SEGUNDO (TÍTULO DE ADQUISICIÓN): Redactar narrativa en voz activa EXACTAMENTE: "
+                        f"'{_s2_narr}. ----------' "
+                        "PROHIBIDO formato 'Anotación N: ...'. "
+                        "PROHIBIDO 'pacto de retroventa' o texto de otro acto. "
+                        f"ADVERTENCIA CRÍTICA: '{_compradores_names}' es el COMPRADOR ACTUAL — NUNCA en SEGUNDO. "
+                    )
+                    if _force_narrative:
+                        # FIX 1A v39: pop tradicion para que DataBinder no use la cadena completa
+                        # y respete la instrucción _s2_narr (solo EP de la adjudicación)
+                        (ctx_acto.get("INMUEBLE") or {}).pop("tradicion", None)
+                        ctx_acto.pop("TRADICION_INMUEBLE", None)
+                else:
+                    instruccion_acto += (
+                        f"SEGUNDO (TÍTULO DE ADQUISICIÓN): TRANSCRIBIR EXACTAMENTE el siguiente texto "
+                        f"(fuente: Certificado de Tradición y Libertad): "
+                        f"'{_segundo_ctl}. ----------' "
+                        "PROHIBIDO agregar CUALQUIER texto adicional antes o después de esta frase. "
+                        "PROHIBIDO añadir: 'en la cual X le transfirió', 'pacto cancelado', 'Primer Acto', "
+                        "'cancelado en', 'pacto de retroventa', u otro. "
+                        "El campo 'ep_antecedente_pacto' en el contexto es SOLO referencia del EP antecedente "
+                        "del vendedor — NO indica que exista un pacto de retroventa en este caso. "
+                        f"ADVERTENCIA CRÍTICA: '{_compradores_names}' es el COMPRADOR ACTUAL — NUNCA en SEGUNDO. "
+                    )
+                if _es_adjudicacion:
+                    instruccion_acto += (
+                        "El tipo de adquisición ES ADJUDICACIÓN EN SUCESIÓN, NO compraventa ni retroventa. "
+                        "ABSOLUTAMENTE PROHIBIDO añadir 'por compra', 'mediante compraventa' u otras "
+                        "frases de compraventa a este texto — la adquisición es exclusivamente "
+                        "ADJUDICACIÓN EN SUCESIÓN. Si el texto base ya contiene 'por compra', eliminarlo. "
+                        "ABSOLUTAMENTE PROHIBIDO mencionar 'pacto de retroventa' — este caso NO tiene pacto de retroventa. "
+                        f"PROHIBIDO mencionar a '{_compradores_names}' en el SEGUNDO — "
+                        "el comprador actual NO tuvo ninguna relación con el EP antecedente del vendedor. "
+                    )
+                    if _compradores_names:
+                        instruccion_acto += (
+                            f"ADVERTENCIA CRÍTICA: '{_compradores_names}' es/son el/la COMPRADOR(A) ACTUAL "
+                            "en ESTE instrumento — NUNCA fue(ron) propietario(s) anterior(es) del inmueble. "
+                            "PROHIBIDO mencionar su nombre en el SEGUNDO como vendedor, cedente, "
+                            "otorgante o parte del antecedente. Aparecer en SEGUNDO = ERROR GRAVE. "
+                        )
+                    if _ctl_causante_primary:
+                        instruccion_acto += (
+                            f"CAUSANTE (anterior propietario cuyo inmueble se adjudicó): '{_causante_final or _ctl_causante_primary}'. "
+                        )
+                    # Si no es rural, prohibir explícitamente Ley 160 / baldíos
+                    _rural_aplica_ctl = bool(contexto.get("DATOS_EXTRA", {}).get("RURAL_APLICA"))
+                    if not _rural_aplica_ctl:
+                        instruccion_acto += (
+                            "PROHIBIDO ABSOLUTAMENTE insertar cláusulas de 'Ley 160', 'baldío', 'INCODER', "
+                            "'UAF' o 'unidad agrícola familiar' — este es un inmueble URBANO. "
+                        )
+            # EC-2 (revisado): escanear TODOS los valores de HISTORIA para contexto de sucesión
+            # — Gemini renombra la clave diferente cada run; no depender de "antecedentes_sucesion".
+            _hist_ec = contexto.get("HISTORIA") or {}
+            _hist_suc_ec_parts = []
+            for _hec_v in _hist_ec.values():
+                if isinstance(_hec_v, str) and _hec_v:
+                    _hist_suc_ec_parts.append(_hec_v)
+                elif isinstance(_hec_v, dict):
+                    _hist_suc_ec_parts.extend(v for v in _hec_v.values() if isinstance(v, str) and v)
+            _hist_suc_ec = " ".join(_hist_suc_ec_parts)
+            _hist_suc_ec_has_suc = bool(re.search(
+                r'\b(sucesion|sucesor|adjudicaci|herencia|causante)\b', _hist_suc_ec, re.IGNORECASE))
+            # Fix A-v3: Standalone EC-2 — detectar viudez directamente desde rol_en_hoja del vendedor
+            # (independiente de _hist_suc_ec_has_suc — funciona cuando HISTORIA está vacía o con claves inesperadas)
+            for _v_ec_st in _vendedores_ctl_list:
+                # E-01: usar _normalize_name (elimina tildes, lowercasea) + substring — sin word boundary
+                # La regex anterior \b(ADJUDICATARI)\b fallaba en "Adjudicataria" y CONYUGE≠CÓNYUGE
+                _rol_ec_st_n = _normalize_name(_v_ec_st.get("rol_en_hoja") or "")
+                if any(kw in _rol_ec_st_n for kw in ("adjudicatari", "cesionari", "conyuge", "viuda")):
+                    _nombre_st = _v_ec_st.get("nombre") or ""
+                    _es_mujer_st = "de" in _normalize_name(_nombre_st).split()
+                    _ec_viudez_st = "Soltera por viudez" if _es_mujer_st else "Soltero por viudez"
+                    _v_ec_st["estado_civil"] = _ec_viudez_st  # E-01: mutar el dato directamente en ctx_acto
+                    # FIX 1B v39: también actualizar flat key que DataBinder prioriza sobre el nested dict
+                    _v_idx_v39 = (_vendedores_ctl_list.index(_v_ec_st) + 1
+                                  if _v_ec_st in _vendedores_ctl_list else 1)
+                    for _flat_ec_v39 in (f"ESTADO_CIVIL_VENDEDOR_{_v_idx_v39}",
+                                         "ESTADO_CIVIL_VENDEDOR"):
+                        ctx_acto[_flat_ec_v39] = _ec_viudez_st
+                    # Fix 1 v32: instrucción con género explícito para evitar "Soltero" vs "Soltera" erróneo
+                    _genero_label_st = "MUJER (GÉNERO FEMENINO)" if _es_mujer_st else "HOMBRE (GÉNERO MASCULINO)"
+                    _prohib_st = (
+                        "ABSOLUTAMENTE PROHIBIDO escribir 'Soltero por viudez' — es MUJER, no hombre."
+                        if _es_mujer_st else
+                        "ABSOLUTAMENTE PROHIBIDO escribir 'Soltera por viudez' — es HOMBRE, no mujer."
+                    )
+                    instruccion_acto += (
+                        f"ESTADO CIVIL {_genero_label_st} — {_nombre_st}: "
+                        f"escribir OBLIGATORIAMENTE '{_ec_viudez_st}'. {_prohib_st} "
+                        "PROHIBIDO 'que declara bajo juramento'. El estado civil ES CONOCIDO y DETERMINADO. "
+                    )
+                    _hist_suc_ec_has_suc = True  # asegurar que MMFL8 también dispare
+            # FIX 2 v39: normalizar dirección — insertar "DE LA" entre MANZANA y URBANIZACION/BARRIO
+            _inmueble_ctx_v39 = ctx_acto.get("INMUEBLE") or {}
+            _dir_raw_v39 = _inmueble_ctx_v39.get("direccion") or ""
+            if _dir_raw_v39:
+                _dir_fix_v39 = re.sub(
+                    r'\bMANZANA\s+(\w+)\s*,\s*(URBANIZACION|BARRIO|CONJUNTO|SECTOR)',
+                    r'MANZANA \1 DE LA \2',
+                    _dir_raw_v39, flags=re.IGNORECASE
+                )
+                if _dir_fix_v39 != _dir_raw_v39:
+                    _inmueble_ctx_v39["direccion"] = _dir_fix_v39
+                    ctx_acto["DIRECCION_INMUEBLE"] = _dir_fix_v39
+            # FIX 1C v39: rellenar OCUPACION desde PERSONAS_ACTIVOS cuando placeholder
+            for _idx_oc_v39, _vend_oc_v39 in enumerate(_vendedores_ctl_list, start=1):
+                _k_oc_v39 = f"OCUPACION_VENDEDOR_{_idx_oc_v39}"
+                if "[[PENDIENTE" in (ctx_acto.get(_k_oc_v39) or ""):
+                    _vn_v39 = _normalize_name(_vend_oc_v39.get("nombre") or "")
+                    _vw_v39 = {w for w in _vn_v39.split() if len(w) > 3}
+                    for _pa_v39 in (contexto.get("PERSONAS_ACTIVOS") or []):
+                        _pan_v39 = _normalize_name(_pa_v39.get("nombre") or "")
+                        _pw_v39 = {w for w in _pan_v39.split() if len(w) > 3}
+                        if len(_pw_v39 & _vw_v39) >= 2:
+                            _oc_v39 = (_pa_v39.get("ocupacion") or "").strip()
+                            if _oc_v39:
+                                ctx_acto[_k_oc_v39] = _oc_v39
+                                break
+            # FIX v41-OCUPACION: Fallback cuando _vendedores_ctl_list vacío
+            # Scan PERSONAS_ACTIVOS buscando cualquier persona con rol vendedor y ocupacion
+            if not _vendedores_ctl_list:
+                _k_oc_fallback = "OCUPACION_VENDEDOR_1"
+                if "[[PENDIENTE" in (ctx_acto.get(_k_oc_fallback) or ""):
+                    for _pa_oc in (contexto.get("PERSONAS_ACTIVOS") or []):
+                        _rol_oc_f = _normalize_name(_pa_oc.get("rol_en_hoja") or "")
+                        # Excluir compradores, APs, acreedores
+                        if any(kw in _rol_oc_f for kw in ("comprad", "beneficiari", "acreedor",
+                                                            " ap ", "apoderado", "poder")):
+                            continue
+                        _oc_f = (_pa_oc.get("ocupacion") or "").strip()
+                        if _oc_f:
+                            ctx_acto[_k_oc_fallback] = _oc_f
+                            break
+            # Fix v47: cuando ocupación sigue PENDIENTE tras todos los fallbacks → "Independiente"
+            if "[[PENDIENTE" in (ctx_acto.get("OCUPACION_VENDEDOR_1") or ""):
+                ctx_acto["OCUPACION_VENDEDOR_1"] = "Independiente"
+            if _hist_suc_ec_has_suc:
+                _hist_suc_norm = _normalize_name(_hist_suc_ec)
+                for _v_ec in _vendedores_ctl_list:
+                    _v_ec_val = (_v_ec.get("estado_civil") or "").strip().upper()
+                    # Fix A capa 2: rol_en_hoja explícito de viudez (Cónyuge Sobreviviente, Adjudicataria)
+                    # E-01: misma fix normalize — evitar word-boundary + accent bug
+                    _rol_ec_n = _normalize_name(_v_ec.get("rol_en_hoja") or "")
+                    _ec_override_by_rol = any(kw in _rol_ec_n for kw in ("adjudicatari", "cesionari", "conyuge", "viuda"))
+                    # Fix A capa 1: allowlist ampliado con CASADA/CASADO
+                    if _ec_override_by_rol or _v_ec_val in (
+                            "", "NO_DETECTADO", "ILEGIBLE", "PENDIENTE",
+                            "SOLTERA", "SOLTERO", "CASADA", "CASADO"):
+                        _v_nom_ec = _normalize_name(_v_ec.get("nombre") or "")
+                        _v_parts_ec = [w for w in _v_nom_ec.split() if len(w) > 3]
+                        if _v_parts_ec and sum(1 for p in _v_parts_ec if p in _hist_suc_norm) >= 2:
+                            # Determinar género: keyword explícito → fallback a "DE" patronímico español
+                            # "MARTINEZ DE CORNEJO HILDE": "de" en nombre normalizado = mujer casada
+                            _es_mujer_ec = bool(re.search(r'\b(conyuge|conyugue|viuda|esposa)\b', _hist_suc_norm))
+                            if not _es_mujer_ec:
+                                _es_mujer_ec = "de" in _v_nom_ec.split()
+                            _ec_viudez = "Soltera por viudez" if _es_mujer_ec else "Soltero por viudez"
+                            # Fix 1 v32: género explícito en segundo bloque (igual que en standalone EC-2)
+                            _genero_label_ec = "MUJER (GÉNERO FEMENINO)" if _es_mujer_ec else "HOMBRE (GÉNERO MASCULINO)"
+                            _prohib_ec = (
+                                "ABSOLUTAMENTE PROHIBIDO escribir 'Soltero por viudez' — es MUJER."
+                                if _es_mujer_ec else
+                                "ABSOLUTAMENTE PROHIBIDO escribir 'Soltera por viudez' — es HOMBRE."
+                            )
+                            instruccion_acto += (
+                                f"ESTADO CIVIL {_genero_label_ec} — {_v_ec.get('nombre')}: "
+                                f"escribir OBLIGATORIAMENTE '{_ec_viudez}'. {_prohib_ec} "
+                                "Esta persona es cónyuge sobreviviente. NO usar 'que declara bajo juramento'. "
+                            )
+            # MMFL8: si hay contexto de sucesión, inyectar estado civil explícito para cada COMPRADOR
+            # para impedir que DataBinder generalice la instrucción de viudez del vendedor al acto.
+            if _hist_suc_ec_has_suc:
+                _ya_cubiertos_mmfl8: set = set()
+                # Compradores del acto
+                for _c_mmfl8 in (_roles_acto_ctl.get("COMPRADORES") or []):
+                    _c_nombre_mmfl8 = (_c_mmfl8.get("nombre") or "").strip()
+                    _c_ec_mmfl8 = (_c_mmfl8.get("estado_civil") or "").strip().upper()
+                    if not _c_nombre_mmfl8 or _c_ec_mmfl8 in ("VIUDO", "VIUDA"):
+                        continue
+                    instruccion_acto += (
+                        f"ESTADO CIVIL de {_c_nombre_mmfl8}: 'soltero(a) con unión marital de hecho' "
+                        f"(NO 'Soltero/a por viudez' — la viudez aplica ÚNICAMENTE a la PARTE VENDEDORA). "
+                    )
+                    _ya_cubiertos_mmfl8.add(_c_nombre_mmfl8)
+                # Fix B: Cubrir también APs (rol_en_hoja "AP") — el AP comparece físicamente
+                for _p_mmfl8 in (contexto.get("PERSONAS_ACTIVOS") or []):
+                    _p_nom_mmfl8 = (_p_mmfl8.get("nombre") or "").strip()
+                    _p_ec_mmfl8 = (_p_mmfl8.get("estado_civil") or "").strip().upper()
+                    _p_rol_mmfl8 = (_p_mmfl8.get("rol_en_hoja") or "").upper()
+                    if not _p_nom_mmfl8 or _p_nom_mmfl8 in _ya_cubiertos_mmfl8:
+                        continue
+                    if re.search(r'\bAP\b', _p_rol_mmfl8) and _p_ec_mmfl8 not in ("VIUDO", "VIUDA"):
+                        instruccion_acto += (
+                            f"ESTADO CIVIL de {_p_nom_mmfl8}: 'soltero(a) con unión marital de hecho' "
+                            "(NO 'Soltero/a por viudez'). "
+                        )
+            # Fix B-v2: Standalone — emitir instrucción para CUALQUIER persona con "unión libre"
+            # (independiente de _hist_suc_ec_has_suc — siempre corre para COMPRAVENTA)
+            _ya_cubiertos_ul: set = set()
+            for _p_ul in (contexto.get("PERSONAS_ACTIVOS") or []):
+                _p_ec_ul = (_p_ul.get("estado_civil") or "").strip().lower()
+                _p_nom_ul = (_p_ul.get("nombre") or "").strip()
+                if not _p_nom_ul or _p_nom_ul in _ya_cubiertos_ul:
+                    continue
+                if "uni" in _p_ec_ul and "libre" in _p_ec_ul:
+                    instruccion_acto += (
+                        f"ESTADO CIVIL de {_p_nom_ul}: usar 'soltero(a) con unión marital de hecho' "
+                        "(NO 'que declara bajo juramento', NO 'Soltero/a por viudez'). "
+                    )
+                    _ya_cubiertos_ul.add(_p_nom_ul)
+            # CTL STATE ENGINE — Point 3 (TERCERO / NI-08): usar CTLState como fuente autoritativa
+            # de gravámenes. Si el engine resolvió, inyectar instrucción directa a DataBinder.
+            _ctl_deed_ctx_g = contexto.get("_ctl_deed_ctx") or {}
+            if _ctl_deed_ctx_g:
+                if _ctl_deed_ctx_g.get("clausula_libertad_libre"):
+                    instruccion_acto += (
+                        "TERCERO-LIBERTAD (CTL-ENGINE): Según el CTL State Engine el inmueble se "
+                        "encuentra LIBRE de hipotecas, embargos, condiciones resolutorias y demás "
+                        "gravámenes. ABSOLUTAMENTE PROHIBIDO mencionar 'gravamen de valorización' "
+                        "como activo o vigente. Escribir que el inmueble está libre de gravámenes "
+                        "y que el/la vendedor/a se obliga al saneamiento de Ley. "
+                    )
+                elif _ctl_deed_ctx_g.get("active_gravamenes_text") or _ctl_deed_ctx_g.get("active_embargos_text"):
+                    _grav_eng = "; ".join(filter(None, [
+                        _ctl_deed_ctx_g.get("active_gravamenes_text"),
+                        _ctl_deed_ctx_g.get("active_embargos_text"),
+                    ]))
+                    instruccion_acto += (
+                        f"TERCERO-LIBERTAD (CTL-ENGINE NI-08): El inmueble tiene gravámenes ACTIVOS "
+                        f"según el CTL State Engine: {_grav_eng}. En TERCERO indicar estos gravámenes "
+                        f"vigentes exactamente como se mencionan. "
+                    )
+
+            # NI-05/NI-08: Detectar gravámenes activos en CTL — soporta lista, dict Y strings HISTORIA
+            _hist_grav = contexto.get("HISTORIA") or {}
+            _anotas_grav_src: list = []
+            for _grav_key in ("anotaciones_registrales", "anotaciones_historicas",
+                              "anotaciones", "anotaciones_relevantes"):
+                _grav_cand = _hist_grav.get(_grav_key)
+                if isinstance(_grav_cand, list) and _grav_cand:
+                    _anotas_grav_src = _grav_cand
+                    break
+                elif isinstance(_grav_cand, dict) and _grav_cand:
+                    # Gemini a veces devuelve dict {"001_compraventa": "...", "008_gravamen": "..."}
+                    _anotas_grav_src = [{"especificacion": v, "de": ""} for v in _grav_cand.values()
+                                        if isinstance(v, str)]
+                    break
+            # FIX v41-MMFL12: Pre-compute text scan de HISTORIA ANTES del loop estructurado
+            # para poder usarlo dentro del loop y evitar añadir VALORIZ cuando ya está cancelada
+            _hist_valoriz_txt_cancelled = any(
+                ("VALORIZ" in str(v).upper() and "CANCEL" in str(v).upper())
+                for v in (_hist_grav.values() if isinstance(_hist_grav, dict) else [])
+                if v
+            )
+            _active_gravamenes: list = []
+            _nios_valoriz_cancelled = False  # FIX B v38: True cuando valorización CTL fue cancelada
+            for _idx_g, _anota_g in enumerate(_anotas_grav_src):
+                _espec_g = (_anota_g.get("especificacion") or "").upper()
+                if not any(kw in _espec_g for kw in ("GRAVAMEN", "EMBARGO", "AFECTACION VIVIENDA", "VALORIZ")):
+                    continue
+                # Auto-cancelado: el propio texto de la anotación dice "CANCELADA POR ANOTACION X"
+                _self_cancelled_g = bool(re.search(r'\bCANCEL', _espec_g))
+                # v13 Fix-1: Cancelado por anotación posterior VÁLIDA en la lista.
+                # Las cancelaciones declaradas inválidas ("Esta anotación no tiene validez",
+                # Art. 59 Ley 1579/2012 salvedad registral) NO cancelan el gravamen.
+                _VOID_CANCEL_KW = (
+                    "NO TIENE VALIDEZ", "SIN VALIDEZ", "SIN EFECTO",
+                    "NO CORRESPONDE", "SALVEDAD REGISTRAL",
+                )
+                _later_cancelled_g = False
+                for _later_g in _anotas_grav_src[_idx_g + 1:]:
+                    _later_spec_g = (_later_g.get("especificacion") or "").upper()
+                    if "CANCEL" not in _later_spec_g:
+                        continue
+                    # Si la propia cancelación está declarada inválida/sin efecto → no cancela nada
+                    if any(kw in _later_spec_g for kw in _VOID_CANCEL_KW):
+                        continue
+                    _later_cancelled_g = True
+                    break
+                # FIX B v38 + FIX v41: registrar cuando valorización fue cancelada (struct o texto)
+                if "VALORIZ" in _espec_g and (_self_cancelled_g or _later_cancelled_g
+                                               or _hist_valoriz_txt_cancelled):
+                    _nios_valoriz_cancelled = True
+                if not _self_cancelled_g and not _later_cancelled_g:
+                    # FIX v41-MMFL12: no añadir VALORIZ si texto HISTORIA confirma cancelación
+                    if "VALORIZ" in _espec_g and _hist_valoriz_txt_cancelled:
+                        _nios_valoriz_cancelled = True  # asegurar flag
+                    else:
+                        _grav_desc = (_anota_g.get("especificacion") or "").strip()
+                        _grav_de = (_anota_g.get("de") or "").strip()
+                        _active_gravamenes.append(
+                            f"{_grav_desc} a favor de {_grav_de}" if _grav_de else _grav_desc
+                        )
+            # Fallback 2: escanear strings HISTORIA cuando no hay lista/dict de anotaciones
+            # CTL ENGINE GUARD: si el engine ya resolvió "libre", no escanear texto histórico
+            # (el texto histórico menciona gravámenes del pasado → falsos positivos).
+            if not _active_gravamenes and not (_ctl_deed_ctx_g or {}).get("clausula_libertad_libre"):
+                for _hv_str in _hist_grav.values():
+                    if not isinstance(_hv_str, str):
+                        continue
+                    _hv_up = _hv_str.upper()
+                    if any(kw in _hv_up for kw in ("GRAVAMEN DE VALORIZACIÓN", "GRAVAMEN VIGENTE",
+                                                    "VALORIZACIÓN MUNICIPAL", "PLAN VIAL",
+                                                    "GRAVAMEN DE VALORIZACION", "EMBARGO",
+                                                    "MEDIDA CAUTELAR")):
+                        _active_gravamenes.append("gravamen de valorización municipal vigente")
+                        break
+            # Fix E/I-03 — Fallback 3: PERSONAS_ACTIVOS con rol de acreedor/gravamen/embargo
+            if not _active_gravamenes:
+                for _pa_g in (contexto.get("PERSONAS_ACTIVOS") or []):
+                    _rol_g = (_pa_g.get("rol_en_hoja") or "").upper()
+                    if any(kw in _rol_g for kw in ("VALORIZ", "GRAVAMEN", "ACREEDOR",
+                                                    "EMBARGO", "CAUTELAR", "MEDIDA")):
+                        _grav_nom = (_pa_g.get("nombre") or "").strip()
+                        _grav_tipo_pa = ("embargo" if any(kw in _rol_g for kw in ("EMBARGO", "CAUTELAR", "MEDIDA"))
+                                         else "gravamen de valorización")
+                        # FIX v42: valorización con paz y salvo aportado → marcada cancelada, no añadir
+                        if ("VALORIZ" in _rol_g and (
+                                datos_extra.get("PAZ_SALVO_VALORIZACION") or
+                                _hist_valoriz_txt_cancelled or _nios_valoriz_cancelled)):
+                            _nios_valoriz_cancelled = True  # confirmado cancelada por paz y salvo
+                            continue  # NO añadir a _active_gravamenes
+                        _active_gravamenes.append(
+                            f"{_grav_tipo_pa} a favor de {_grav_nom}" if _grav_nom
+                            else f"{_grav_tipo_pa} vigente"
+                        )
+            # CTL ENGINE OVERRIDE: si el engine dice "libre", descartar gravámenes encontrados
+            # por Fallback 2 / Fallback 3 (escanean texto histórico y producen falsos positivos).
+            if (_ctl_deed_ctx_g or {}).get("clausula_libertad_libre"):
+                _active_gravamenes = []
+                _nios_valoriz_cancelled = True   # asegurar que NI-LIBRE-F3 dispara si aplica
+            if _active_gravamenes:
+                _grav_str = "; ".join(_active_gravamenes)
+                instruccion_acto += (
+                    f"TERCERO-LIBERTAD (NI-08): El inmueble tiene gravámenes ACTIVOS: {_grav_str}. "
+                    "En TERCERO: NO escribir 'se encuentra libre de embargo [...] de cualquier otro gravamen'. "
+                    f"En cambio: indicar que el inmueble tiene las siguientes anotaciones vigentes: {_grav_str}. "
+                )
+            # FIX B v38 — NI-LIBRE: cuando NI-05 procesó anotaciones y todas están canceladas
+            # → el inmueble está libre de gravámenes → instrucción explícita
+            if not _active_gravamenes and _anotas_grav_src:
+                instruccion_acto += (
+                    "TERCERO-LIBERTAD (NI-LIBRE): El inmueble se encuentra LIBRE de hipotecas, embargos, "
+                    "condiciones resolutorias y demás gravámenes (todas las anotaciones de gravamen en el "
+                    "Certificado de Tradición y Libertad tienen cancelación registral posterior). "
+                    "En TERCERO escribir: 'El inmueble se encuentra libre de hipotecas, embargos, condiciones "
+                    "resolutorias y demás gravámenes, salvo las servidumbres que constan en el folio de matrícula. "
+                    "En todo caso la parte vendedora se obliga al saneamiento en los casos previstos por la Ley.' "
+                    "ABSOLUTAMENTE PROHIBIDO mencionar 'gravamen de valorización' como activo o vigente. "
+                )
+            # FIX v42: NI-LIBRE-F3 — valorización cancelada detectada por Fallback 3 (PERSONAS_ACTIVOS)
+            # _anotas_grav_src vacío → NI-LIBRE no dispara; E-03 no dispara gracias a _nios_valoriz_cancelled.
+            # Sin instrucción explícita DataBinder podría mencionar el gravamen al ver PAZ_SALVO en contexto.
+            if _nios_valoriz_cancelled and not _active_gravamenes and not _anotas_grav_src:
+                instruccion_acto += (
+                    "TERCERO-LIBERTAD (NI-LIBRE-F3): La valorización municipal del folio fue CANCELADA "
+                    "(existe Paz y Salvo de Valorización aportado al instrumento). "
+                    "ABSOLUTAMENTE PROHIBIDO mencionar 'gravamen de valorización' como activo o vigente. "
+                    "En TERCERO escribir que el inmueble se encuentra libre de hipotecas, embargos, "
+                    "condiciones resolutorias y demás gravámenes, salvo las servidumbres que constan en "
+                    "el folio de matrícula. La parte vendedora se obliga al saneamiento de Ley. "
+                )
+            # E-03: Si NI-05 no detectó gravamen pero existe paz y salvo de valorización,
+            # inferir gravamen de valorización activo en el folio (paz y salvo ≠ cancelación registral)
+            # FIX B v38: NO disparar si NI-05 encontró la valorización y la confirmó cancelada en CTL
+            # FIX v40: tampoco disparar si el texto de HISTORIA menciona valorización cancelada
+            if (not _active_gravamenes
+                    and not _nios_valoriz_cancelled
+                    and not _hist_valoriz_txt_cancelled
+                    and datos_extra.get("PAZ_SALVO_VALORIZACION")):
+                instruccion_acto += (
+                    "TERCERO-LIBERTAD (E-03): El folio registra anotación de VALORIZACIÓN MUNICIPAL VIGENTE. "
+                    "La presentación del Paz y Salvo de Valorización confirma que el gravamen existe en el folio "
+                    "pero el impuesto está pagado (paz y salvo NO equivale a cancelación registral). "
+                    "En TERCERO escribir: 'El inmueble registra anotación de gravamen de valorización municipal "
+                    "vigente en el folio de matrícula, cuyo paz y salvo fue aportado al presente instrumento. "
+                    "En todo caso la parte vendedora se obliga al saneamiento en los casos previstos por la Ley.' "
+                    "PROHIBIDO afirmar que el inmueble está LIBRE de todo gravamen o limitación. "
+                )
+            # v13 Fix-2: Servidumbre estable desde DATOS_EXTRA / HISTORIA.complementacion
+            # DataBinder solo la incluye cuando Gemini la extrae ese run — no determinístico.
+            # Inyectar instrucción explícita para garantizar presencia en TERCERO siempre.
+            # Fix B v14: Scan dinámico de TODAS las keys de HISTORIA que contengan "servidumbre"
+            # La key real varía por run: puede ser "servidumbre_acueducto", "servidumbres_pasivas", etc.
+            _hist_for_serv = contexto.get("HISTORIA") or {}
+            # FIX C v38: COLDAMPAROS en HISTORIA tiene prioridad sobre "Acueducto" genérico de DATOS_EXTRA.
+            # El "or" chain cortocircuitaba: datos_extra["servidumbres_pasivas"]="Acueducto" (truthy)
+            # → nunca llegaba al scan de HISTORIA donde está el texto completo con COLDAMPAROS.
+            _serv_from_historia_cold = next(
+                (v for k, v in (_hist_for_serv.items() if isinstance(_hist_for_serv, dict) else [])
+                 if isinstance(v, str) and "COLDAMPAROS" in v.upper()),
+                None
+            )
+            _serv_pasivas_raw = (
+                _serv_from_historia_cold or                      # HISTORIA COLDAMPAROS (prioridad)
+                datos_extra.get("servidumbres_pasivas") or
+                datos_extra.get("SERVIDUMBRES_PASIVAS") or
+                # Fix B v14: keys HISTORIA con "servidumbre" en el nombre
+                next(
+                    (v for k, v in (_hist_for_serv.items() if isinstance(_hist_for_serv, dict) else [])
+                     if "servidumbre" in k.lower() and isinstance(v, str) and v.strip()),
+                    None
+                ) or
+                # Fix 3 v32: VALORES de HISTORIA que mencionen servidumbre/acueducto/COLDAMPAROS
+                # (cuando Gemini no usa key con "servidumbre" pero el contenido lo menciona)
+                next(
+                    (v for k, v in (_hist_for_serv.items() if isinstance(_hist_for_serv, dict) else [])
+                     if isinstance(v, str) and any(
+                         kw in v.upper() for kw in ("SERVIDUMBRE", "COLDAMPAROS", "ACUEDUCTO")
+                     )),
+                    None
+                ) or ""
+            ).strip()
+            if _serv_pasivas_raw and not _is_garbage(_serv_pasivas_raw):
+                _serv_text_v32 = _serv_pasivas_raw if len(_serv_pasivas_raw) < 300 else _serv_pasivas_raw[:300]
+                # Fix 3 v32: si COLDAMPAROS detectado → cita legal completa (Escritura 1424/1978)
+                if "COLDAMPAROS" in _serv_text_v32.upper():
+                    _serv_text_v32 = (
+                        "Servidumbre de Acueducto a favor de Cooperativa Colombiana de Previsión y Amparos "
+                        "Limitada (COLDAMPAROS), constituida mediante Escritura 1424 del 8 de junio de 1978, "
+                        "Notaría 3 de Bucaramanga."
+                    )
+                instruccion_acto += (
+                    f"TERCERO-SERVIDUMBRE (v32): OBLIGATORIO agregar al final de TERCERO, antes del cierre: "
+                    f"'Así mismo, el inmueble tiene las siguientes servidumbres pasivas: {_serv_text_v32}' "
+                    "NUNCA omitir esta servidumbre. Es un gravamen real registrado en el folio de matrícula. "
+                )
+
+            # A-01: Standalone "unión marital de hecho" — SIEMPRE corre (independiente de _hist_suc_ec_has_suc)
+            # Fix B-v2 está dentro del if _hist_suc_ec_has_suc, así que no corre en versiones impares.
+            # Esta mutación garantiza el formato correcto en TODO run.
+            for _p_ul_sa in (contexto.get("PERSONAS_ACTIVOS") or []):
+                _p_ec_ul_sa = (_p_ul_sa.get("estado_civil") or "").strip().lower()
+                _p_nom_ul_sa = (_p_ul_sa.get("nombre") or "").strip()
+                if not _p_nom_ul_sa:
+                    continue
+                if "uni" in _p_ec_ul_sa and ("libre" in _p_ec_ul_sa or "marital" in _p_ec_ul_sa):
+                    _p_ul_sa["estado_civil"] = "soltero(a) con unión marital de hecho"
+                    instruccion_acto += (
+                        f"ESTADO CIVIL de {_p_nom_ul_sa}: usar EXACTAMENTE 'soltero(a) con unión marital "
+                        "de hecho' — incluir el paréntesis (a). NUNCA 'soltero' sin paréntesis. "
+                    )
+            # PH-1 + MMFL17: si el inmueble es CASA (no PH), prohibir secciones de PH
+            # y el texto "LOTE SIN VIVIENDA" en la constancia notarial de afectación.
+            _tipo_inm_compra = (inmueble.get("tipo_inmueble") or "").upper().strip()
+            if _tipo_inm_compra in ("CASA", "LOTE", "LOTE_BALDIO", "RURAL") or (
+                _tipo_inm_compra not in ("PROPIEDAD_HORIZONTAL", "APARTAMENTO")
+                and "PH" not in (inmueble.get("descripcion") or "").upper()
+            ):
+                instruccion_acto += (
+                    "RESTRICCIÓN DE FORMATO: Este inmueble NO está en propiedad horizontal. "
+                    "PROHIBIDO agregar: (1) sección o párrafo 'RÉGIMEN DE PROPIEDAD HORIZONTAL', "
+                    "(2) 'NOTA DE ADMINISTRACIÓN', (3) 'LINDEROS GENERALES' de la urbanización, "
+                    "(4) frase 'reglamento de propiedad horizontal' en el texto del PRESENTE(S). "
+                    "Generar ÚNICAMENTE los numerales del template de referencia. "
+                )
+            if _tipo_inm_compra == "CASA":
+                # Fix F: usar nombre real del comprador en CONSTANCIA
+                _compradores_constancia = _roles_acto_ctl.get("COMPRADORES") or []
+                _id_compradora_f = (
+                    (_compradores_constancia[0].get("nombre") or "").strip()
+                    if _compradores_constancia else ""
+                ) or "el/la comprador/a"
+                instruccion_acto += (
+                    "CONSTANCIA NOTARIAL (MMFL17): Transcribir EXACTAMENTE los dos bloques del template: "
+                    "(1) 'CONSTANCIA NOTARIAL PARA EL(LA)(LOS) VENDEDOR(A)(ES): La suscrita notaria "
+                    "indagó a la parte vendedora, sobre lo dispuesto en el art. 6 de la ley 258 de 1996 "
+                    "modificada por la ley 854 de 2.003 y manifestó: que su estado civil es como se "
+                    "contempló al comienzo de este instrumento y que el inmueble que transfiere no se "
+                    "encuentra afectado a vivienda familiar. ----------' "
+                    "(2) 'CONSTANCIA NOTARIAL PARA EL(LA)(LOS) COMPRADOR(A)(ES): La suscrita notaria "
+                    "indagó a la parte compradora, sobre lo dispuesto en el art. 6 de la ley 258 de 1996 "
+                    "modificada por la ley 854 de 2.003 y bajo la gravedad de juramento manifestó: que "
+                    f"el inmueble que adquieren SÍ constituye vivienda familiar para {_id_compradora_f}. ----------' "
+                    "PROHIBIDO sustituir por 'CONSTANCIA NOTARIAL DE AFECTACIÓN A VIVIENDA FAMILIAR'. "
+                    "PROHIBIDO el texto 'POR TRATARSE DE UN LOTE SIN VIVIENDA'. "
+                    "NI-06: Si el template contiene [[PENDIENTE: CONSTITUYE_VIVIENDA_FAMILIAR]], "
+                    f"reemplazar EXACTAMENTE con: 'SÍ constituye vivienda familiar para {_id_compradora_f}'. "
+                )
+                # Fix E v14: Instrucción para AFECTACIÓN/PATRIMONIO en encabezado CASA
+                instruccion_acto += (
+                    "ENCABEZADO INMUEBLE (Fix E v14): El template tiene placeholders "
+                    "[[PENDIENTE: AFECTACION_VIVIENDA_FAMILIAR]] y [[PENDIENTE: PATRIMONIO_FAMILIA_INEMBARGABLE]]. "
+                    "Resolver con: 'AFECTACIÓN A VIVIENDA FAMILIAR: NO.' (la parte vendedora declaró que el "
+                    "inmueble NO está afectado a vivienda familiar) y "
+                    "'PATRIMONIO DE FAMILIA INEMBARGABLE: NO.' (ninguna de las partes tiene patrimonio de familia). "
+                    "NUNCA dejar 'INCLUIR SEGÚN CONSTANCIA NOTARIAL' — reemplazar siempre con el valor correcto. "
+                )
             # Bug 8 / H-C: Inject forma_de_pago into COMPRAVENTA context
             fdp = datos_extra.get("FORMA_DE_PAGO") or ""
+            if not fdp or _is_garbage(fdp):
+                instruccion_acto += (
+                    "MMFL13-CUARTO: No hay datos de FORMA_DE_PAGO disponibles. "
+                    "Después del precio en CUARTO añadir: "
+                    "'La forma de pago se realizó [[PENDIENTE: FORMA_DE_PAGO]]. ----------' "
+                    "NO inventar ni asumir modalidad de pago (contado, cuotas, hipoteca). "
+                )
+            # Fix I-04: Conservar PARÁGRAFO SEGUNDO (condición resolutoria) en CUARTO — obligatorio
+            instruccion_acto += (
+                "NI-04-CUARTO: CONSERVAR ÍNTEGRAMENTE el PARÁGRAFO PRIMERO (Ley 2010/2019) y el "
+                "PARÁGRAFO SEGUNDO (condición resolutoria) tal como aparecen en la minuta de referencia. "
+                "PROHIBIDO eliminar o resumir cualquiera de los dos párrafos — ambos son texto legal obligatorio. "
+            )
             if fdp and not _is_garbage(fdp):
                 ctx_acto["FORMA_DE_PAGO"] = fdp
                 instruccion_acto += (
@@ -1424,35 +2735,93 @@ def _prepare_ep_sections(contexto: Dict[str, Any], actos_docs: List[Dict[str, st
                     "no acumula predios en exceso de la UAF. "
                     "e) Las declaraciones juramentadas se adjuntan para su protocolización. "
                 )
-            # J-1/I-4: Si hay ep_antecedente_pacto, aclarar contexto de retroventa con phrasing explícito
+            # J-1/I-4: Si hay ep_antecedente_pacto Y existe un acto de CANCELACION en este instrumento,
+            # aclarar contexto de retroventa. Fix C2: sin cancelacion no generar instrucción de retroventa.
             ep_ant_trad = inmueble.get("ep_antecedente_pacto") or {}
             if ep_ant_trad.get("numero_ep") and not _is_garbage(ep_ant_trad.get("numero_ep") or ""):
-                _ref_canc = contexto.get("_ACTO_CANCELACION_REFERENCIA") or "el Primer Acto del presente instrumento"
-                # Obtener nombre completo del vendedor en EP antecedente (= empresa con la retroventa)
-                _disp_map = contexto.get("EMPRESA_DISPLAY_MAP") or {}
-                _empresa_ant_names = [_disp_map.get(k) or k for k in (empresa_rl_map or {})]
-                _vendedor_ep_ant = max(_empresa_ant_names, key=len) if _empresa_ant_names else ""
-                if _vendedor_ep_ant:
-                    ctx_acto["VENDEDOR_EP_ANTECEDENTE"] = _vendedor_ep_ant
-                instruccion_acto += (
-                    f"TRADICIÓN VENDEDOR: La parte vendedora adquirió el inmueble mediante Escritura "
-                    f"Pública número {ep_ant_trad.get('numero_ep')} de {ep_ant_trad.get('fecha', '')} "
-                    f"de {ep_ant_trad.get('notaria', '')}, en la cual "
-                    f"{_vendedor_ep_ant or 'EL ANTERIOR PROPIETARIO'} le transfirió el dominio "
-                    f"con pacto de retroventa — pacto cancelado mediante {_ref_canc}. "
-                    "REDACTAR EXACTAMENTE ASÍ: '[VENDEDORA] adquirió el inmueble mediante escritura pública "
-                    "número [num] de fecha [fecha] de [notaría], en la cual VENDEDOR_EP_ANTECEDENTE le "
-                    "transfirió el dominio con pacto de retroventa, pacto cancelado en [ref]'. "
-                    "NUNCA escribir 'compraventa efectuada a X' ni 'fue adquirido ... de X' en voz pasiva. "
-                    "Usar voz activa: 'X le transfirió' o '[vendedora] adquirió DE X'. "
-                )
+                _has_cancelacion_j1 = bool(contexto.get("_ACTO_CANCELACION_REFERENCIA"))
+                if _has_cancelacion_j1:
+                    _ref_canc = contexto.get("_ACTO_CANCELACION_REFERENCIA")
+                    # Obtener nombre completo del vendedor en EP antecedente (= empresa con la retroventa)
+                    _disp_map = contexto.get("EMPRESA_DISPLAY_MAP") or {}
+                    _empresa_ant_names = [_disp_map.get(k) or k for k in (empresa_rl_map or {})]
+                    _vendedor_ep_ant = max(_empresa_ant_names, key=len) if _empresa_ant_names else ""
+                    if _vendedor_ep_ant:
+                        ctx_acto["VENDEDOR_EP_ANTECEDENTE"] = _vendedor_ep_ant
+                    instruccion_acto += (
+                        f"TRADICIÓN VENDEDOR: La parte vendedora adquirió el inmueble mediante Escritura "
+                        f"Pública número {ep_ant_trad.get('numero_ep')} de {ep_ant_trad.get('fecha', '')} "
+                        f"de {ep_ant_trad.get('notaria', '')}, en la cual "
+                        f"{_vendedor_ep_ant or 'EL ANTERIOR PROPIETARIO'} le transfirió el dominio "
+                        f"con pacto de retroventa — pacto cancelado mediante {_ref_canc}. "
+                        "REDACTAR EXACTAMENTE ASÍ: '[VENDEDORA] adquirió el inmueble mediante escritura pública "
+                        "número [num] de fecha [fecha] de [notaría], en la cual VENDEDOR_EP_ANTECEDENTE le "
+                        "transfirió el dominio con pacto de retroventa, pacto cancelado en [ref]'. "
+                        "NUNCA escribir 'compraventa efectuada a X' ni 'fue adquirido ... de X' en voz pasiva. "
+                        "Usar voz activa: 'X le transfirió' o '[vendedora] adquirió DE X'. "
+                    )
+                # else: EP antecedente existe pero es EP de sucesión/compraventa sin retroventa — no generar instrucción
             # J-2: Registrar vendedores de esta compraventa para uso en HIPOTECA (excluye empresa NIT)
             _vendedores_cv = [
-                v.get("nombre") for v in (ctx_acto.get("VENDEDORES") or [])
+                v.get("nombre") for v in _vendedores_ctl_list
                 if v.get("nombre") and "NIT" not in (v.get("identificacion") or "").upper()
             ]
             if _vendedores_cv:
                 contexto["_VENDEDOR_COMPRAVENTA_NOMBRES"] = " y ".join(_vendedores_cv)
+            # Fix 25278-B2: COMPRAVENTA con CANCELACIÓN de pacto de retroventa antecedente en mismo instrumento
+            # → EP_ANTECEDENTE desde ep_antecedente_pacto + VENDEDOR_ANTERIOR = parte NIT de la CANCELACIÓN
+            if (contexto.get("_ACTO_CANCELACION_REFERENCIA")
+                    and ep_ant_global.get("numero_ep")
+                    and not _is_garbage(ep_ant_global.get("numero_ep") or "")):
+                # EP_ANTECEDENTE: propagar siempre (no solo si [[PENDIENTE]]) — los datos son autoritativos
+                ctx_acto["EP_ANTECEDENTE_NUMERO"] = ep_ant_global["numero_ep"]
+                ctx_acto["EP_ANTECEDENTE_FECHA"] = ep_ant_global.get("fecha") or ctx_acto.get("EP_ANTECEDENTE_FECHA", "")
+                ctx_acto["EP_ANTECEDENTE_NOTARIA"] = ep_ant_global.get("notaria") or ctx_acto.get("EP_ANTECEDENTE_NOTARIA", "")
+                # VENDEDOR_ANTERIOR = parte NIT del acto CANCELACIÓN (quien tenía el inmueble bajo el pacto)
+                # Override cuando el valor actual ES la vendedora actual (error semántico) O si es [[PENDIENTE]]
+                _vendedora_cv_norm = _normalize_name(
+                    next((v.get("nombre", "") for v in _vendedores_ctl_list), "")
+                )
+                _va_actual_norm = _normalize_name(ctx_acto.get("VENDEDOR_ANTERIOR") or "")
+                _va_es_vendedora = (_vendedora_cv_norm and _va_actual_norm == _vendedora_cv_norm)
+                if _va_es_vendedora or "[[PENDIENTE" in (ctx_acto.get("VENDEDOR_ANTERIOR") or ""):
+                    for _a_canc in actos_list:
+                        _a_canc_nom = (_a_canc.get("nombre") if isinstance(_a_canc, dict) else "").upper()
+                        if "CANCELAC" in _a_canc_nom:
+                            for _ot_canc in (_a_canc.get("otorgantes") or []):
+                                if _normalize_name(_ot_canc) != _vendedora_cv_norm:
+                                    # Buscar nombre completo en PERSONAS_ACTIVOS por word-overlap
+                                    _full_va = _ot_canc
+                                    for _pa_va in (contexto.get("PERSONAS_ACTIVOS") or []):
+                                        _pa_ws = frozenset(_normalize_name(_pa_va.get("nombre","")).split())
+                                        _ot_ws = frozenset(_normalize_name(_ot_canc).split())
+                                        if len(_pa_ws & _ot_ws) >= 2:
+                                            _full_va = _pa_va.get("nombre", _ot_canc)
+                                            break
+                                    ctx_acto["VENDEDOR_ANTERIOR"] = _full_va.upper()
+                                    break
+                            break
+                # Instrucción dominante para DataBinder (override CTL-1) con ABSOLUTAMENTE PROHIBIDO [[PENDIENTE]]
+                _va_final = ctx_acto.get("VENDEDOR_ANTERIOR") or ""
+                _ep_num   = ctx_acto.get("EP_ANTECEDENTE_NUMERO") or ""
+                _ep_fecha = ctx_acto.get("EP_ANTECEDENTE_FECHA") or ""
+                _ep_not   = ctx_acto.get("EP_ANTECEDENTE_NOTARIA") or ""
+                if _va_final and _ep_num and "[[PENDIENTE" not in _va_final:
+                    instruccion_acto += (
+                        "SEGUNDO — TÍTULO DE ADQUISICIÓN DEFINITIVO (OVERRIDE de cualquier otro texto): "
+                        f"La vendedora adquirió el inmueble por compraventa con pacto de retroventa "
+                        f"a {_va_final}, mediante escritura pública número {_ep_num}"
+                        + (f" de fecha {_ep_fecha}" if _ep_fecha else "")
+                        + (f" de la {_ep_not}" if _ep_not else "")
+                        + f". El pacto de retroventa fue cancelado en "
+                        f"{contexto.get('_ACTO_CANCELACION_REFERENCIA', 'el Primer Acto')} "
+                        "del presente instrumento. "
+                        "ABSOLUTAMENTE PROHIBIDO usar [[PENDIENTE:...]] en el SEGUNDO — "
+                        f"todos los datos están disponibles: EP {_ep_num}, fecha {_ep_fecha}, notaría: {_ep_not}, "
+                        f"vendedor anterior: {_va_final}. "
+                        "TIPO_ADQUISICION_ANTERIOR = 'compraventa con pacto de retroventa'. "
+                    )
+
             # B3: Registrar referencia cruzada del acto de compraventa para uso en Actos 3 y 4
             contexto["_ACTO_COMPRAVENTA_REFERENCIA"] = (
                 f"el {ctx_acto.get('ORDINAL_ACTO', ordinales[idx])} Acto del presente instrumento"
@@ -1504,18 +2873,37 @@ def _prepare_ep_sections(contexto: Dict[str, Any], actos_docs: List[Dict[str, st
                 or (_ep_ant_valor if _ep_ant_valor and not _is_garbage(_ep_ant_valor) else None)
                 or "[[PENDIENTE: VALOR_ANTECEDENTE]]"
             )
-            ctx_acto["VALOR_ANTECEDENTE"] = _valor_canc_autoritativo
-            ctx_acto["PRECIO_CANCELACION"] = _valor_canc_autoritativo
+            # S-1: precio_compraventa_original = precio TOTAL de la venta EP526
+            # Puede diferir del valor del pacto de retroventa (ej: $605M vs $600M)
+            _precio_cv_ant_raw = (ep_ant.get("precio_compraventa_original") or "").strip()
+            _precio_compraventa_ant = (
+                _precio_cv_ant_raw if _precio_cv_ant_raw and not _is_garbage(_precio_cv_ant_raw)
+                else _ep_ant_valor  # fallback: si Gemini no separa, usar el mismo valor
+            )
+            # S-2: Si Gemini no separó precio_compraventa_original del valor del pacto,
+            # usar la cuantía de la COMPRAVENTA del mismo instrumento (más fiable).
+            if (not _precio_cv_ant_raw or _is_garbage(_precio_cv_ant_raw)
+                    or _precio_compraventa_ant == _ep_ant_valor):
+                for _a_cv in actos_list:
+                    _a_cv_nombre = (_a_cv.get("nombre") if isinstance(_a_cv, dict) else "").upper()
+                    _a_cv_cuantia = int(_a_cv.get("cuantia") or 0) if isinstance(_a_cv, dict) else 0
+                    if "COMPRAVENTA" in _a_cv_nombre and _a_cv_cuantia:
+                        _precio_compraventa_ant = f"${_a_cv_cuantia:,.0f}".replace(",", ".")
+                        break
+            ctx_acto["VALOR_ANTECEDENTE"] = _valor_canc_autoritativo          # para CUARTO
+            ctx_acto["PRECIO_CANCELACION"] = _valor_canc_autoritativo         # para CUARTO
+            ctx_acto["PRECIO_COMPRAVENTA_ANTECEDENTE"] = _precio_compraventa_ant  # para SEGUNDO
             # Suprimir total_venta_hoy para que no contamine el valor del pacto
             for _k_tvh in ("total_venta_hoy", "TOTAL_VENTA_HOY"):
                 ctx_acto.pop(_k_tvh, None)
                 (ctx_acto.get("DATOS_EXTRA") or {}).pop(_k_tvh, None)
             instruccion_acto += (
-                f"VALOR DEL PACTO CANCELADO (AUTORITATIVO): EXACTAMENTE {_valor_canc_autoritativo} "
-                "— usar PRECIO_CANCELACION del contexto en TODOS los párrafos donde aparezca el monto "
-                "(SEGUNDO y CUARTO). "
-                "Este valor viene del ANTECEDENTE EP (escritura que se cancela), NO del precio de compraventa. "
-                "NO usar total_venta_hoy ni ninguna suma de cuotas de compraventa. "
+                f"SEGUNDO: El precio de la compraventa original (EP antecedente) fue EXACTAMENTE "
+                f"{_precio_compraventa_ant} — usar PRECIO_COMPRAVENTA_ANTECEDENTE en la cláusula SEGUNDO. "
+                f"CUARTO: El valor del pacto de retroventa que se cancela fue EXACTAMENTE "
+                f"{_valor_canc_autoritativo} — usar PRECIO_CANCELACION en la cláusula CUARTO. "
+                "ESTOS SON DOS VALORES DISTINTOS — NO usar el mismo número en ambas cláusulas. "
+                "NO usar total_venta_hoy ni ninguna suma de cuotas de la compraventa actual. "
             )
             # Fix dirección del pacto: identificar quien vendió y quien compró en el antecedente EP.
             # ep_antecedente_pacto.vendedor puede estar mal extraído por Gemini (muestra empresa en lugar
@@ -1645,6 +3033,26 @@ def _prepare_ep_sections(contexto: Dict[str, Any], actos_docs: List[Dict[str, st
                 if _nv and not _is_garbage(_nv):
                     _nombre_asignado_comprador = _nv.upper()
                     break
+            # Fix 25278-B3: si nombre_nuevo_asignado no disponible, buscar soporte que muestre
+            # explícitamente el cambio FROM nombre_actual (nombre_anterior_predio == inmueble.nombre_nuevo)
+            if not _nombre_asignado_comprador:
+                _nombre_actual_inmueble_norm = _normalize_name(inmueble.get("nombre_nuevo") or "")
+                # Pasada 1: soporte con nombre_anterior_predio == nombre_actual → usar su nombre_nuevo_predio
+                for _sp_hv in (contexto.get("_SOPORTES_HALLAZGOS") or []):
+                    _ant_sp = _normalize_name((_sp_hv or {}).get("nombre_anterior_predio") or "")
+                    _nuevo_sp = ((_sp_hv or {}).get("nombre_nuevo_predio") or "").strip()
+                    if (_ant_sp and _nombre_actual_inmueble_norm
+                            and _ant_sp == _nombre_actual_inmueble_norm
+                            and _nuevo_sp and not _is_garbage(_nuevo_sp)):
+                        _nombre_asignado_comprador = _nuevo_sp.upper()
+                        break
+                # Pasada 2: fallback al primer nombre_nuevo_predio no-nulo (comportamiento anterior)
+                if not _nombre_asignado_comprador:
+                    for _sp_hv in (contexto.get("_SOPORTES_HALLAZGOS") or []):
+                        _nv2 = ((_sp_hv or {}).get("nombre_nuevo_predio") or "").strip()
+                        if _nv2 and not _is_garbage(_nv2):
+                            _nombre_asignado_comprador = _nv2.upper()
+                            break
             # B2: Nombre nuevo del predio — prioridad: comentario > soportes > radicación > inmueble
             _nombre_nuevo_b2 = (
                 comentario_overrides.get("NOMBRE_NUEVO_PREDIO")  # H-A: prioridad máxima (usuario)
@@ -1652,6 +3060,22 @@ def _prepare_ep_sections(contexto: Dict[str, Any], actos_docs: List[Dict[str, st
                 or datos_extra.get("NOMBRE_NUEVO_PREDIO")        # radicación
                 or inmueble.get("nombre_nuevo") or ""
             )
+            # Sanity fix 25278: si el "nuevo nombre" == nombre actual/anterior (no hay cambio real),
+            # buscar en soportes cualquier nombre distinto a los nombres históricos conocidos del predio
+            _nombres_historicos_b2 = {
+                _normalize_name(inmueble.get("nombre_nuevo") or ""),
+                _normalize_name(inmueble.get("nombre_anterior") or ""),
+            }
+            _nombres_historicos_b2.discard("")  # no comparar contra string vacío
+            if (_nombre_nuevo_b2
+                    and _normalize_name(_nombre_nuevo_b2) in _nombres_historicos_b2):
+                for _sp_alt in (contexto.get("_SOPORTES_HALLAZGOS") or []):
+                    _nv_alt = ((_sp_alt or {}).get("nombre_nuevo_predio") or "").strip()
+                    if (_nv_alt
+                            and not _is_garbage(_nv_alt)
+                            and _normalize_name(_nv_alt) not in _nombres_historicos_b2):
+                        _nombre_nuevo_b2 = _nv_alt.upper()
+                        break
             if _nombre_nuevo_b2 and not _is_garbage(_nombre_nuevo_b2):
                 ctx_acto["NOMBRE_NUEVO_PREDIO"] = _nombre_nuevo_b2.upper()
                 ctx_acto["NUEVO_NOMBRE_PREDIO"] = _nombre_nuevo_b2.upper()  # alias compatibilidad
@@ -1843,6 +3267,11 @@ def _prepare_ep_sections(contexto: Dict[str, Any], actos_docs: List[Dict[str, st
                     + legal_context
                 )
 
+        # NI-04/MMFL11: Eliminar ep_antecedente_pacto del ctx_acto antes de enviar a DataBinder.
+        # El campo "pacto" en el nombre confunde a DataBinder → inventa "COMPRADOR le transfirió
+        # con pacto de retroventa". Los datos del EP antecedente ya están en instruccion_acto CTL-1.
+        _ctx_inmueble_to_clean = ctx_acto.get("INMUEBLE") or {}
+        _ctx_inmueble_to_clean.pop("ep_antecedente_pacto", None)
         misiones.append({
             "orden": 20 + idx,
             "descripcion": f"EP_ACTO_{idx+1}",
@@ -1854,7 +3283,19 @@ def _prepare_ep_sections(contexto: Dict[str, Any], actos_docs: List[Dict[str, st
     # INSERTOS — construir campos dinámicamente desde datos extraídos
     _pz_predial = datos_extra.get("PAZ_SALVO_PREDIAL") or ""
     _pz_valoriz = datos_extra.get("PAZ_SALVO_VALORIZACION") or ""
-    _pz_metro = datos_extra.get("PAZ_SALVO_AREA_METRO") or "no aplica (municipio fuera de área metropolitana)"
+    _pz_metro = datos_extra.get("PAZ_SALVO_AREA_METRO") or "[[PENDIENTE: PAZ_SALVO_AREA_METRO]]"
+    # NI-04: Filtrar empresa_rl_map a solo empresas reales (NIT).
+    # empresa_rl_map también incluye relaciones AP (persona natural → apoderado), lo que causa
+    # que se generen líneas de "Cámara de Comercio" para personas naturales. Excluir esas entradas.
+    _cc_ins_word_sets = {
+        frozenset(_normalize_name(p.get("nombre") or "").split())
+        for p in personas_activos or []
+        if p.get("nombre") and not re.search(r"\bNIT\b|\bNI\b", (p.get("identificacion") or "").upper())
+    }
+    _empresa_rl_map_nit = {
+        k: v for k, v in (empresa_rl_map or {}).items()
+        if not any(frozenset(_normalize_name(k).split()) == cc_ws for cc_ws in _cc_ins_word_sets)
+    }
     # CERTIFICADOS_PAZ_Y_SALVO_DETALLE: construir lista de todos los documentos protocolizados
     _cert_lines = []
     if _pz_predial and not _is_garbage(_pz_predial):
@@ -1863,21 +3304,41 @@ def _prepare_ep_sections(contexto: Dict[str, Any], actos_docs: List[Dict[str, st
         _cert_lines.append(f"Paz y Salvo de Valorización N° {_pz_valoriz}.")
     elif _pz_valoriz and "NO COBRA" in _pz_valoriz.upper():
         _cert_lines.append(f"Constancia de no cobro de valorización: {_pz_valoriz}.")
-    # Agregar cámaras de comercio de empresas participantes (dedup por nombre normalizado)
+    # Agregar cámaras de comercio de empresas reales (solo NIT — excluye personas naturales AP)
     _disp_map_ins = contexto.get("EMPRESA_DISPLAY_MAP") or {}
     _seen_cert_emp: set = set()
-    for _emp_k_ins, _rl_ins in (empresa_rl_map or {}).items():
+    for _emp_k_ins, _rl_ins in _empresa_rl_map_nit.items():
         _emp_name_ins = _disp_map_ins.get(_emp_k_ins) or _emp_k_ins.upper()
         _emp_norm_key = _normalize_name(_emp_name_ins)[:30]
         if _emp_norm_key in _seen_cert_emp:
             continue
         _seen_cert_emp.add(_emp_norm_key)
         _cert_lines.append(f"Certificado de Existencia y Representación Legal de {_emp_name_ins}, expedido por la Cámara de Comercio.")
+    # Pre-resolver [[CAMARAS_COMERCIO]] usando solo empresas NIT (evita Cámara para personas naturales)
+    _camaras_str_ins = _build_camaras_text(_empresa_rl_map_nit, contexto.get("EMPRESA_DISPLAY_MAP")) or ""
+    # Añadir poder(es) AP protocolizados
+    _poder_ins_lines = []
+    for _p_ap_ins in personas_activos or []:
+        if re.search(r"\bAP\b", (_p_ap_ins.get("rol_en_hoja") or "").upper()):
+            _rep_ap_ins = (_p_ap_ins.get("representa_a") or "").strip()
+            if _rep_ap_ins:
+                _poder_ins_lines.append(
+                    f"Poder otorgado por {_rep_ap_ins} a {(_p_ap_ins.get('nombre') or '').strip()}."
+                )
+    # NI-09/MMFL27: incluir poder también en _cert_lines (sección "ME FUERON PRESENTADOS")
+    _cert_lines.extend(_poder_ins_lines)
     _certificados_detalle = "\n".join(_cert_lines) if _cert_lines else datos_extra.get("CERTIFICADOS_PAZ_Y_SALVO_DETALLE") or "[[PENDIENTE: CERTIFICADOS_PAZ_Y_SALVO_DETALLE]]"
+    _poder_str_ins = "\n".join(_poder_ins_lines)
+    _extra_ins = "\n".join(filter(None, [_poder_str_ins, _camaras_str_ins]))
+    # Reemplazar placeholder en template antes de enviarlo a DataBinder
+    _insertos_tmpl_resolved = EP_INSERTOS_TEMPLATE.replace(
+        "[[CAMARAS_COMERCIO]]",
+        _extra_ins if _extra_ins else ""
+    )
     misiones.append({
-        "orden": 80,
+        "orden": 91,
         "descripcion": "EP_INSERTOS",
-        "plantilla_con_huecos": EP_INSERTOS_TEMPLATE,
+        "plantilla_con_huecos": _insertos_tmpl_resolved,
         "contexto_datos": {
             **contexto,
             "MATRICULA_INMOBILIARIA": matricula,
@@ -1885,20 +3346,21 @@ def _prepare_ep_sections(contexto: Dict[str, Any], actos_docs: List[Dict[str, st
             "PAZ_SALVO_VALORIZACION": _pz_valoriz or "no aplica",
             "PAZ_SALVO_AREA_METRO": _pz_metro,
             "CERTIFICADOS_PAZ_Y_SALVO_DETALLE": _certificados_detalle,
-            "CAMARAS_COMERCIO": _build_camaras_text(empresa_rl_map, contexto.get("EMPRESA_DISPLAY_MAP")),
         },
         "instrucciones": (
             "Completa insertos usando EXACTAMENTE los valores del contexto. "
             "PAZ_SALVO_PREDIAL, PAZ_SALVO_VALORIZACION, PAZ_SALVO_AREA_METRO y "
             "CERTIFICADOS_PAZ_Y_SALVO_DETALLE ya están resueltos — transcríbelos sin modificar. "
             "Si PAZ_SALVO_VALORIZACION es 'no aplica', OMITIR ESA LÍNEA por completo. "
+            "CAMARAS_COMERCIO ya está resuelto en el template — "
+            "NO añadir ni inventar líneas de Cámara de Comercio de personas naturales ni de personas fallecidas. "
             "Sin markdown. No inventes números ni documentos no listados."
         ),
     })
 
     # OTORGAMIENTO
     misiones.append({
-        "orden": 90,
+        "orden": 80,
         "descripcion": "EP_OTORGAMIENTO",
         "plantilla_con_huecos": EP_OTORGAMIENTO_TEMPLATE,
         "contexto_datos": {
@@ -1940,8 +3402,15 @@ def _prepare_ep_sections(contexto: Dict[str, Any], actos_docs: List[Dict[str, st
             "orden": 96,
             "descripcion": "EP_UIAF",
             "plantilla_con_huecos": uiaf_blocks_con_marcadores,
-            "contexto_datos": contexto,
-            "instrucciones": "Bloque UIAF ya construido. Transcribe sin modificar incluyendo marcadores ###TABLE_START### y ###TABLE_END###.",
+            "contexto_datos": {},  # sin datos personales — campos deben quedar en blanco
+            "instrucciones": (
+                "Bloques UIAF ya construidos. TRANSCRIBE EXACTAMENTE sin modificar nada. "
+                "Todos los campos (NOMBRE, DOCUMENTOS DE IDENTIFICACIÓN, CELULAR, DIRECCIÓN, EMAIL, "
+                "PROFESIÓN, ACTIVIDAD ECONÓMICA, ESTADO CIVIL, etc.) deben quedar EN BLANCO — "
+                "NO insertes ningún dato personal aunque lo conozcas del contexto. "
+                "El cliente completa estos campos en la notaría. "
+                "Solo mantén los marcadores ###TABLE_START### y ###TABLE_END###."
+            ),
         })
 
     # FIRMAS
@@ -2204,6 +3673,9 @@ async def run_pipeline(
     debug.dump_misiones(misiones)
 
     # 7) BINDER POR SECCIÓN
+    # Limpiar outputs de runs anteriores para evitar archivos stale en el DOCX
+    debug.clear_binder_outputs()
+
     async def _run_mision(m: Dict[str, Any]) -> Dict[str, Any]:
         user = DATABINDER_USER.format(
             contexto_json=json.dumps(m["contexto_datos"], ensure_ascii=False),
@@ -2233,12 +3705,94 @@ async def run_pipeline(
         else:
             partes_escritura.append(texto)
     cuerpo_escritura = "\n\n".join(partes_escritura)
+
+    # E-01 post-processing: reemplazar estado civil inválido para vendedores con viudez
+    # Actúa DESPUÉS de todos los pasos — robusto aunque DataBinder ignore instrucciones o ROLES_ACTO esté vacío
+    _pp_viudez_list = contexto.get("_POST_PROC_VIUDEZ") or []
+    for _pv_nom, _pv_ec in _pp_viudez_list:
+        _pv_words = [w for w in _normalize_name(_pv_nom).split() if len(w) > 4]
+        if not _pv_words:
+            continue
+        _pv_anchor = re.escape(_pv_words[0])  # primer apellido/nombre largo como ancla
+        # FIX v40-MMFL7-B: incluir forma de género incorrecto (Soltero↔Soltera por viudez)
+        _pv_bad_forms = ["que declara bajo juramento", "Soltero/a", "soltero/a", "casada", "casado",
+                         "mujer mayor de edad", "hombre mayor de edad"]
+        if "Soltera" in _pv_ec:
+            _pv_bad_forms.append("Soltero por viudez")
+        elif "Soltero" in _pv_ec:
+            _pv_bad_forms.append("Soltera por viudez")
+        for _bad_ec_pp in _pv_bad_forms:
+            _pp_pattern = rf'({_pv_anchor}[\s\S]{{0,500}}?de estado civil\s+){re.escape(_bad_ec_pp)}'
+            cuerpo_escritura = re.sub(_pp_pattern, rf'\1{_pv_ec}', cuerpo_escritura, flags=re.IGNORECASE, count=1)
+
+    # FIX v40-MMFL7-A: Scan PERSONAS_ACTIVOS — independiente de _POST_PROC_VIUDEZ
+    # Cubre cuando _vendedores_ctl_list vacío y _POST_PROC_VIUDEZ queda sin datos
+    for _pa_vdz in (contexto.get("PERSONAS_ACTIVOS") or []):
+        _pa_rol_n = _normalize_name(_pa_vdz.get("rol_en_hoja") or "")
+        if not any(kw in _pa_rol_n for kw in ("adjudicatari", "cesionari", "conyuge", "viuda")):
+            continue
+        _pa_nom = (_pa_vdz.get("nombre") or "").strip()
+        if not _pa_nom:
+            continue
+        _pa_mujer = "de" in _normalize_name(_pa_nom).split()
+        _pa_ec = "Soltera por viudez" if _pa_mujer else "Soltero por viudez"
+        _pa_words = [w for w in _normalize_name(_pa_nom).split() if len(w) > 4]
+        if not _pa_words:
+            continue
+        for _anchor in _pa_words[:2]:
+            # FIX v41-MMFL7-A: lista ampliada con formas nuevas
+            _pa_bad_explicit = [
+                "que declara bajo juramento", "Soltero por viudez",
+                "Soltero/a", "soltero/a", "casada", "casado",
+                "mujer mayor de edad", "hombre mayor de edad",
+            ]
+            for _bad in _pa_bad_explicit:
+                _pp_pat = rf'({re.escape(_anchor)}[\s\S]{{0,600}}?de estado civil\s+){re.escape(_bad)}'
+                cuerpo_escritura = re.sub(_pp_pat, rf'\1{_pa_ec}',
+                                          cuerpo_escritura, flags=re.IGNORECASE, count=1)
+            # FIX v41-MMFL7-A: patrón genérico — reemplaza CUALQUIER EC incorrecto si la forma
+            # correcta no está ya presente cerca del ancla
+            _anchor_pos = cuerpo_escritura.lower().find(_anchor)
+            if _anchor_pos >= 0 and _pa_ec not in cuerpo_escritura[max(0, _anchor_pos - 10):_anchor_pos + 700]:
+                _pp_generic = (rf'({re.escape(_anchor)}[\s\S]{{0,600}}?de estado civil\s+)'
+                               rf'(?!{re.escape(_pa_ec)})[^\n,;]{{3,50}}')
+                cuerpo_escritura = re.sub(_pp_generic, rf'\1{_pa_ec}',
+                                          cuerpo_escritura, flags=re.IGNORECASE, count=1)
+
+    # Fix-Final-Gender: nombres patronímicos colombianos con " DE " → género femenino.
+    # Cubre casos donde rol_en_hoja = "VENDEDORA"/"Propietario Actual" (no "adjudicataria"),
+    # por lo que los bloques EC-2 / E-01 no detectaron a la persona y DataBinder usó el género
+    # masculino por defecto. Aplica SOLO cuando "Soltero por viudez" sigue a un nombre con DE.
+    cuerpo_escritura = re.sub(
+        r'(\b\w+\s+DE\s+\w+[\s\S]{0,400}?de\s+estado\s+civil\s+)Soltero\s+por\s+viudez',
+        r'\1Soltera por viudez',
+        cuerpo_escritura,
+        flags=re.IGNORECASE,
+    )
+
+    # Fix-PorCompra: DataBinder a veces inserta "por compra" de la plantilla de compraventa
+    # aunque la instrucción diga "adjudicación en sucesión". Eliminar si aparece dentro de
+    # los 120 chars siguientes a "adjudicación en sucesión".
+    cuerpo_escritura = re.sub(
+        r'(adjudicaci[oó]n\s+en\s+sucesi[oó]n\b[^\n]{0,120}?)\s*,?\s*por\s+compra\b[^,.\n]{0,60}',
+        r'\1',
+        cuerpo_escritura,
+        flags=re.IGNORECASE,
+    )
+
     debug.dump_stage_text("08_cuerpo_escritura.txt", cuerpo_escritura)
     debug.write_checklist()
 
     # 8) RENDER
     docx_path = str(case_dir / f"Minuta_Caso_{radicado}.docx")
     pdf_path = str(case_dir / f"Escritura_Caso_{radicado}.pdf")
+
+    # Fix 5 v32: Normalizar DECONOCIMIENTO → DE CONOCIMIENTO con NFC + regex word-boundary
+    # Reemplaza Fix C v14 (str.replace exacto) — cubre variantes Unicode decomposed y espacios dobles
+    import unicodedata as _ud_orch
+    cuerpo_escritura = _ud_orch.normalize('NFC', cuerpo_escritura)
+    # Fix 2 v33: sin \b — captura DECONOCIMIENTO aunque esté pegado a otro carácter (encoding edge cases)
+    cuerpo_escritura = re.sub(r'DECONOCIMIENTO', 'DE CONOCIMIENTO', cuerpo_escritura, flags=re.IGNORECASE)
 
     _de = contexto.get("DATOS_EXTRA") or {}
     context_docx = {

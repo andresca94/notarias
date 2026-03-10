@@ -27,8 +27,8 @@ Certificado de Tradición y Libertad N° [[MATRICULA_INMOBILIARIA]].
 Fotocopias de cédulas / documentos de identificación de los otorgantes.
 [[CAMARAS_COMERCIO]]
 Paz y Salvo Predial N° [[PAZ_SALVO_PREDIAL]].
-Paz y Salvo de Valorización N° [[PAZ_SALVO_VALORIZACION]] (si aplica).
-Paz y salvo de Área Metropolitana N° [[PAZ_SALVO_AREA_METRO]] (si aplica).
+Paz y Salvo de Valorización N° [[PAZ_SALVO_VALORIZACION]].
+Paz y salvo de Área Metropolitana N° [[PAZ_SALVO_AREA_METRO]].
 Certificado REDAM (si aplica).
 
 ME FUERON PRESENTADOS LOS SIGUIENTES COMPROBANTES LEGALES QUE SE PROTOCOLIZAN ASÍ:
@@ -56,7 +56,7 @@ EL(LOS) COMPARECIENTE(S) HACE(N) CONSTAR QUE:
 7. Solo solicitaran correcciones, aclaraciones, o modificaciones al texto de la presente escritura en la forma y casos previstos por la ley
 8. La presente escritura se Autoriza a Insistencia de los interesados (ART. 6 Decreto 960 de 1970).
 
-DE LA CAPACIDAD: El (la, los) compareciente(s) manifiesta(n) que son plenamente capaces para contratar y obligarse, que no tiene ningún tipo de impedimento legal que vicie de nulidad las declaraciones que dentro del acto o negocio jurídico se han consignado. Que gozan de forma absoluta del ejercicio de sus derechos y que las declaraciones redactadas en este instrumento son su real voluntad y de esta forma busca la eficacia del acto o negocio otorgado.
+DE LA CAPACIDAD: El (la, los) compareciente(s) manifiesta(n) que son plenamente capaces para contratar y obligarse, que no tiene ningún tipo de impedimento legal que vicie de nulidad las declaraciones que dentro del acto o negocio jurídico se han consignado. Que gozan de forma absoluta del ejercicio de sus derechos y que las declaraciones redactadas en este instrumento son su real voluntad y de esta forma busca la eficacia del acto o negocio otorgado. Que sus condiciones mentales e intelectuales son las idóneas y en razón a ello han conllevado a la notaria a través de un juicio de valores, a determinar su capacidad para comparecer. Que han entendido el clausulado que conforma la presente escritura pública y que la aprueban en su totalidad.
 
 DEL OBJETO LICITO: El (la, los) compareciente(s) manifiesta(n) que el objeto del presente negocio o acto jurídico se encuentra enmarcado dentro de las normas legales vigentes, que no contraviene la ley.
 
@@ -66,7 +66,7 @@ DE LA IDENTIFICACIÓN: El (la, los) compareciente(s) manifiesta(n) que los docum
 
 CLÁUSULA DE CONOCIMIENTO: La Notaría en ejercicio del control de legalidad que se le asiste advierte a las partes intervinientes en el negocio jurídico de la importancia de verificar previamente la identidad, condiciones legales de los intervinientes, que los bienes, cosas y derechos que se comprometen en esta transacción jurídica, están dentro del mercado comercial y de la vida jurídica y están sujetos al principio de la oferta y la demanda por no existir sobre los mismos anotaciones o decisiones que prohíban la enajenación o gravamen, embargo o medida cautelares vigente, que no contraviene la ley, que los bienes, cosas y derechos que se comprometen en esta transacción jurídica, están dentro del mercado comercial y de la vida jurídica y están sujetos al principio de la oferta y la demanda.
 
-LEY DE ECONOMÍA ECONÓMICO: La notaría ilustró a los otorgantes sobre el contenido, alcance y consecuencias del artículo 61 de la ley 2010 del 27 de diciembre de 2019, que modificó el artículo 90 del estatuto tributario. Los otorgantes declaran bajo gravedad de juramento que el precio de la venta contenido en la presente escritura es real y no ha sido objeto de pactos privados en los que se señale un precio diferente, ni existen sumas que se hayan convenido o facturado por fuera del valor aquí estipulado.
+LEY DE CRECIMIENTO ECONÓMICO: La notaría ilustró a los otorgantes sobre el contenido, alcance y consecuencias del artículo 61 de la ley 2010 del 27 de diciembre de 2019, que modificó el artículo 90 del estatuto tributario. Los otorgantes declaran bajo gravedad de juramento que el precio de la venta contenido en la presente escritura es real y no ha sido objeto de pactos privados en los que se señale un precio diferente, ni existen sumas que se hayan convenido o facturado por fuera del valor aquí estipulado.
 
 PROTECCIÓN DE DATOS DE CARÁCTER PERSONAL: Los intervinientes aceptan la incorporación de sus datos y la copia del documento de identidad en el presente instrumento, con la finalidad de realizar las funciones propias de la actividad Notarial y efectuar las comunicaciones de datos previstas en la ley a la administración pública.
 
@@ -90,25 +90,25 @@ NOTA: ESTA ESCRITURA FUE EXTENDIDA EN LAS HOJAS DE PAPEL NOTARIAL NÚMEROS:
 
 EP_UIAF_TEMPLATE = """
 NOMBRE:
-[[NOMBRE]]
+
 DOCUMENTOS DE IDENTIFICACIÓN:
-[[CEDULA]]
+
 TELEFONO FIJO:
-[[TELEFONO_FIJO]]
+
 CELULAR:
-[[CELULAR]]
+
 DIRECCIÓN:
-[[DIRECCION]]
+
 CIUDAD:
-[[CIUDAD]]
+
 EMAIL:
-[[EMAIL]]
+
 PROFESIÓN U OFICIO:
-[[OCUPACION]]
+
 ACTIVIDAD ECONÓMICA:
-[[ACTIVIDAD_ECONOMICA]]
+
 ESTADO CIVIL:
-[[ESTADO_CIVIL]]
+
 PERSONA EXPUESTA POLÍTICAMENTE DECRETO 1674 DE 2016: SI: ___ / NO: X
 CARGO:
 FECHA DE VINCULACIÓN:
@@ -126,4 +126,6 @@ EP_FIRMAS_TEMPLATE = """
 EL(LOS) OTORGANTE(S),
 
 [[BLOQUE_FIRMAS]]
+
+TODO LO ESCRITO EN OTRO TIPO DE LETRA Y MAQUINA VALE.
 """.strip()
