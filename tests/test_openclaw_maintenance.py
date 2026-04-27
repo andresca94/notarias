@@ -34,6 +34,9 @@ def test_build_auto_tune_prompt_respects_push_and_deploy_flags():
         assert "git push origin main" in prompt
         assert "deploy-backend-command" in prompt
         assert "/admin/openclaw/backend-maintenance/status" in prompt
+        assert "Objetivo principal" in prompt
+        assert "No uses `skipped` como salida por defecto." in prompt
+        assert "Comentarios Word relevantes" in prompt or "si todos los comentarios son puramente especificos" in prompt
     finally:
         settings.OPENCLAW_AUTO_TUNE_GIT_PUSH_ENABLED = original_push
         settings.OPENCLAW_AUTO_TUNE_DEPLOY_ENABLED = original_deploy

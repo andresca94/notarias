@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from app.core.config import settings
 from app.services.case_manager import (
@@ -77,12 +77,64 @@ def _load_prompt_template() -> str:
     return path.read_text(encoding="utf-8").strip()
 
 
+def _truncate_text(value: str, limit: int = 220) -> str:
+    normalized = " ".join((value or "").split()).strip()
+    if len(normalized) <= limit:
+        return normalized
+    return f"{normalized[: limit - 1].rstrip()}…"
+
+
+def _build_feedback_excerpt(*, radicado: str, iteration: int, limit: int = 6) -> List[str]:
+    try:
+        state = load_case_state(radicado)
+    except CaseStateError:
+        return []
+
+    entry = ((state.get("iterations") or {}).get(str(iteration)) or {})
+    feedback = entry.get("feedback") or {}
+    comments_rel = (feedback.get("comments_json_path") or "").strip()
+    if not comments_rel:
+        return []
+
+    comments_path = case_dir(radicado) / comments_rel
+    if not comments_path.exists():
+        return []
+
+    try:
+        comments = json.loads(comments_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return []
+
+    if not comments:
+        return []
+
+    excerpt = ["Comentarios Word relevantes para convertir en mejora de backend:"]
+    for idx, item in enumerate(comments[:limit], 1):
+        comment_text = _truncate_text(item.get("comment_text") or item.get("comment") or "")
+        anchor_text = _truncate_text(item.get("anchor_text") or "")
+        paragraph_text = _truncate_text(item.get("paragraph_text") or "")
+        excerpt.extend(
+            [
+                f"{idx}. Comentario: {comment_text or '[sin texto]'}",
+                f"   - Ancla: {anchor_text or '[sin ancla]'}",
+                f"   - Párrafo: {paragraph_text or '[sin párrafo]'}",
+            ]
+        )
+
+    if len(comments) > limit:
+        excerpt.append(
+            f"Hay {len(comments) - limit} comentario(s) adicionales en el JSON del caso; revísalos antes de decidir."
+        )
+    return excerpt
+
+
 def _build_context(
     *,
     radicado: Optional[str],
     prompt: Optional[str],
     trigger: str,
     comments_count: Optional[int] = None,
+    iteration: Optional[int] = None,
 ) -> str:
     context_lines = [
         "Trabaja SOLO sobre el backend de Notar-IA.",
@@ -112,6 +164,8 @@ def _build_context(
             context_lines.append(
                 f"Estado del caso: {json.dumps(build_case_response(state), ensure_ascii=False)}"
             )
+            if iteration is not None:
+                context_lines.extend(_build_feedback_excerpt(radicado=radicado, iteration=iteration))
         except CaseStateError:
             context_lines.append(f"Radicado objetivo informado, pero sin estado local: {radicado}.")
 
@@ -184,8 +238,12 @@ def _build_auto_tune_prompt(*, radicado: str, iteration: int) -> str:
         "Este disparo fue activado automaticamente despues de subir feedback experto en Word.",
         f"Radicado objetivo: {radicado}.",
         f"Iteracion objetivo: {iteration}.",
+        "Objetivo principal: convertir este feedback experto en una mejora real del backend cuando exista una regla, validacion, prompt, parser o test que pueda generalizarse.",
         "Busca patrones corregibles en prompts, reglas, parsers, validaciones o tests del backend.",
-        "Si el cambio es seguro y verificable, aplicalo. Si no, deja un no-op claro.",
+        "No uses `skipped` como salida por defecto.",
+        "Si al menos un comentario revela un patron backend corregible y verificable, aplica el cambio mas pequeno posible y respáldalo con un test o check relevante.",
+        "Usa `skipped` solo si todos los comentarios son puramente especificos del caso, dependen de hechos no generalizables, o ya estan cubiertos por el comportamiento actual del backend sin requerir cambio real.",
+        "Si dudas entre un micro-fix backend con regresion y `skipped`, prefiere el micro-fix backend con regresion.",
         "No toques el frontend ni nginx.",
         *_build_workspace_guardrails(),
         *_build_maintenance_callback_instructions(radicado=radicado, iteration=iteration),
@@ -193,6 +251,7 @@ def _build_auto_tune_prompt(*, radicado: str, iteration: int) -> str:
         "Si modificas archivos, ejecuta los checks mas pequenos y relevantes antes de continuar.",
         "Si el worktree termina con archivos inesperados o fuera de alcance, aborta sin commit ni push.",
         "Si hay cambios backend-only validos, haz git add y git commit con un mensaje corto y especifico.",
+        "Antes de decidir `skipped`, cita en tu razonamiento por que cada comentario relevante no se traduce en una mejora backend segura.",
     ]
 
     if settings.OPENCLAW_AUTO_TUNE_GIT_PUSH_ENABLED:
@@ -222,12 +281,14 @@ async def trigger_backend_maintenance(
     prompt: Optional[str],
     trigger: str,
     comments_count: Optional[int] = None,
+    iteration: Optional[int] = None,
 ) -> Dict[str, Any]:
     message = _build_context(
         radicado=radicado,
         prompt=prompt,
         trigger=trigger,
         comments_count=comments_count,
+        iteration=iteration,
     )
     client = OpenClawClient()
     response = await client.trigger_agent_task(
@@ -242,6 +303,7 @@ async def trigger_backend_maintenance(
             "trigger": trigger,
             "radicado": radicado,
             "comments_count": comments_count,
+            "iteration": iteration,
             "ok": True,
             "openclaw": response,
         },
@@ -263,6 +325,7 @@ async def trigger_backend_maintenance_logged(
             prompt=prompt,
             trigger=trigger,
             comments_count=comments_count,
+            iteration=iteration,
         )
     except Exception as exc:
         _record_maintenance_failure(
@@ -329,6 +392,7 @@ async def run_auto_tune_for_feedback(
             prompt=prompt,
             trigger="feedback_upload_auto_tune",
             comments_count=comments_count,
+            iteration=iteration,
         )
         run_id = ((response or {}).get("runId") if isinstance(response, dict) else None)
         set_iteration_maintenance_status(
