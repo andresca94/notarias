@@ -35,6 +35,8 @@ from app.pipeline.boilerplate import (
     EP_DERECHOS_TEMPLATE,
     EP_UIAF_TEMPLATE,
     EP_FIRMAS_TEMPLATE,
+    REDAM_COMPRAVENTA_PROTOCOLIZACION_TEXT,
+    build_certificados_paz_y_salvo_detalle,
 )
 
 
@@ -1445,14 +1447,12 @@ def _prepare_ep_sections(contexto: Dict[str, Any], actos_docs: List[Dict[str, st
                 "inmueble objeto de esta venta, ya se encuentran canceladas. ----------' "
                 "NO omitir esta cláusula bajo ninguna circunstancia. "
             )
-            # Fix F v14: REDAM SIEMPRE con referencia a Ley 2097 de 2021
+            # MMFL / feedback corpus: texto REDAM de protocolización MINTIC para compraventa
             instruccion_acto += (
-                "CLÁUSULA REDAM (Fix F v14): La cláusula REDAM DEBE SIEMPRE incluir la referencia legal "
-                "a la Ley 2097. Texto exacto obligatorio: 'La suscrita Notaria, en cumplimiento de lo "
-                "dispuesto en el artículo 2 de la Ley 2097 de 2021, consultó el Registro de Deudores "
-                "Alimentarios Morosos (REDAM) respecto de los comparecientes, y deja constancia de que "
-                "no se encuentran reportados como deudores alimentarios morosos vigentes.' "
-                "NUNCA usar texto de REDAM sin 'artículo 2 de la Ley 2097 de 2021'. "
+                "CLÁUSULA REDAM (MMFL / corpus): Cuando la parte vendedora sea persona natural, usar "
+                f"EXACTAMENTE este texto: '{REDAM_COMPRAVENTA_PROTOCOLIZACION_TEXT}' "
+                "No sustituirlo por la fórmula antigua de 'la suscrita notaria consultó... artículo 2'. "
+                "Si aplica una contingencia REDAM, conservar la constancia de contingencia conforme al contexto. "
             )
             # Fix 2 v33: instrucción explícita contra DECONOCIMIENTO (sin espacio)
             instruccion_acto += (
@@ -3317,13 +3317,11 @@ def _prepare_ep_sections(contexto: Dict[str, Any], actos_docs: List[Dict[str, st
         if not any(frozenset(_normalize_name(k).split()) == cc_ws for cc_ws in _cc_ins_word_sets)
     }
     # CERTIFICADOS_PAZ_Y_SALVO_DETALLE: construir lista de todos los documentos protocolizados
-    _cert_lines = []
-    if _pz_predial and not _is_garbage(_pz_predial):
-        _cert_lines.append(f"Paz y Salvo Predial N° {_pz_predial}.")
-    if _pz_valoriz and not _is_garbage(_pz_valoriz) and "NO COBRA" not in _pz_valoriz.upper():
-        _cert_lines.append(f"Paz y Salvo de Valorización N° {_pz_valoriz}.")
-    elif _pz_valoriz and "NO COBRA" in _pz_valoriz.upper():
-        _cert_lines.append(f"Constancia de no cobro de valorización: {_pz_valoriz}.")
+    _cert_lines = build_certificados_paz_y_salvo_detalle(
+        _pz_predial if not _is_garbage(_pz_predial) else "",
+        _pz_valoriz if not _is_garbage(_pz_valoriz) else "",
+        _pz_metro if not _is_garbage(_pz_metro) else "",
+    )
     # Agregar cámaras de comercio de empresas reales (solo NIT — excluye personas naturales AP)
     _disp_map_ins = contexto.get("EMPRESA_DISPLAY_MAP") or {}
     _seen_cert_emp: set = set()

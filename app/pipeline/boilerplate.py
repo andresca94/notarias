@@ -3,6 +3,46 @@ from __future__ import annotations
 
 # Nota: aquí dejamos placeholders tipo [[...]] para que OpenAI DataBinder los complete o los deje como [[PENDIENTE:...]].
 
+REDAM_COMPRAVENTA_PROTOCOLIZACION_TEXT = (
+    "De conformidad con el artículo 6 numeral 3 de la Ley 2097 del 02 de julio de 2021, "
+    "LA PARTE VENDEDORA presenta para su protocolización CERTIFICACIÓN DE LA CONSULTA "
+    "REALIZADA ANTE EL MINISTERIO DE TECNOLOGÍAS DE LA INFORMACIÓN Y COMUNICACIONES - "
+    "MINTIC, Registro de Deudores Alimentarios Morosos. (Circular 355 de fecha 20 septiembre "
+    "de 2023 SNR)."
+)
+
+
+def build_certificados_paz_y_salvo_detalle(
+    paz_salvo_predial: str | None,
+    paz_salvo_valorizacion: str | None,
+    paz_salvo_area_metro: str | None,
+) -> list[str]:
+    def _norm(value: str | None) -> str:
+        return str(value or "").strip()
+
+    def _usable(value: str) -> bool:
+        if not value:
+            return False
+        upper = value.upper()
+        return upper not in {"NO APLICA", "N/A", "NULL", "NONE"} and "[[PENDIENTE:" not in upper
+
+    predial = _norm(paz_salvo_predial)
+    valorizacion = _norm(paz_salvo_valorizacion)
+    area_metro = _norm(paz_salvo_area_metro)
+
+    lines: list[str] = []
+    if _usable(predial):
+        lines.append(f"Paz y Salvo Predial N° {predial}.")
+    if _usable(valorizacion):
+        if "NO COBRA" in valorizacion.upper():
+            lines.append(f"Constancia de no cobro de valorización: {valorizacion}.")
+        else:
+            lines.append(f"Paz y Salvo de Valorización N° {valorizacion}.")
+    if _usable(area_metro):
+        lines.append(f"Paz y salvo de Área Metropolitana N° {area_metro}.")
+    return lines
+
+
 EP_CARATULA_TEMPLATE = """
 ESCRITURA PUBLICA NUMERO: [[PENDIENTE: NUMERO_EP]]
 RADICADO: [[NUMERO_RADICADO]]
