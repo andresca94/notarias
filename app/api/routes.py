@@ -14,6 +14,7 @@ from app.pipeline.orchestrator import run_pipeline
 from app.services.case_manager import (
     DOCX_MIME_TYPE,
     PDF_MIME_TYPE,
+    TEXT_MARKDOWN_MIME_TYPE,
     CaseLockError,
     CaseStateError,
     append_feedback_corpus_event,
@@ -257,6 +258,20 @@ async def download_pdf(radicado: str, iteration: Optional[int] = Query(default=N
         path=str(pdf_path),
         media_type=PDF_MIME_TYPE,
         filename=pdf_path.name,
+    )
+
+
+@router.get("/cases/{radicado}/artifacts/change-report")
+async def download_change_report(radicado: str, iteration: Optional[int] = Query(default=None)):
+    try:
+        report_path = artifact_path_for_response(radicado, "change_report", iteration)
+    except CaseStateError as exc:
+        raise _http_404(str(exc)) from exc
+    _ensure_file_exists(report_path, "Reporte de cambios no encontrado para ese radicado.")
+    return FileResponse(
+        path=str(report_path),
+        media_type=TEXT_MARKDOWN_MIME_TYPE,
+        filename=report_path.name,
     )
 
 

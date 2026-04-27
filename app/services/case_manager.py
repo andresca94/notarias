@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import difflib
 import json
 import os
 import re
@@ -17,6 +18,7 @@ from app.core.config import settings
 
 DOCX_MIME_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 PDF_MIME_TYPE = "application/pdf"
+TEXT_MARKDOWN_MIME_TYPE = "text/markdown; charset=utf-8"
 
 
 class CaseStateError(RuntimeError):
@@ -218,6 +220,170 @@ def _copy_generated_artifacts(
     }
 
 
+def _extract_docx_blocks(path: Path) -> List[str]:
+    from docx import Document  # type: ignore
+
+    doc = Document(str(path))
+    blocks: List[str] = []
+    seen: set[str] = set()
+
+    def _push(text: str) -> None:
+        normalized = re.sub(r"\s+", " ", (text or "").strip())
+        if not normalized or normalized in seen:
+            return
+        seen.add(normalized)
+        blocks.append(normalized)
+
+    for paragraph in doc.paragraphs:
+        _push(paragraph.text)
+    for table in doc.tables:
+        for row in table.rows:
+            for cell in row.cells:
+                _push(cell.text)
+    return blocks
+
+
+def _truncate_text(text: str, limit: int = 420) -> str:
+    value = re.sub(r"\s+", " ", (text or "").strip())
+    if len(value) <= limit:
+        return value
+    return f"{value[: limit - 1].rstrip()}…"
+
+
+def _render_excerpt(blocks: List[str], *, max_items: int = 2) -> str:
+    excerpt = [_truncate_text(item) for item in blocks[:max_items] if item.strip()]
+    return "\n".join(f"- {item}" for item in excerpt) or "- [sin texto detectable]"
+
+
+def _load_feedback_comments_from_entry(radicado: str, entry: Dict[str, Any]) -> List[Dict[str, Any]]:
+    feedback = entry.get("feedback") or {}
+    comments_rel = feedback.get("comments_json_path")
+    if not comments_rel:
+        return []
+    comments_path = resolve_case_path(radicado, comments_rel)
+    if not comments_path.exists():
+        return []
+    return json.loads(comments_path.read_text(encoding="utf-8"))
+
+
+def _write_iteration_change_report(
+    *,
+    radicado: str,
+    state: Dict[str, Any],
+    iteration: int,
+    artifacts: Dict[str, str],
+) -> str:
+    if iteration <= 1:
+        return ""
+
+    previous_entry = (state.get("iterations") or {}).get(str(iteration - 1)) or {}
+    previous_docx_rel = ((previous_entry.get("artifacts") or {}).get("docx_path") or "").strip()
+    current_docx_rel = (artifacts.get("docx_path") or "").strip()
+    if not previous_docx_rel or not current_docx_rel:
+        return ""
+
+    previous_docx_path = resolve_case_path(radicado, previous_docx_rel)
+    current_docx_path = resolve_case_path(radicado, current_docx_rel)
+    if not previous_docx_path.exists() or not current_docx_path.exists():
+        return ""
+
+    try:
+        previous_blocks = _extract_docx_blocks(previous_docx_path)
+        current_blocks = _extract_docx_blocks(current_docx_path)
+    except Exception:
+        return ""
+
+    matcher = difflib.SequenceMatcher(a=previous_blocks, b=current_blocks, autojunk=False)
+    changes: List[Dict[str, Any]] = []
+    counts = {"replace": 0, "insert": 0, "delete": 0}
+    for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+        if tag == "equal":
+            continue
+        if tag in counts:
+            counts[tag] += 1
+        changes.append(
+            {
+                "tag": tag,
+                "before": previous_blocks[i1:i2],
+                "after": current_blocks[j1:j2],
+            }
+        )
+
+    comments = _load_feedback_comments_from_entry(radicado, previous_entry)
+    report_lines = [
+        "# Reporte de cambios de iteracion",
+        "",
+        f"- Radicado: {radicado}",
+        f"- Comparacion: iteracion {iteration - 1} -> {iteration}",
+        f"- Generado: {utc_now_iso()}",
+        f"- Comentarios aplicados desde la iteracion anterior: {len(comments)}",
+        f"- Bloques con cambio detectados: {len(changes)}",
+        f"- Reemplazos: {counts['replace']}",
+        f"- Inserciones: {counts['insert']}",
+        f"- Eliminaciones: {counts['delete']}",
+        "",
+    ]
+
+    if comments:
+        report_lines.extend(
+            [
+                "## Feedback previo utilizado",
+                "",
+            ]
+        )
+        for idx, item in enumerate(comments[:12], start=1):
+            report_lines.extend(
+                [
+                    f"{idx}. {_truncate_text(item.get('comment_text') or '', 320)}",
+                    f"   - Ancla: {_truncate_text(item.get('anchor_text') or '[sin ancla]', 180)}",
+                ]
+            )
+        report_lines.append("")
+
+    report_lines.extend(
+        [
+            "## Cambios detectados en el Word generado",
+            "",
+        ]
+    )
+    if not changes:
+        report_lines.append("No se detectaron diferencias textuales claras entre ambas iteraciones.")
+    else:
+        tag_labels = {
+            "replace": "Texto reemplazado",
+            "insert": "Texto agregado",
+            "delete": "Texto eliminado",
+        }
+        for idx, change in enumerate(changes[:12], start=1):
+            report_lines.extend(
+                [
+                    f"### Cambio {idx}: {tag_labels.get(change['tag'], change['tag'])}",
+                    "",
+                    "**Antes**",
+                    _render_excerpt(change["before"]),
+                    "",
+                    "**Despues**",
+                    _render_excerpt(change["after"]),
+                    "",
+                ]
+            )
+
+    report_lines.extend(
+        [
+            "## Como verificar",
+            "",
+            "- Descarga el Word y el PDF de la iteracion actual.",
+            "- Contrasta este reporte con los comentarios del Word revisado.",
+            "- Si un comentario importante no aparece reflejado, vuelve a subir feedback mas especifico antes de intentar otra iteracion.",
+            "",
+        ]
+    )
+
+    report_path = case_dir(radicado) / "iterations" / str(iteration) / "generated" / f"Reporte_Cambios_{radicado}_iteracion_{iteration}.md"
+    report_path.write_text("\n".join(report_lines), encoding="utf-8")
+    return relative_to_case(radicado, report_path)
+
+
 def finalize_generation(
     *,
     radicado: str,
@@ -234,6 +400,14 @@ def finalize_generation(
         state["inputs"] = _copy_inputs_to_case(radicado, staged_scans, staged_docs)
 
     artifacts = _copy_generated_artifacts(radicado, iteration, result)
+    change_report_rel = _write_iteration_change_report(
+        radicado=radicado,
+        state=state,
+        iteration=iteration,
+        artifacts=artifacts,
+    )
+    if change_report_rel:
+        artifacts["change_report_path"] = change_report_rel
     now = utc_now_iso()
     state["latest_iteration"] = max(int(state.get("latest_iteration") or 0), iteration)
     state["status"] = "generated"
@@ -401,6 +575,11 @@ def build_case_response(state: Dict[str, Any], iteration: Optional[int] = None) 
                 "artifacts": {
                     "docx_url": f"/cases/{radicado}/artifacts/docx?iteration={int(item['iteration'])}",
                     "pdf_url": f"/cases/{radicado}/artifacts/pdf?iteration={int(item['iteration'])}",
+                    "change_report_url": (
+                        f"/cases/{radicado}/artifacts/change-report?iteration={int(item['iteration'])}"
+                        if item_artifacts.get("change_report_path")
+                        else None
+                    ),
                 },
                 "feedback_uploaded": bool(item_feedback),
             }
@@ -414,6 +593,11 @@ def build_case_response(state: Dict[str, Any], iteration: Optional[int] = None) 
         "artifacts": {
             "docx_url": f"/cases/{radicado}/artifacts/docx?iteration={current_iteration}",
             "pdf_url": f"/cases/{radicado}/artifacts/pdf?iteration={current_iteration}",
+            "change_report_url": (
+                f"/cases/{radicado}/artifacts/change-report?iteration={current_iteration}"
+                if artifacts.get("change_report_path")
+                else None
+            ),
         },
         "actions": {
             "case_url": f"/cases/{radicado}",
