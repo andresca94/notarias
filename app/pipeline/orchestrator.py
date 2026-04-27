@@ -1224,6 +1224,22 @@ def _prepare_ep_sections(contexto: Dict[str, Any], actos_docs: List[Dict[str, st
     })
 
     # CARÁTULA
+    _predial_nacional = inmueble.get("predial_nacional") or "[[PENDIENTE: NUMERO_PREDIAL_NACIONAL]]"
+    _codigo_catastral = (
+        inmueble.get("CODIGO_CATASTRAL_ANTERIOR")
+        or inmueble.get("codigo_catastral_anterior")
+        or "[[PENDIENTE: CODIGO_CATASTRAL_ANTERIOR]]"
+    )
+    _afectacion_vivienda = (inmueble.get("afectacion_vivienda") or "").strip().upper()
+    if _afectacion_vivienda in {"SI", "SÍ", "NO"}:
+        _afectacion_vivienda = "SÍ" if _afectacion_vivienda in {"SI", "SÍ"} else "NO"
+    else:
+        _afectacion_vivienda = "[[PENDIENTE: AFECTACION_VIVIENDA_FAMILIAR]]"
+    _patrimonio_familia = (inmueble.get("patrimonio_familia") or "").strip().upper()
+    if _patrimonio_familia in {"SI", "SÍ", "NO"}:
+        _patrimonio_familia = "SÍ" if _patrimonio_familia in {"SI", "SÍ"} else "NO"
+    else:
+        _patrimonio_familia = "[[PENDIENTE: PATRIMONIO_FAMILIA_INEMBARGABLE]]"
     misiones.append({
         "orden": 1,
         "descripcion": "EP_CARATULA",
@@ -1234,6 +1250,10 @@ def _prepare_ep_sections(contexto: Dict[str, Any], actos_docs: List[Dict[str, st
             "NOTARIA_NOMBRE": notaria,
             "CIUDAD": ciudad,
             "MATRICULA_INMOBILIARIA": matricula,
+            "NUMERO_PREDIAL_NACIONAL": _predial_nacional,
+            "CODIGO_CATASTRAL_ANTERIOR": _codigo_catastral,
+            "AFECTACION_VIVIENDA_FAMILIAR": _afectacion_vivienda,
+            "PATRIMONIO_FAMILIA_INEMBARGABLE": _patrimonio_familia,
             "RESUMEN_ACTOS": resumen_actos,
             "DESCRIPCION_INMUEBLE": re.sub(r'\bDELA\b', 'DE LA', inmueble.get("direccion") or "[[PENDIENTE: DESCRIPCION_INMUEBLE]]"),
         },
