@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     OUTPUT_DIR: str = "outputs"
     PDF_ENGINE: str = "libreoffice"
 
-    RAG_STORE_DIR: str = "rag_store"
+    RAG_STORE_DIR: str = "app/rag_store"
     CORS_ALLOW_ORIGINS: str = "http://localhost:5173"
 
     OPENCLAW_BASE_URL: str | None = None
