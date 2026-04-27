@@ -104,13 +104,75 @@ def _safe_get(d: Dict[str, Any], path: List[str], default=None):
     return cur
 
 
-def _extract_radicado_from_radicacion_json(radicacion: Dict[str, Any]) -> str:
+_RADICADO_TEXT_PATTERNS = (
+    re.compile(r'"numero_radicado"\s*:\s*"?(?P<rad>\d{4,12})', re.IGNORECASE),
+    re.compile(r'"radicacion"\s*:\s*\{.*?"numero"\s*:\s*"?(?P<rad>\d{4,12})', re.IGNORECASE | re.DOTALL),
+    re.compile(r'\bradicad(?:o|a|ion|ión)?\b[^\d]{0,24}(?P<rad>\d{4,12})', re.IGNORECASE),
+)
+
+
+def _normalize_radicado_candidate(value: Any) -> Optional[str]:
+    digits = re.sub(r"\D+", "", str(value or ""))
+    if 4 <= len(digits) <= 12:
+        return digits
+    return None
+
+
+def _extract_radicado_from_structure(node: Any, *, parent_key: str = "") -> Optional[str]:
+    if isinstance(node, dict):
+        for key, value in node.items():
+            key_norm = str(key or "").strip().lower()
+            if "radicado" in key_norm:
+                candidate = _normalize_radicado_candidate(value)
+                if candidate:
+                    return candidate
+            if key_norm == "numero" and parent_key in {"radicacion", "negocio_actual"}:
+                candidate = _normalize_radicado_candidate(value)
+                if candidate:
+                    return candidate
+            candidate = _extract_radicado_from_structure(value, parent_key=key_norm)
+            if candidate:
+                return candidate
+    elif isinstance(node, list):
+        for item in node:
+            candidate = _extract_radicado_from_structure(item, parent_key=parent_key)
+            if candidate:
+                return candidate
+    return None
+
+
+def _extract_radicado_from_raw_text(raw_text: str) -> Optional[str]:
+    text = (raw_text or "").strip()
+    if not text:
+        return None
+    for pattern in _RADICADO_TEXT_PATTERNS:
+        match = pattern.search(text)
+        if not match:
+            continue
+        candidate = _normalize_radicado_candidate(match.group("rad"))
+        if candidate:
+            return candidate
+    return None
+
+
+def _extract_radicado_from_radicacion_json(
+    radicacion: Dict[str, Any],
+    raw_text: Optional[str] = None,
+) -> str:
     r = _safe_get(radicacion, ["negocio_actual", "numero_radicado"])
-    if r:
-        return str(r)
+    candidate = _normalize_radicado_candidate(r)
+    if candidate:
+        return candidate
     r2 = _safe_get(radicacion, ["radicacion", "numero"])
-    if r2:
-        return str(r2)
+    candidate = _normalize_radicado_candidate(r2)
+    if candidate:
+        return candidate
+    candidate = _extract_radicado_from_structure(radicacion)
+    if candidate:
+        return candidate
+    candidate = _extract_radicado_from_raw_text(raw_text or "")
+    if candidate:
+        return candidate
     return str(uuid.uuid4().int)[:8]
 
 
@@ -519,6 +581,7 @@ def _build_universal_context(
     radicacion_json: Dict[str, Any],
     soportes_json_list: List[Dict[str, Any]],
     cedulas_json_list: List[Dict[str, Any]],
+    resolved_radicado: Optional[str] = None,
 ) -> Dict[str, Any]:
     contexto: Dict[str, Any] = {
         "RADICACION": "PENDIENTE",
@@ -535,7 +598,7 @@ def _build_universal_context(
     }
 
     if radicacion_json:
-        contexto["RADICACION"] = _extract_radicado_from_radicacion_json(radicacion_json)
+        contexto["RADICACION"] = resolved_radicado or _extract_radicado_from_radicacion_json(radicacion_json)
         _merge_smart(contexto["INMUEBLE"], radicacion_json.get("datos_inmueble") or {})
         _merge_smart(contexto["NEGOCIO"], radicacion_json.get("negocio_actual") or {})
 
@@ -3492,7 +3555,7 @@ async def run_pipeline(
             max_tokens=4000,
         )
 
-    radicado = _extract_radicado_from_radicacion_json(rad_json)
+    radicado = _extract_radicado_from_radicacion_json(rad_json, raw_text=rad_text)
 
     # CASE DIR + DEBUG
     case_dir = Path(settings.OUTPUT_DIR) / f"CASE-{radicado}"
@@ -3580,7 +3643,12 @@ async def run_pipeline(
     debug.dump_stage_json("03_cedulas.json", cedulas_json_list)
 
     # 4) CONTEXTO UNIVERSAL + DEDUPE
-    contexto = _build_universal_context(rad_json, soportes_json_list, cedulas_json_list)
+    contexto = _build_universal_context(
+        rad_json,
+        soportes_json_list,
+        cedulas_json_list,
+        resolved_radicado=radicado,
+    )
     contexto["PERSONAS"] = dedupe_personas(contexto.get("PERSONAS") or [])
 
     # Reconstruir PERSONAS_ACTIVOS y EMPRESA_RL_MAP DESPUÉS del dedup para que los
