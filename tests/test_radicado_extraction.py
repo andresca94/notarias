@@ -1,5 +1,6 @@
 from app.pipeline.orchestrator import (
     _build_universal_context,
+    _pick_radicacion_file,
     _extract_radicado_from_radicacion_json,
 )
 
@@ -62,3 +63,15 @@ def test_build_universal_context_uses_resolved_radicado_when_json_failed():
     )
 
     assert contexto["RADICACION"] == "25963"
+
+
+def test_pick_radicacion_file_prefers_rad_token_over_other_pdfs():
+    paths = [
+        "/tmp/REDAM.pdf",
+        "/tmp/ANEXOS.pdf",
+        "/tmp/CLT.pdf",
+        "/tmp/RAD.pdf",
+        "/tmp/PAZ Y SALVO.pdf",
+    ]
+
+    assert _pick_radicacion_file(paths) == "/tmp/RAD.pdf"

@@ -74,10 +74,26 @@ _BALDIOS_CLAUSE_FULL = (
 def _pick_radicacion_file(paths: List[str]) -> Optional[str]:
     if not paths:
         return None
+    ranked: List[tuple[int, str]] = []
     for p in paths:
         name = Path(p).name.lower()
-        if any(k in name for k in ["radic", "turno", "hoja", "radicación", "radicacion"]):
-            return p
+        stem = Path(p).stem.lower()
+        score = 0
+        if any(k in name for k in ["radicacion", "radicación", "hoja de radicacion", "hoja de radicación"]):
+            score = 100
+        elif "turno" in name:
+            score = 90
+        elif re.search(r"(^|[\s._-])rad($|[\s._-])", stem):
+            score = 80
+        elif "radic" in name:
+            score = 70
+        elif "hoja" in name:
+            score = 60
+        if score:
+            ranked.append((score, p))
+    if ranked:
+        ranked.sort(key=lambda item: item[0], reverse=True)
+        return ranked[0][1]
     for p in paths:
         if Path(p).suffix.lower() == ".pdf":
             return p
