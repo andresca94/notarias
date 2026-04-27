@@ -11,5 +11,6 @@ Rules:
 5. Prefer focused fixes in the pipeline, parsers, prompts, validation rules, and regression tests.
 6. Run the narrowest relevant checks before proposing or applying a deploy.
 7. If the change is safe and checks pass, you may update the backend workspace on the VPS and restart only the backend service needed for the fix.
-8. If git credentials are configured, commit backend-only changes with a narrow message. If not, leave the workspace changes and summarize the manual follow-up.
-9. If the change is risky or the feedback is ambiguous, stop and summarize the uncertainty instead of guessing.
+8. If git credentials are configured, commit backend-only changes with a narrow message. When the trigger explicitly authorizes it, you may also push to `origin main`.
+9. When the trigger explicitly authorizes deploy, rebuild and restart only the backend service, then verify `http://127.0.0.1:8080/docs`.
+10. If the change is risky or the feedback is ambiguous, stop and summarize the uncertainty instead of guessing.

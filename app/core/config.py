@@ -25,6 +25,13 @@ class Settings(BaseSettings):
     OPENCLAW_MAINTENANCE_PROMPT_FILE: str = "ops/openclaw/backend-maintenance-prompt.md"
     OPENCLAW_AUTO_TUNE_ENABLED: bool = False
     OPENCLAW_AUTO_TUNE_MIN_COMMENTS: int = 1
+    OPENCLAW_AUTO_TUNE_GIT_PUSH_ENABLED: bool = False
+    OPENCLAW_AUTO_TUNE_DEPLOY_ENABLED: bool = False
+    OPENCLAW_AUTO_TUNE_DEPLOY_COMMAND: str = (
+        "docker build -t ghcr.io/andresca94/notarias-backend:latest . && "
+        "docker compose -f /srv/notar-ia/backend/current/ops/deploy/docker-compose.yml up -d --force-recreate backend && "
+        "curl -fsS http://127.0.0.1:8080/docs >/dev/null"
+    )
     INTERNAL_ADMIN_TOKEN: str | None = None
 
 

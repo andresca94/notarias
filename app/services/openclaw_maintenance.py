@@ -72,6 +72,39 @@ def _build_context(
     return "\n".join(context_lines)
 
 
+def _build_auto_tune_prompt(*, iteration: int) -> str:
+    instructions = [
+        "Este disparo fue activado automaticamente despues de subir feedback experto en Word.",
+        f"Iteracion objetivo: {iteration}.",
+        "Busca patrones corregibles en prompts, reglas, parsers, validaciones o tests del backend.",
+        "Si el cambio es seguro y verificable, aplicalo. Si no, deja un no-op claro.",
+        "No toques el frontend ni nginx.",
+        "Trabaja solamente dentro de /srv/notar-ia/backend/current.",
+        "Si modificas archivos, ejecuta los checks mas pequenos y relevantes antes de continuar.",
+        "Si hay cambios backend-only validos, haz git add y git commit con un mensaje corto y especifico.",
+    ]
+
+    if settings.OPENCLAW_AUTO_TUNE_GIT_PUSH_ENABLED:
+        instructions.append(
+            "Despues del commit, haz git push origin main. Si push falla, deja el commit local y explica el error."
+        )
+    else:
+        instructions.append(
+            "No hagas git push; deja el commit local y resume el cambio aplicado."
+        )
+
+    if settings.OPENCLAW_AUTO_TUNE_DEPLOY_ENABLED:
+        instructions.extend(
+            [
+                "Despues del cambio verificado, redespliega solo el backend.",
+                f"Usa exactamente este comando de deploy: {settings.OPENCLAW_AUTO_TUNE_DEPLOY_COMMAND}",
+                "Si el deploy falla, no toques el frontend y resume el error exacto.",
+            ]
+        )
+
+    return " ".join(instructions)
+
+
 async def trigger_backend_maintenance(
     *,
     radicado: Optional[str],
@@ -116,12 +149,7 @@ async def run_auto_tune_for_feedback(
     if comments_count < int(settings.OPENCLAW_AUTO_TUNE_MIN_COMMENTS or 1):
         return
 
-    prompt = (
-        "Este disparo fue activado automaticamente despues de subir feedback experto en Word. "
-        f"Iteracion objetivo: {iteration}. "
-        "Busca patrones corregibles en prompts, reglas, parsers, validaciones o tests del backend. "
-        "Si el cambio es seguro y verificable, aplicalo. Si no, deja un no-op claro."
-    )
+    prompt = _build_auto_tune_prompt(iteration=iteration)
 
     try:
         await trigger_backend_maintenance(
