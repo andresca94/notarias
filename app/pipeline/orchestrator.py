@@ -107,7 +107,8 @@ def _safe_get(d: Dict[str, Any], path: List[str], default=None):
 _RADICADO_TEXT_PATTERNS = (
     re.compile(r'"numero_radicado"\s*:\s*"?(?P<rad>\d{4,12})', re.IGNORECASE),
     re.compile(r'"radicacion"\s*:\s*\{.*?"numero"\s*:\s*"?(?P<rad>\d{4,12})', re.IGNORECASE | re.DOTALL),
-    re.compile(r'\bradicad(?:o|a|ion|ión)?\b[^\d]{0,24}(?P<rad>\d{4,12})', re.IGNORECASE),
+    re.compile(r'\bradicaci[oó]n\b[^\d]{0,32}(?P<rad>\d{4,12})', re.IGNORECASE),
+    re.compile(r'\bradicad[oa]\b[^\d]{0,24}(?P<rad>\d{4,12})', re.IGNORECASE),
 )
 
 

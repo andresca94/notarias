@@ -29,6 +29,25 @@ def test_extract_radicado_falls_back_to_raw_text_when_json_is_placeholder():
     assert _extract_radicado_from_radicacion_json(rad_json, raw_text=raw_text) == "25963"
 
 
+def test_extract_radicado_from_plain_radicacion_pdf_text():
+    rad_json = {
+        "radicacion": {"numero": "EXTRAER"},
+        "negocio_actual": {"numero_radicado": "EXTRAER"},
+    }
+    raw_text = """
+    NOTARIA TERCERA DE BUCARAMANGA
+
+    Radicacion Nro. 26485
+
+    Fecha: 26/02/2026 10:42:37 AM
+    Matriculas: 300-62293
+    Escritura Nro.
+    01250000
+    """
+
+    assert _extract_radicado_from_radicacion_json(rad_json, raw_text=raw_text) == "26485"
+
+
 def test_build_universal_context_uses_resolved_radicado_when_json_failed():
     rad_json = {
         "radicacion": {"numero": "EXTRAER"},
