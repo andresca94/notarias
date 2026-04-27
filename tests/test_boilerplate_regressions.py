@@ -1,5 +1,6 @@
 from app.pipeline.boilerplate import (
     EP_CARATULA_TEMPLATE,
+    EP_INSERTOS_TEMPLATE,
     EP_OTORGAMIENTO_TEMPLATE,
     REDAM_COMPRAVENTA_PROTOCOLIZACION_TEXT,
     build_certificados_paz_y_salvo_detalle,
@@ -23,6 +24,13 @@ def test_redam_protocolizacion_text_matches_feedback_wording():
     assert "artículo 6 numeral 3" in REDAM_COMPRAVENTA_PROTOCOLIZACION_TEXT
     assert "MINTIC" in REDAM_COMPRAVENTA_PROTOCOLIZACION_TEXT
     assert "artículo 2 de la Ley 2097" not in REDAM_COMPRAVENTA_PROTOCOLIZACION_TEXT
+
+
+def test_insertos_template_avoids_duplicate_paz_y_salvo_placeholders():
+    assert "[[CERTIFICADOS_PAZ_Y_SALVO_DETALLE]]" in EP_INSERTOS_TEMPLATE
+    assert "Paz y Salvo Predial N° [[PAZ_SALVO_PREDIAL]]." not in EP_INSERTOS_TEMPLATE
+    assert "Paz y Salvo de Valorización N° [[PAZ_SALVO_VALORIZACION]]." not in EP_INSERTOS_TEMPLATE
+    assert "Paz y salvo de Área Metropolitana N° [[PAZ_SALVO_AREA_METRO]]." not in EP_INSERTOS_TEMPLATE
 
 
 def test_build_certificados_paz_y_salvo_detalle_includes_area_metro():

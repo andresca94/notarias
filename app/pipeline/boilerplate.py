@@ -70,9 +70,6 @@ INSERTOS Y COMPROBANTES: Se protocolizan:
 Certificado de Tradición y Libertad N° [[MATRICULA_INMOBILIARIA]].
 Fotocopias de cédulas / documentos de identificación de los otorgantes.
 [[CAMARAS_COMERCIO]]
-Paz y Salvo Predial N° [[PAZ_SALVO_PREDIAL]].
-Paz y Salvo de Valorización N° [[PAZ_SALVO_VALORIZACION]].
-Paz y salvo de Área Metropolitana N° [[PAZ_SALVO_AREA_METRO]].
 Certificado REDAM (si aplica).
 
 ME FUERON PRESENTADOS LOS SIGUIENTES COMPROBANTES LEGALES QUE SE PROTOCOLIZAN ASÍ:
