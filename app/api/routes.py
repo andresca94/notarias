@@ -24,6 +24,7 @@ from app.services.case_manager import (
     case_lock,
     compose_iteration_commentary,
     create_staging_dir,
+    extract_case_hint_from_filename,
     finalize_generation,
     list_case_inputs,
     load_case_state,
@@ -127,6 +128,16 @@ async def upload_feedback(
     if not (feedback_docx.filename or "").lower().endswith(".docx"):
         raise HTTPException(status_code=400, detail="El feedback debe ser un archivo .docx.")
 
+    filename_hint = extract_case_hint_from_filename(feedback_docx.filename or "")
+    if filename_hint and filename_hint != radicado:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "El Word revisado parece pertenecer a otro caso. "
+                f"El nombre del archivo sugiere radicado {filename_hint}, pero el caso actual es {radicado}."
+            ),
+        )
+
     state = _load_state_or_404(radicado)
     current_iteration = int(state.get("latest_iteration") or 0)
     if current_iteration < 1:
@@ -156,6 +167,7 @@ async def upload_feedback(
         reviewed_docx_path=reviewed_docx_path,
         comments_path=comments_path,
         comments=comments,
+        source_filename=feedback_docx.filename or reviewed_docx_path.name,
     )
     append_feedback_corpus_event(
         radicado=radicado,
@@ -208,11 +220,21 @@ async def create_next_iteration(
                     template_id=template_id or fresh_state.get("template_id"),
                 )
                 if str(result["radicado"]) != radicado:
+                    feedback_filename = (
+                        ((current_entry.get("feedback") or {}).get("source_filename") or "").strip()
+                    )
+                    filename_hint = extract_case_hint_from_filename(feedback_filename)
+                    extra_detail = ""
+                    if filename_hint and filename_hint != radicado:
+                        extra_detail = (
+                            " El Word revisado cargado para este caso parece corresponder a otro radicado: "
+                            f"{filename_hint}."
+                        )
                     raise HTTPException(
                         status_code=400,
                         detail=(
                             "La radicación detectada al regenerar no coincide con el caso actual. "
-                            f"Esperado {radicado}, recibido {result['radicado']}."
+                            f"Esperado {radicado}, recibido {result['radicado']}.{extra_detail}"
                         ),
                     )
                 final_state = finalize_generation(

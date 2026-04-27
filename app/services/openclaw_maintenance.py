@@ -11,6 +11,7 @@ from app.services.case_manager import (
     case_dir,
     feedback_corpus_runs_path,
     load_case_state,
+    set_iteration_maintenance_status,
     utc_now_iso,
 )
 from app.services.openclaw_client import OpenClawClient
@@ -213,20 +214,51 @@ async def run_auto_tune_for_feedback(
     comments_count: int,
 ) -> None:
     if not settings.OPENCLAW_AUTO_TUNE_ENABLED:
+        set_iteration_maintenance_status(
+            radicado,
+            iteration,
+            status="skipped",
+            message="Auto-tune deshabilitado en este entorno.",
+        )
         return
     if comments_count < int(settings.OPENCLAW_AUTO_TUNE_MIN_COMMENTS or 1):
+        set_iteration_maintenance_status(
+            radicado,
+            iteration,
+            status="skipped",
+            message="No se alcanzó el mínimo de comentarios para auto-tune.",
+        )
         return
 
     prompt = _build_auto_tune_prompt(iteration=iteration)
+    set_iteration_maintenance_status(
+        radicado,
+        iteration,
+        status="running",
+        message="Codex está actualizando el backend con este feedback.",
+    )
 
     try:
-        await trigger_backend_maintenance(
+        response = await trigger_backend_maintenance(
             radicado=radicado,
             prompt=prompt,
             trigger="feedback_upload_auto_tune",
             comments_count=comments_count,
         )
+        set_iteration_maintenance_status(
+            radicado,
+            iteration,
+            status="completed",
+            message="Actualización automática del backend finalizada.",
+            run_id=((response or {}).get("runId") if isinstance(response, dict) else None),
+        )
     except Exception as exc:
+        set_iteration_maintenance_status(
+            radicado,
+            iteration,
+            status="failed",
+            message=f"Actualización automática fallida: {exc}",
+        )
         _record_maintenance_failure(
             trigger="feedback_upload_auto_tune",
             radicado=radicado,

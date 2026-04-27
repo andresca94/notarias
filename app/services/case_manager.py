@@ -19,6 +19,7 @@ from app.core.config import settings
 DOCX_MIME_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 PDF_MIME_TYPE = "application/pdf"
 TEXT_MARKDOWN_MIME_TYPE = "text/markdown; charset=utf-8"
+CASE_FILENAME_HINT_RE = re.compile(r"(?:caso|radicado)[\s_-]*(\d{4,})", re.IGNORECASE)
 
 
 class CaseStateError(RuntimeError):
@@ -51,6 +52,13 @@ def _unique_destination(directory: Path, original_name: str) -> Path:
         candidate = directory / f"{stem}_{idx}{suffix}"
         idx += 1
     return candidate
+
+
+def extract_case_hint_from_filename(filename: str) -> Optional[str]:
+    match = CASE_FILENAME_HINT_RE.search((filename or "").strip())
+    if not match:
+        return None
+    return match.group(1)
 
 
 def case_dir(radicado: str) -> Path:
@@ -384,6 +392,48 @@ def _write_iteration_change_report(
     return relative_to_case(radicado, report_path)
 
 
+def set_iteration_maintenance_status(
+    radicado: str,
+    iteration: int,
+    *,
+    status: str,
+    message: Optional[str] = None,
+    run_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    state = load_case_state(radicado)
+    iteration_key = str(iteration)
+    entry = (state.get("iterations") or {}).get(iteration_key)
+    if not entry:
+        raise CaseStateError(f"La iteración {iteration} no existe para el caso {radicado}.")
+
+    now = utc_now_iso()
+    maintenance = dict(entry.get("maintenance") or {})
+    maintenance["status"] = status
+    if status == "queued":
+        maintenance["queued_at"] = now
+        maintenance.pop("started_at", None)
+        maintenance.pop("finished_at", None)
+        maintenance.pop("run_id", None)
+    elif status == "running":
+        maintenance.setdefault("queued_at", now)
+        maintenance["started_at"] = now
+        maintenance.pop("finished_at", None)
+    else:
+        maintenance.setdefault("queued_at", now)
+        maintenance.setdefault("started_at", now)
+        maintenance["finished_at"] = now
+    if message is not None:
+        maintenance["message"] = message
+    if run_id is not None:
+        maintenance["run_id"] = run_id
+
+    entry["maintenance"] = maintenance
+    entry["updated_at"] = now
+    state["iterations"][iteration_key] = entry
+    save_case_state(state)
+    return state
+
+
 def finalize_generation(
     *,
     radicado: str,
@@ -431,6 +481,7 @@ def record_feedback(
     reviewed_docx_path: Path,
     comments_path: Path,
     comments: List[Dict[str, Any]],
+    source_filename: Optional[str] = None,
 ) -> Dict[str, Any]:
     state = load_case_state(radicado)
     iteration_key = str(iteration)
@@ -442,11 +493,17 @@ def record_feedback(
         "comments_json_path": relative_to_case(radicado, comments_path),
         "comments_count": len(comments),
         "uploaded_at": utc_now_iso(),
+        "source_filename": source_filename or reviewed_docx_path.name,
     }
     state["status"] = "feedback_uploaded"
     state["iterations"][iteration_key]["status"] = "feedback_uploaded"
     state["iterations"][iteration_key]["updated_at"] = utc_now_iso()
     state["iterations"][iteration_key]["feedback"] = feedback
+    state["iterations"][iteration_key]["maintenance"] = {
+        "status": "queued",
+        "queued_at": utc_now_iso(),
+        "message": "Feedback recibido. Esperando actualización automática del backend.",
+    }
     save_case_state(state)
     return state
 
@@ -572,6 +629,7 @@ def build_case_response(state: Dict[str, Any], iteration: Optional[int] = None) 
                 "iteration": int(item["iteration"]),
                 "status": item.get("status"),
                 "comments_count": int(item_feedback.get("comments_count") or 0),
+                "maintenance_status": ((item.get("maintenance") or {}).get("status")),
                 "artifacts": {
                     "docx_url": f"/cases/{radicado}/artifacts/docx?iteration={int(item['iteration'])}",
                     "pdf_url": f"/cases/{radicado}/artifacts/pdf?iteration={int(item['iteration'])}",
@@ -608,6 +666,7 @@ def build_case_response(state: Dict[str, Any], iteration: Optional[int] = None) 
             "uploaded": bool(current.get("feedback")),
             "comments_count": int((current.get("feedback") or {}).get("comments_count") or 0),
         },
+        "maintenance": current.get("maintenance") or None,
         "iterations": iterations,
     }
 

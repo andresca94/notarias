@@ -137,6 +137,30 @@ def test_feedback_upload_writes_corpus_event(client, tmp_path: Path):
     assert '"radicado": "26485"' in payload
 
 
+def test_feedback_upload_rejects_word_from_other_case(client, tmp_path: Path):
+    test_client, _ = client
+
+    generate_response = test_client.post(
+        "/notaria-v63-universal",
+        files=[("documentos", ("radicacion.pdf", b"%PDF-1.4", "application/pdf"))],
+    )
+    assert generate_response.status_code == 200
+
+    feedback_path = write_feedback_docx(tmp_path / "Minuta_Caso_25963.docx")
+    with feedback_path.open("rb") as feedback_file:
+        feedback_response = test_client.post(
+            "/cases/26485/feedback",
+            files=[
+                (
+                    "feedback_docx",
+                    ("Minuta_Caso_25963.docx", feedback_file.read(), "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
+                )
+            ],
+        )
+    assert feedback_response.status_code == 400
+    assert "parece pertenecer a otro caso" in feedback_response.json()["detail"]
+
+
 def test_next_iteration_exposes_change_report(
     client,
     tmp_path: Path,
@@ -214,3 +238,28 @@ def test_next_iteration_exposes_change_report(
     assert "Cambiar el parrafo principal segun la revision" in report_text
     assert "Parrafo anterior antes del feedback experto." in report_text
     assert "Parrafo actualizado despues del feedback experto." in report_text
+
+
+def test_feedback_upload_response_marks_maintenance_as_queued(client, tmp_path: Path):
+    test_client, _ = client
+
+    generate_response = test_client.post(
+        "/notaria-v63-universal",
+        files=[("documentos", ("radicacion.pdf", b"%PDF-1.4", "application/pdf"))],
+    )
+    assert generate_response.status_code == 200
+
+    feedback_path = write_feedback_docx(tmp_path / "feedback.docx")
+    with feedback_path.open("rb") as feedback_file:
+        feedback_response = test_client.post(
+            "/cases/26485/feedback",
+            files=[
+                (
+                    "feedback_docx",
+                    ("feedback.docx", feedback_file.read(), "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
+                )
+            ],
+        )
+    assert feedback_response.status_code == 200
+    payload = feedback_response.json()
+    assert payload["maintenance"]["status"] == "queued"
