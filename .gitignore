@@ -40,3 +40,12 @@ __pycache__/
 
 # IDE
 .vscode/
+
+# Ignore personal workspace noise if an agent creates it accidentally
+HEARTBEAT.md
+IDENTITY.md
+SOUL.md
+TOOLS.md
+USER.md
+MEMORY.md
+memory/
