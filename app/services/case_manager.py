@@ -85,6 +85,114 @@ def feedback_corpus_runs_path() -> Path:
     return feedback_corpus_root() / "openclaw_runs.jsonl"
 
 
+def backend_maintenance_state_path() -> Path:
+    return feedback_corpus_root() / "backend_maintenance_state.json"
+
+
+def _parse_utc_iso(value: Optional[str]) -> Optional[datetime]:
+    if not value:
+        return None
+    normalized = value.strip()
+    if not normalized:
+        return None
+    try:
+        return datetime.fromisoformat(normalized.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def load_backend_maintenance_state() -> Optional[Dict[str, Any]]:
+    path = backend_maintenance_state_path()
+    if not path.exists():
+        return None
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def save_backend_maintenance_state(state: Dict[str, Any]) -> Dict[str, Any]:
+    path = backend_maintenance_state_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
+    return state
+
+
+def refresh_backend_maintenance_state() -> Optional[Dict[str, Any]]:
+    state = load_backend_maintenance_state()
+    if not state:
+        return None
+
+    status = (state.get("status") or "").strip().lower()
+    if status not in {"queued", "running"}:
+        return state
+
+    timeout_seconds = int(settings.OPENCLAW_MAINTENANCE_PENDING_TIMEOUT_SECONDS or 0)
+    if timeout_seconds <= 0:
+        return state
+
+    anchor = _parse_utc_iso(state.get("started_at")) or _parse_utc_iso(state.get("queued_at"))
+    if not anchor:
+        return state
+
+    elapsed_seconds = (datetime.now(timezone.utc) - anchor).total_seconds()
+    if elapsed_seconds < timeout_seconds:
+        return state
+
+    expired_state = dict(state)
+    expired_state["status"] = "failed"
+    expired_state["message"] = (
+        "La actualización automática del backend excedió el tiempo máximo de espera. "
+        "Revisa logs y vuelve a intentar cuando el backend esté estable."
+    )
+    expired_state.setdefault("started_at", state.get("queued_at") or utc_now_iso())
+    expired_state["finished_at"] = utc_now_iso()
+    save_backend_maintenance_state(expired_state)
+    return expired_state
+
+
+def set_backend_maintenance_state(
+    *,
+    status: str,
+    radicado: Optional[str] = None,
+    iteration: Optional[int] = None,
+    message: Optional[str] = None,
+    run_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    now = utc_now_iso()
+    current = refresh_backend_maintenance_state() or {}
+    state = dict(current)
+    state["status"] = status
+    if radicado is not None:
+        state["radicado"] = str(radicado)
+    if iteration is not None:
+        state["iteration"] = int(iteration)
+    if status == "queued":
+        state["queued_at"] = now
+        state.pop("started_at", None)
+        state.pop("finished_at", None)
+        state.pop("run_id", None)
+    elif status == "running":
+        state.setdefault("queued_at", now)
+        state["started_at"] = now
+        state.pop("finished_at", None)
+    else:
+        state.setdefault("queued_at", now)
+        state.setdefault("started_at", now)
+        state["finished_at"] = now
+    if message is not None:
+        state["message"] = message
+    if run_id is not None:
+        state["run_id"] = run_id
+    return save_backend_maintenance_state(state)
+
+
+def backend_maintenance_pending() -> Optional[Dict[str, Any]]:
+    state = refresh_backend_maintenance_state()
+    if not state:
+        return None
+    if (state.get("status") or "").strip().lower() in {"queued", "running"}:
+        return state
+    return None
+
+
 def create_staging_dir() -> Path:
     path = incoming_root() / uuid.uuid4().hex
     path.mkdir(parents=True, exist_ok=True)
@@ -434,6 +542,43 @@ def set_iteration_maintenance_status(
     return state
 
 
+def refresh_case_maintenance_state(state: Dict[str, Any]) -> Dict[str, Any]:
+    timeout_seconds = int(settings.OPENCLAW_MAINTENANCE_PENDING_TIMEOUT_SECONDS or 0)
+    if timeout_seconds <= 0:
+        return state
+
+    now_dt = datetime.now(timezone.utc)
+    changed = False
+    for key, entry in (state.get("iterations") or {}).items():
+        maintenance = dict(entry.get("maintenance") or {})
+        status = (maintenance.get("status") or "").strip().lower()
+        if status not in {"queued", "running"}:
+            continue
+
+        anchor = _parse_utc_iso(maintenance.get("started_at")) or _parse_utc_iso(maintenance.get("queued_at"))
+        if not anchor:
+            continue
+
+        if (now_dt - anchor).total_seconds() < timeout_seconds:
+            continue
+
+        maintenance["status"] = "failed"
+        maintenance["message"] = (
+            "La actualización automática del backend excedió el tiempo máximo de espera. "
+            "Puedes revisar logs o subir feedback nuevo cuando el backend vuelva a estar estable."
+        )
+        maintenance.setdefault("started_at", maintenance.get("queued_at") or utc_now_iso())
+        maintenance["finished_at"] = utc_now_iso()
+        entry["maintenance"] = maintenance
+        entry["updated_at"] = utc_now_iso()
+        state["iterations"][key] = entry
+        changed = True
+
+    if changed:
+        save_case_state(state)
+    return state
+
+
 def finalize_generation(
     *,
     radicado: str,
@@ -482,6 +627,8 @@ def record_feedback(
     comments_path: Path,
     comments: List[Dict[str, Any]],
     source_filename: Optional[str] = None,
+    maintenance_status: str = "queued",
+    maintenance_message: Optional[str] = None,
 ) -> Dict[str, Any]:
     state = load_case_state(radicado)
     iteration_key = str(iteration)
@@ -500,10 +647,19 @@ def record_feedback(
     state["iterations"][iteration_key]["updated_at"] = utc_now_iso()
     state["iterations"][iteration_key]["feedback"] = feedback
     state["iterations"][iteration_key]["maintenance"] = {
-        "status": "queued",
-        "queued_at": utc_now_iso(),
-        "message": "Feedback recibido. Esperando actualización automática del backend.",
+        "status": maintenance_status,
+        "message": maintenance_message,
     }
+    now = utc_now_iso()
+    if maintenance_status == "queued":
+        state["iterations"][iteration_key]["maintenance"]["queued_at"] = now
+    elif maintenance_status == "running":
+        state["iterations"][iteration_key]["maintenance"]["queued_at"] = now
+        state["iterations"][iteration_key]["maintenance"]["started_at"] = now
+    else:
+        state["iterations"][iteration_key]["maintenance"]["queued_at"] = now
+        state["iterations"][iteration_key]["maintenance"]["started_at"] = now
+        state["iterations"][iteration_key]["maintenance"]["finished_at"] = now
     save_case_state(state)
     return state
 
@@ -614,6 +770,7 @@ def get_iteration_entry(state: Dict[str, Any], iteration: Optional[int] = None) 
 
 
 def build_case_response(state: Dict[str, Any], iteration: Optional[int] = None) -> Dict[str, Any]:
+    state = refresh_case_maintenance_state(state)
     radicado = str(state["radicado"])
     current = get_iteration_entry(state, iteration)
     current_iteration = int(current["iteration"])

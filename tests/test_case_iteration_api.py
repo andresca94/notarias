@@ -242,6 +242,36 @@ def test_next_iteration_exposes_change_report(
 
 def test_feedback_upload_response_marks_maintenance_as_queued(client, tmp_path: Path):
     test_client, _ = client
+    original_auto_tune_enabled = settings.OPENCLAW_AUTO_TUNE_ENABLED
+    settings.OPENCLAW_AUTO_TUNE_ENABLED = True
+
+    try:
+        generate_response = test_client.post(
+            "/notaria-v63-universal",
+            files=[("documentos", ("radicacion.pdf", b"%PDF-1.4", "application/pdf"))],
+        )
+        assert generate_response.status_code == 200
+
+        feedback_path = write_feedback_docx(tmp_path / "feedback.docx")
+        with feedback_path.open("rb") as feedback_file:
+            feedback_response = test_client.post(
+                "/cases/26485/feedback",
+                files=[
+                    (
+                        "feedback_docx",
+                        ("feedback.docx", feedback_file.read(), "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
+                    )
+                ],
+            )
+        assert feedback_response.status_code == 200
+        payload = feedback_response.json()
+        assert payload["maintenance"]["status"] == "queued"
+    finally:
+        settings.OPENCLAW_AUTO_TUNE_ENABLED = original_auto_tune_enabled
+
+
+def test_feedback_upload_marks_maintenance_as_skipped_when_auto_tune_disabled(client, tmp_path: Path):
+    test_client, _ = client
 
     generate_response = test_client.post(
         "/notaria-v63-universal",
@@ -262,4 +292,116 @@ def test_feedback_upload_response_marks_maintenance_as_queued(client, tmp_path: 
         )
     assert feedback_response.status_code == 200
     payload = feedback_response.json()
-    assert payload["maintenance"]["status"] == "queued"
+    assert payload["maintenance"]["status"] == "skipped"
+
+
+def test_global_maintenance_blocks_new_generation_and_next_iteration(
+    client,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    test_client, _ = client
+    original_auto_tune_enabled = settings.OPENCLAW_AUTO_TUNE_ENABLED
+    settings.OPENCLAW_AUTO_TUNE_ENABLED = True
+
+    async def fake_run_auto_tune_for_feedback(**_kwargs):
+        return None
+
+    monkeypatch.setattr(
+        "app.api.routes.run_auto_tune_for_feedback",
+        fake_run_auto_tune_for_feedback,
+    )
+
+    try:
+        generate_response = test_client.post(
+            "/notaria-v63-universal",
+            files=[("documentos", ("radicacion.pdf", b"%PDF-1.4", "application/pdf"))],
+        )
+        assert generate_response.status_code == 200
+
+        feedback_path = write_feedback_docx(tmp_path / "feedback.docx")
+        with feedback_path.open("rb") as feedback_file:
+            feedback_response = test_client.post(
+                "/cases/26485/feedback",
+                files=[
+                    (
+                        "feedback_docx",
+                        ("feedback.docx", feedback_file.read(), "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
+                    )
+                ],
+            )
+        assert feedback_response.status_code == 200
+
+        blocked_generate = test_client.post(
+            "/notaria-v63-universal",
+            files=[("documentos", ("otro.pdf", b"%PDF-1.4", "application/pdf"))],
+        )
+        assert blocked_generate.status_code == 409
+        assert "backend se está actualizando" in blocked_generate.json()["detail"]
+
+        blocked_next = test_client.post("/cases/26485/iterations/next")
+        assert blocked_next.status_code == 409
+        assert "backend se está actualizando" in blocked_next.json()["detail"]
+    finally:
+        settings.OPENCLAW_AUTO_TUNE_ENABLED = original_auto_tune_enabled
+
+
+def test_maintenance_callback_unlocks_next_iteration(
+    client,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    test_client, _ = client
+    original_auto_tune_enabled = settings.OPENCLAW_AUTO_TUNE_ENABLED
+    original_admin_token = settings.INTERNAL_ADMIN_TOKEN
+    settings.OPENCLAW_AUTO_TUNE_ENABLED = True
+    settings.INTERNAL_ADMIN_TOKEN = "secret-token"
+
+    async def fake_run_auto_tune_for_feedback(**_kwargs):
+        return None
+
+    monkeypatch.setattr(
+        "app.api.routes.run_auto_tune_for_feedback",
+        fake_run_auto_tune_for_feedback,
+    )
+
+    try:
+        generate_response = test_client.post(
+            "/notaria-v63-universal",
+            files=[("documentos", ("radicacion.pdf", b"%PDF-1.4", "application/pdf"))],
+        )
+        assert generate_response.status_code == 200
+
+        feedback_path = write_feedback_docx(tmp_path / "feedback.docx")
+        with feedback_path.open("rb") as feedback_file:
+            feedback_response = test_client.post(
+                "/cases/26485/feedback",
+                files=[
+                    (
+                        "feedback_docx",
+                        ("feedback.docx", feedback_file.read(), "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
+                    )
+                ],
+            )
+        assert feedback_response.status_code == 200
+        assert feedback_response.json()["maintenance"]["status"] == "queued"
+
+        callback_response = test_client.post(
+            "/admin/openclaw/backend-maintenance/status",
+            headers={"x-admin-token": "secret-token"},
+            json={
+                "radicado": "26485",
+                "iteration": 1,
+                "status": "completed",
+                "message": "Backend actualizado y verificado.",
+            },
+        )
+        assert callback_response.status_code == 200
+        assert callback_response.json()["maintenance"]["status"] == "completed"
+
+        next_response = test_client.post("/cases/26485/iterations/next")
+        assert next_response.status_code == 200
+        assert next_response.json()["current_iteration"] == 2
+    finally:
+        settings.OPENCLAW_AUTO_TUNE_ENABLED = original_auto_tune_enabled
+        settings.INTERNAL_ADMIN_TOKEN = original_admin_token

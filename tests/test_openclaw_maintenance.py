@@ -22,8 +22,9 @@ def test_build_auto_tune_prompt_respects_push_and_deploy_flags():
         settings.OPENCLAW_MAINTENANCE_BRANCH = "main"
         settings.OPENCLAW_MAINTENANCE_OUTPUTS_ROOT = "/srv/notar-ia/data/outputs"
 
-        prompt = _build_auto_tune_prompt(iteration=7)
+        prompt = _build_auto_tune_prompt(radicado="26485", iteration=7)
 
+        assert "Radicado objetivo: 26485." in prompt
         assert "Iteracion objetivo: 7." in prompt
         assert "/srv/notar-ia/backend/autotune" in prompt
         assert "/srv/notar-ia/backend/current" in prompt
@@ -32,6 +33,7 @@ def test_build_auto_tune_prompt_respects_push_and_deploy_flags():
         assert "git status --short" in prompt
         assert "git push origin main" in prompt
         assert "deploy-backend-command" in prompt
+        assert "/admin/openclaw/backend-maintenance/status" in prompt
     finally:
         settings.OPENCLAW_AUTO_TUNE_GIT_PUSH_ENABLED = original_push
         settings.OPENCLAW_AUTO_TUNE_DEPLOY_ENABLED = original_deploy

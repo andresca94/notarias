@@ -7,10 +7,12 @@ from typing import Any, Dict, Optional
 from app.core.config import settings
 from app.services.case_manager import (
     CaseStateError,
+    backend_maintenance_state_path,
     build_case_response,
     case_dir,
     feedback_corpus_runs_path,
     load_case_state,
+    set_backend_maintenance_state,
     set_iteration_maintenance_status,
     utc_now_iso,
 )
@@ -41,6 +43,30 @@ def _record_maintenance_failure(
     }
     if iteration is not None:
         payload["iteration"] = iteration
+    _append_jsonl(feedback_corpus_runs_path(), payload)
+
+
+def record_maintenance_status_update(
+    *,
+    trigger: str,
+    radicado: str,
+    iteration: int,
+    status: str,
+    message: Optional[str] = None,
+    run_id: Optional[str] = None,
+) -> None:
+    payload: Dict[str, Any] = {
+        "timestamp": utc_now_iso(),
+        "trigger": trigger,
+        "radicado": radicado,
+        "iteration": iteration,
+        "status": status,
+        "ok": status not in {"failed"},
+    }
+    if message:
+        payload["message"] = message
+    if run_id:
+        payload["run_id"] = run_id
     _append_jsonl(feedback_corpus_runs_path(), payload)
 
 
@@ -114,14 +140,55 @@ def _build_workspace_guardrails() -> list[str]:
     return guardrails
 
 
-def _build_auto_tune_prompt(*, iteration: int) -> str:
+def _build_maintenance_callback_instructions(*, radicado: str, iteration: int) -> list[str]:
+    callback_url = "http://127.0.0.1:8080/admin/openclaw/backend-maintenance/status"
+    token_source = (
+        "ADMIN_TOKEN=\"$(grep '^INTERNAL_ADMIN_TOKEN=' /srv/notar-ia/backend/shared/backend.env | cut -d= -f2-)\""
+    )
+    callback_prefix = (
+        f"{token_source} && curl -fsS -X POST {callback_url} "
+        "-H \"x-admin-token: ${ADMIN_TOKEN}\" "
+        "-H \"Content-Type: application/json\" "
+    )
+
+    def _payload(status: str, message: str) -> str:
+        escaped_message = json.dumps(message, ensure_ascii=False)
+        return (
+            f"'{json.dumps({'radicado': radicado, 'iteration': iteration, 'status': status}, ensure_ascii=False)[:-1]}, "
+            f"\"message\": {escaped_message}}}'"
+        )
+
+    return [
+        "Nunca marques la actualización como finalizada antes de tener una verificación real del resultado.",
+        (
+            "Cuando completes un deploy exitoso y `curl -fsS http://127.0.0.1:8080/docs >/dev/null` responda bien, "
+            f"reporta completion con este comando exacto: {callback_prefix}-d {_payload('completed', 'Backend actualizado y verificado para la siguiente iteración.')}."
+        ),
+        (
+            "Si concluyes que no corresponde aplicar un cambio global seguro o decides un no-op explícito, "
+            f"reporta skip con este comando exacto: {callback_prefix}-d {_payload('skipped', 'No se aplicó un cambio global seguro; la siguiente iteración solo validará el feedback del caso.')}."
+        ),
+        (
+            "Si fallan checks, push o deploy y el backend sigue accesible por loopback, "
+            f"reporta failure con este comando exacto: {callback_prefix}-d {_payload('failed', 'La actualización automática del backend falló; revisa logs antes de reintentar.')}."
+        ),
+        (
+            "Si el backend no queda accesible para reportar failure, no inventes completion; "
+            f"el sistema dejará registro pendiente y habrá que revisar {backend_maintenance_state_path().resolve()} y los logs."
+        ),
+    ]
+
+
+def _build_auto_tune_prompt(*, radicado: str, iteration: int) -> str:
     instructions = [
         "Este disparo fue activado automaticamente despues de subir feedback experto en Word.",
+        f"Radicado objetivo: {radicado}.",
         f"Iteracion objetivo: {iteration}.",
         "Busca patrones corregibles en prompts, reglas, parsers, validaciones o tests del backend.",
         "Si el cambio es seguro y verificable, aplicalo. Si no, deja un no-op claro.",
         "No toques el frontend ni nginx.",
         *_build_workspace_guardrails(),
+        *_build_maintenance_callback_instructions(radicado=radicado, iteration=iteration),
         f"Trabaja solamente dentro de {Path(settings.OPENCLAW_MAINTENANCE_WORKSPACE).resolve()}.",
         "Si modificas archivos, ejecuta los checks mas pequenos y relevantes antes de continuar.",
         "Si el worktree termina con archivos inesperados o fuera de alcance, aborta sin commit ni push.",
@@ -220,6 +287,12 @@ async def run_auto_tune_for_feedback(
             status="skipped",
             message="Auto-tune deshabilitado en este entorno.",
         )
+        set_backend_maintenance_state(
+            status="skipped",
+            radicado=radicado,
+            iteration=iteration,
+            message="Auto-tune deshabilitado en este entorno.",
+        )
         return
     if comments_count < int(settings.OPENCLAW_AUTO_TUNE_MIN_COMMENTS or 1):
         set_iteration_maintenance_status(
@@ -228,13 +301,25 @@ async def run_auto_tune_for_feedback(
             status="skipped",
             message="No se alcanzó el mínimo de comentarios para auto-tune.",
         )
+        set_backend_maintenance_state(
+            status="skipped",
+            radicado=radicado,
+            iteration=iteration,
+            message="No se alcanzó el mínimo de comentarios para auto-tune.",
+        )
         return
 
-    prompt = _build_auto_tune_prompt(iteration=iteration)
+    prompt = _build_auto_tune_prompt(radicado=radicado, iteration=iteration)
     set_iteration_maintenance_status(
         radicado,
         iteration,
         status="running",
+        message="Codex está actualizando el backend con este feedback.",
+    )
+    set_backend_maintenance_state(
+        status="running",
+        radicado=radicado,
+        iteration=iteration,
         message="Codex está actualizando el backend con este feedback.",
     )
 
@@ -245,18 +330,38 @@ async def run_auto_tune_for_feedback(
             trigger="feedback_upload_auto_tune",
             comments_count=comments_count,
         )
+        run_id = ((response or {}).get("runId") if isinstance(response, dict) else None)
         set_iteration_maintenance_status(
             radicado,
             iteration,
-            status="completed",
-            message="Actualización automática del backend finalizada.",
-            run_id=((response or {}).get("runId") if isinstance(response, dict) else None),
+            status="running",
+            message=(
+                "La tarea de Codex fue aceptada y ahora espera una confirmación final "
+                "después del deploy del backend."
+            ),
+            run_id=run_id,
+        )
+        set_backend_maintenance_state(
+            status="running",
+            radicado=radicado,
+            iteration=iteration,
+            message=(
+                "La tarea de Codex fue aceptada y ahora espera una confirmación final "
+                "después del deploy del backend."
+            ),
+            run_id=run_id,
         )
     except Exception as exc:
         set_iteration_maintenance_status(
             radicado,
             iteration,
             status="failed",
+            message=f"Actualización automática fallida: {exc}",
+        )
+        set_backend_maintenance_state(
+            status="failed",
+            radicado=radicado,
+            iteration=iteration,
             message=f"Actualización automática fallida: {exc}",
         )
         _record_maintenance_failure(

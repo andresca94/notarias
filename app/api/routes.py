@@ -19,6 +19,7 @@ from app.services.case_manager import (
     CaseStateError,
     append_feedback_corpus_event,
     artifact_path_for_response,
+    backend_maintenance_pending,
     build_case_response,
     case_dir,
     case_lock,
@@ -30,13 +31,18 @@ from app.services.case_manager import (
     load_case_state,
     mark_iteration_in_progress,
     record_feedback,
+    refresh_backend_maintenance_state,
+    refresh_case_maintenance_state,
     save_case_state,
     save_upload_file,
     save_uploads,
+    set_backend_maintenance_state,
+    set_iteration_maintenance_status,
     utc_now_iso,
 )
 from app.services.docx_feedback import parse_docx_comments
 from app.services.openclaw_maintenance import (
+    record_maintenance_status_update,
     run_auto_tune_for_feedback,
     trigger_backend_maintenance_logged,
 )
@@ -49,13 +55,21 @@ class OpenClawMaintenanceRequest(BaseModel):
     prompt: Optional[str] = None
 
 
+class OpenClawMaintenanceStatusRequest(BaseModel):
+    radicado: str
+    iteration: int
+    status: str
+    message: Optional[str] = None
+    run_id: Optional[str] = None
+
+
 def _http_404(detail: str) -> HTTPException:
     return HTTPException(status_code=404, detail=detail)
 
 
 def _load_state_or_404(radicado: str) -> dict:
     try:
-        return load_case_state(radicado)
+        return refresh_case_maintenance_state(load_case_state(radicado))
     except CaseStateError as exc:
         raise _http_404(str(exc)) from exc
 
@@ -74,6 +88,19 @@ def _require_admin_token(x_admin_token: Optional[str]) -> None:
         raise HTTPException(status_code=403, detail="Token administrativo inválido.")
 
 
+def _raise_if_backend_maintenance_pending() -> None:
+    maintenance = backend_maintenance_pending()
+    if not maintenance:
+        return
+    radicado = maintenance.get("radicado")
+    iteration = maintenance.get("iteration")
+    detail = "El backend se está actualizando automáticamente con feedback experto."
+    if radicado and iteration:
+        detail += f" Caso en curso: {radicado}, iteración {iteration}."
+    detail += " Espera a que termine antes de generar o iterar otro caso."
+    raise HTTPException(status_code=409, detail=detail)
+
+
 @router.post("/notaria-v63-universal")
 async def notaria_v63_universal(
     cedula: Optional[List[UploadFile]] = File(default=None),
@@ -81,6 +108,7 @@ async def notaria_v63_universal(
     comentario: str = Form("(Sin comentarios)"),
     template_id: Optional[str] = Form(None),
 ):
+    _raise_if_backend_maintenance_pending()
     cedula = cedula or []
     staging_dir = create_staging_dir()
     scans_dir = staging_dir / "scanner"
@@ -125,6 +153,7 @@ async def upload_feedback(
     background_tasks: BackgroundTasks,
     feedback_docx: UploadFile = File(...),
 ):
+    _raise_if_backend_maintenance_pending()
     if not (feedback_docx.filename or "").lower().endswith(".docx"):
         raise HTTPException(status_code=400, detail="El feedback debe ser un archivo .docx.")
 
@@ -144,6 +173,12 @@ async def upload_feedback(
         raise HTTPException(status_code=400, detail="El caso no tiene iteraciones generadas.")
     if state.get("status") == "iteration_in_progress":
         raise HTTPException(status_code=409, detail="Ya hay una iteración en curso.")
+    current_entry = (state.get("iterations") or {}).get(str(current_iteration)) or {}
+    if ((current_entry.get("maintenance") or {}).get("status") or "").strip().lower() in {"queued", "running"}:
+        raise HTTPException(
+            status_code=409,
+            detail="Este caso ya tiene una actualización automática del backend en curso. Espera a que termine antes de reenviar feedback.",
+        )
 
     feedback_dir = case_dir(radicado) / "iterations" / str(current_iteration) / "feedback"
     if feedback_dir.exists():
@@ -161,6 +196,17 @@ async def upload_feedback(
     comments_path = feedback_dir / "comments.json"
     comments_path.write_text(json.dumps(comments, ensure_ascii=False, indent=2), encoding="utf-8")
 
+    comments_count = len(comments)
+    if not settings.OPENCLAW_AUTO_TUNE_ENABLED:
+        maintenance_status = "skipped"
+        maintenance_message = "Auto-tune deshabilitado en este entorno."
+    elif comments_count < int(settings.OPENCLAW_AUTO_TUNE_MIN_COMMENTS or 1):
+        maintenance_status = "skipped"
+        maintenance_message = "No se alcanzó el mínimo de comentarios para auto-tune."
+    else:
+        maintenance_status = "queued"
+        maintenance_message = "Feedback recibido. Esperando actualización automática del backend."
+
     state = record_feedback(
         radicado=radicado,
         iteration=current_iteration,
@@ -168,18 +214,27 @@ async def upload_feedback(
         comments_path=comments_path,
         comments=comments,
         source_filename=feedback_docx.filename or reviewed_docx_path.name,
+        maintenance_status=maintenance_status,
+        maintenance_message=maintenance_message,
     )
     append_feedback_corpus_event(
         radicado=radicado,
         iteration=current_iteration,
         comments=comments,
     )
-    background_tasks.add_task(
-        run_auto_tune_for_feedback,
-        radicado=radicado,
-        iteration=current_iteration,
-        comments_count=len(comments),
-    )
+    if maintenance_status == "queued":
+        set_backend_maintenance_state(
+            status="queued",
+            radicado=radicado,
+            iteration=current_iteration,
+            message=maintenance_message,
+        )
+        background_tasks.add_task(
+            run_auto_tune_for_feedback,
+            radicado=radicado,
+            iteration=current_iteration,
+            comments_count=comments_count,
+        )
     return build_case_response(state, iteration=current_iteration)
 
 
@@ -189,6 +244,7 @@ async def create_next_iteration(
     comentario: Optional[str] = None,
     template_id: Optional[str] = None,
 ):
+    _raise_if_backend_maintenance_pending()
     state = _load_state_or_404(radicado)
     current_iteration = int(state.get("latest_iteration") or 0)
     if current_iteration < 1:
@@ -199,6 +255,12 @@ async def create_next_iteration(
         raise HTTPException(
             status_code=400,
             detail="Primero debes subir el DOCX revisado con comentarios de Word.",
+        )
+    maintenance_status = ((current_entry.get("maintenance") or {}).get("status") or "").strip().lower()
+    if maintenance_status in {"queued", "running"}:
+        raise HTTPException(
+            status_code=409,
+            detail="El backend todavía se está actualizando con este feedback. Espera a que termine antes de generar la siguiente iteración.",
         )
 
     scan_paths, doc_paths = list_case_inputs(radicado)
@@ -302,6 +364,11 @@ async def download_pdf_legacy(radicado: str):
     return await download_pdf(radicado)
 
 
+@router.get("/maintenance/backend")
+async def get_backend_maintenance_status():
+    return {"ok": True, "maintenance": refresh_backend_maintenance_state()}
+
+
 @router.post("/admin/openclaw/backend-maintenance")
 async def trigger_openclaw_backend_maintenance(
     background_tasks: BackgroundTasks,
@@ -316,3 +383,39 @@ async def trigger_openclaw_backend_maintenance(
         trigger="admin_endpoint",
     )
     return {"ok": True, "queued": True}
+
+
+@router.post("/admin/openclaw/backend-maintenance/status")
+async def update_openclaw_backend_maintenance_status(
+    payload: OpenClawMaintenanceStatusRequest,
+    x_admin_token: Optional[str] = Header(default=None),
+):
+    _require_admin_token(x_admin_token)
+    status = (payload.status or "").strip().lower()
+    if status not in {"running", "completed", "failed", "skipped"}:
+        raise HTTPException(status_code=400, detail="Estado de maintenance inválido.")
+
+    state = set_iteration_maintenance_status(
+        payload.radicado,
+        payload.iteration,
+        status=status,
+        message=payload.message,
+        run_id=payload.run_id,
+    )
+    maintenance = (build_case_response(state, iteration=payload.iteration).get("maintenance") or None)
+    set_backend_maintenance_state(
+        status=status,
+        radicado=payload.radicado,
+        iteration=payload.iteration,
+        message=(payload.message or (maintenance or {}).get("message")),
+        run_id=payload.run_id,
+    )
+    record_maintenance_status_update(
+        trigger="openclaw_status_callback",
+        radicado=payload.radicado,
+        iteration=payload.iteration,
+        status=status,
+        message=(payload.message or (maintenance or {}).get("message")),
+        run_id=payload.run_id,
+    )
+    return {"ok": True, "maintenance": maintenance}

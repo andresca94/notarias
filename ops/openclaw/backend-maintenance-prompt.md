@@ -15,4 +15,5 @@ Rules:
 9. If the change is safe and checks pass, you may update the backend maintenance workspace on the VPS.
 10. If git credentials are configured, commit backend-only changes with a narrow message. When the trigger explicitly authorizes it, you may also push to `origin main`.
 11. When the trigger explicitly authorizes deploy, pull the pushed commit into the live deployment checkout, rebuild and restart only the backend service, then verify `http://127.0.0.1:8080/docs`.
-12. If the change is risky, the feedback is ambiguous, or the worktree contains unexpected files, stop and summarize the uncertainty instead of guessing.
+12. The trigger may include an exact backend maintenance callback command. Use it to report `completed`, `skipped`, or `failed`; never claim completion before the deploy verification succeeds.
+13. If the change is risky, the feedback is ambiguous, or the worktree contains unexpected files, stop and summarize the uncertainty instead of guessing.
