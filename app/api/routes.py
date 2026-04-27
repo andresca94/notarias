@@ -34,7 +34,10 @@ from app.services.case_manager import (
     utc_now_iso,
 )
 from app.services.docx_feedback import parse_docx_comments
-from app.services.openclaw_maintenance import run_auto_tune_for_feedback, trigger_backend_maintenance
+from app.services.openclaw_maintenance import (
+    run_auto_tune_for_feedback,
+    trigger_backend_maintenance_logged,
+)
 
 router = APIRouter()
 
@@ -264,13 +267,15 @@ async def download_pdf_legacy(radicado: str):
 
 @router.post("/admin/openclaw/backend-maintenance")
 async def trigger_openclaw_backend_maintenance(
+    background_tasks: BackgroundTasks,
     payload: OpenClawMaintenanceRequest,
     x_admin_token: Optional[str] = Header(default=None),
 ):
     _require_admin_token(x_admin_token)
-    response = await trigger_backend_maintenance(
+    background_tasks.add_task(
+        trigger_backend_maintenance_logged,
         radicado=payload.radicado,
         prompt=payload.prompt,
         trigger="admin_endpoint",
     )
-    return {"ok": True, "openclaw": response}
+    return {"ok": True, "queued": True}

@@ -22,6 +22,27 @@ def _append_jsonl(path: Path, payload: Dict[str, Any]) -> None:
         handle.write(json.dumps(payload, ensure_ascii=False) + "\n")
 
 
+def _record_maintenance_failure(
+    *,
+    trigger: str,
+    radicado: Optional[str],
+    comments_count: Optional[int],
+    iteration: Optional[int] = None,
+    error: str,
+) -> None:
+    payload: Dict[str, Any] = {
+        "timestamp": utc_now_iso(),
+        "trigger": trigger,
+        "radicado": radicado,
+        "comments_count": comments_count,
+        "ok": False,
+        "error": error,
+    }
+    if iteration is not None:
+        payload["iteration"] = iteration
+    _append_jsonl(feedback_corpus_runs_path(), payload)
+
+
 def _load_prompt_template() -> str:
     path = Path(settings.OPENCLAW_MAINTENANCE_PROMPT_FILE)
     if not path.exists():
@@ -76,9 +97,13 @@ def _build_context(
 def _build_workspace_guardrails() -> list[str]:
     workspace = Path(settings.OPENCLAW_MAINTENANCE_WORKSPACE).resolve()
     live_checkout = Path(settings.OPENCLAW_MAINTENANCE_LIVE_CHECKOUT).resolve()
+    outputs_root = Path(settings.OPENCLAW_MAINTENANCE_OUTPUTS_ROOT).resolve()
     guardrails = [
         f"Workspace de mantenimiento esperado: {workspace}.",
         f"Rama de trabajo esperada: {settings.OPENCLAW_MAINTENANCE_BRANCH}.",
+        f"Ruta absoluta de salidas a consultar: {outputs_root}.",
+        f"Lee el corpus desde {outputs_root / '_feedback_corpus' / 'feedback_events.jsonl'} cuando exista.",
+        f"Lee los casos desde {outputs_root / 'CASE-*' / 'case_state.json'} y {outputs_root / 'CASE-*' / 'iterations' / '*' / 'feedback' / 'comments.json'} cuando existan.",
         "Antes de cambiar nada, ejecuta `git status --short` y si el worktree no esta limpio, aborta sin cambios.",
     ]
     if workspace != live_checkout:
@@ -156,6 +181,31 @@ async def trigger_backend_maintenance(
     return response
 
 
+async def trigger_backend_maintenance_logged(
+    *,
+    radicado: Optional[str],
+    prompt: Optional[str],
+    trigger: str,
+    comments_count: Optional[int] = None,
+    iteration: Optional[int] = None,
+) -> None:
+    try:
+        await trigger_backend_maintenance(
+            radicado=radicado,
+            prompt=prompt,
+            trigger=trigger,
+            comments_count=comments_count,
+        )
+    except Exception as exc:
+        _record_maintenance_failure(
+            trigger=trigger,
+            radicado=radicado,
+            comments_count=comments_count,
+            iteration=iteration,
+            error=str(exc),
+        )
+
+
 async def run_auto_tune_for_feedback(
     *,
     radicado: str,
@@ -177,15 +227,10 @@ async def run_auto_tune_for_feedback(
             comments_count=comments_count,
         )
     except Exception as exc:
-        _append_jsonl(
-            feedback_corpus_runs_path(),
-            {
-                "timestamp": utc_now_iso(),
-                "trigger": "feedback_upload_auto_tune",
-                "radicado": radicado,
-                "iteration": iteration,
-                "comments_count": comments_count,
-                "ok": False,
-                "error": str(exc),
-            },
+        _record_maintenance_failure(
+            trigger="feedback_upload_auto_tune",
+            radicado=radicado,
+            comments_count=comments_count,
+            iteration=iteration,
+            error=str(exc),
         )

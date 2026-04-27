@@ -21,11 +21,13 @@ class Settings(BaseSettings):
     OPENCLAW_BASE_URL: str | None = None
     OPENCLAW_HOOK_TOKEN: str | None = None
     OPENCLAW_AGENT_HOOK_PATH: str = "/hooks/agent"
+    OPENCLAW_HOOK_HTTP_TIMEOUT_SECONDS: int = 360
     OPENCLAW_MAINTENANCE_MODEL: str | None = None
     OPENCLAW_MAINTENANCE_PROMPT_FILE: str = "ops/openclaw/backend-maintenance-prompt.md"
     OPENCLAW_MAINTENANCE_WORKSPACE: str = "/srv/notar-ia/backend/current"
     OPENCLAW_MAINTENANCE_LIVE_CHECKOUT: str = "/srv/notar-ia/backend/current"
     OPENCLAW_MAINTENANCE_BRANCH: str = "main"
+    OPENCLAW_MAINTENANCE_OUTPUTS_ROOT: str = "/srv/notar-ia/data/outputs"
     OPENCLAW_AUTO_TUNE_ENABLED: bool = False
     OPENCLAW_AUTO_TUNE_MIN_COMMENTS: int = 1
     OPENCLAW_AUTO_TUNE_GIT_PUSH_ENABLED: bool = False

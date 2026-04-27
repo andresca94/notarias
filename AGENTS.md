@@ -1,7 +1,7 @@
 Work only in the Notar-IA backend repository.
 
 Rules:
-- Read `outputs/_feedback_corpus/feedback_events.jsonl` and the latest `outputs/CASE-*/case_state.json` files before changing backend logic.
+- Read the feedback corpus and case state files from the absolute outputs root path supplied in the trigger context before changing backend logic.
 - Do not modify the frontend repo.
 - Do not create or modify personal workspace files such as `HEARTBEAT.md`, `IDENTITY.md`, `SOUL.md`, `TOOLS.md`, `USER.md`, `MEMORY.md`, or `memory/*`.
 - Prefer small fixes in prompts, pipeline rules, parsers, validators, and regression tests.

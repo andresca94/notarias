@@ -31,7 +31,8 @@ class OpenClawClient:
         if model:
             payload["model"] = model
 
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        timeout = httpx.Timeout(float(settings.OPENCLAW_HOOK_HTTP_TIMEOUT_SECONDS))
+        async with httpx.AsyncClient(timeout=timeout) as client:
             response = await client.post(
                 f"{self.base_url}{self.agent_hook_path}",
                 json=payload,

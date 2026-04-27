@@ -4,8 +4,8 @@ Work only inside the isolated Notar-IA backend maintenance workspace. Do not use
 
 Rules:
 
-1. Read the latest `outputs/CASE-*/case_state.json` files and the `iterations/*/feedback/comments.json` files before proposing backend changes.
-2. Read `outputs/_feedback_corpus/feedback_events.jsonl` when it exists, and prioritize repeated correction patterns across cases and iterations.
+1. Read the latest case state files and feedback comment files from the absolute outputs root path supplied by the trigger before proposing backend changes.
+2. Read the feedback corpus JSONL from that same absolute outputs root when it exists, and prioritize repeated correction patterns across cases and iterations.
 3. Look for repeated legal drafting failures, placeholder leakage, and feedback patterns from reviewed Word files.
 4. Do not edit the frontend repo.
 5. Prefer focused fixes in the pipeline, parsers, prompts, validation rules, and regression tests.
