@@ -7,13 +7,16 @@ from fastapi.testclient import TestClient
 
 from app.core.config import settings
 from app.main import app
+from app.services.case_manager import feedback_corpus_events_path
 from tests.helpers_docx import write_feedback_docx
 
 
 @pytest.fixture
 def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     original_output_dir = settings.OUTPUT_DIR
+    original_auto_tune_enabled = settings.OPENCLAW_AUTO_TUNE_ENABLED
     settings.OUTPUT_DIR = str(tmp_path / "outputs")
+    settings.OPENCLAW_AUTO_TUNE_ENABLED = False
 
     call_counter = {"count": 0}
 
@@ -43,6 +46,7 @@ def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
         yield test_client, call_counter
 
     settings.OUTPUT_DIR = original_output_dir
+    settings.OPENCLAW_AUTO_TUNE_ENABLED = original_auto_tune_enabled
 
 
 def test_case_iteration_flow_preserves_previous_artifacts(client, tmp_path: Path):
@@ -102,3 +106,31 @@ def test_next_iteration_requires_feedback(client):
     next_response = test_client.post("/cases/26485/iterations/next")
     assert next_response.status_code == 400
     assert "subir el DOCX revisado" in next_response.json()["detail"]
+
+
+def test_feedback_upload_writes_corpus_event(client, tmp_path: Path):
+    test_client, _ = client
+
+    generate_response = test_client.post(
+        "/notaria-v63-universal",
+        files=[("documentos", ("radicacion.pdf", b"%PDF-1.4", "application/pdf"))],
+    )
+    assert generate_response.status_code == 200
+
+    feedback_path = write_feedback_docx(tmp_path / "feedback.docx")
+    with feedback_path.open("rb") as feedback_file:
+        feedback_response = test_client.post(
+            "/cases/26485/feedback",
+            files=[
+                (
+                    "feedback_docx",
+                    ("feedback.docx", feedback_file.read(), "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
+                )
+            ],
+        )
+    assert feedback_response.status_code == 200
+
+    corpus_path = feedback_corpus_events_path()
+    assert corpus_path.exists()
+    payload = corpus_path.read_text(encoding="utf-8")
+    assert '"radicado": "26485"' in payload

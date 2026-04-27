@@ -63,6 +63,18 @@ def incoming_root() -> Path:
     return Path(settings.OUTPUT_DIR) / "_incoming"
 
 
+def feedback_corpus_root() -> Path:
+    return Path(settings.OUTPUT_DIR) / "_feedback_corpus"
+
+
+def feedback_corpus_events_path() -> Path:
+    return feedback_corpus_root() / "feedback_events.jsonl"
+
+
+def feedback_corpus_runs_path() -> Path:
+    return feedback_corpus_root() / "openclaw_runs.jsonl"
+
+
 def create_staging_dir() -> Path:
     path = incoming_root() / uuid.uuid4().hex
     path.mkdir(parents=True, exist_ok=True)
@@ -141,7 +153,7 @@ def ensure_case_state(radicado: str, comentario: str, template_id: Optional[str]
     except CaseStateError:
         state = build_case_state(radicado, comentario, template_id)
     state["template_id"] = template_id or state.get("template_id")
-    if comentario and comentario.strip():
+    if comentario and comentario.strip() and not (state.get("base_comentario") or "").strip():
         state["base_comentario"] = comentario
     return state
 
@@ -263,6 +275,33 @@ def record_feedback(
     state["iterations"][iteration_key]["feedback"] = feedback
     save_case_state(state)
     return state
+
+
+def append_feedback_corpus_event(
+    *,
+    radicado: str,
+    iteration: int,
+    comments: List[Dict[str, Any]],
+) -> None:
+    state = load_case_state(radicado)
+    iteration_key = str(iteration)
+    entry = (state.get("iterations") or {}).get(iteration_key) or {}
+    payload = {
+        "timestamp": utc_now_iso(),
+        "radicado": radicado,
+        "iteration": iteration,
+        "template_id": state.get("template_id"),
+        "base_comentario": state.get("base_comentario"),
+        "source_comentario": entry.get("source_comentario"),
+        "comments_count": len(comments),
+        "comments": comments,
+        "inputs": state.get("inputs") or {},
+        "artifacts": entry.get("artifacts") or {},
+    }
+    path = feedback_corpus_events_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(payload, ensure_ascii=False) + "\n")
 
 
 def mark_iteration_in_progress(radicado: str) -> Dict[str, Any]:

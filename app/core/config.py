@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     OPENCLAW_HOOK_TOKEN: str | None = None
     OPENCLAW_AGENT_HOOK_PATH: str = "/hooks/agent"
     OPENCLAW_MAINTENANCE_MODEL: str | None = None
+    OPENCLAW_MAINTENANCE_PROMPT_FILE: str = "ops/openclaw/backend-maintenance-prompt.md"
+    OPENCLAW_AUTO_TUNE_ENABLED: bool = False
+    OPENCLAW_AUTO_TUNE_MIN_COMMENTS: int = 1
     INTERNAL_ADMIN_TOKEN: str | None = None
 
 

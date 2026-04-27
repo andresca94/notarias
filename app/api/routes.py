@@ -5,7 +5,7 @@ import shutil
 from pathlib import Path
 from typing import List, Optional
 
-from fastapi import APIRouter, File, Form, Header, HTTPException, Query, UploadFile
+from fastapi import APIRouter, BackgroundTasks, File, Form, Header, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
@@ -16,6 +16,7 @@ from app.services.case_manager import (
     PDF_MIME_TYPE,
     CaseLockError,
     CaseStateError,
+    append_feedback_corpus_event,
     artifact_path_for_response,
     build_case_response,
     case_dir,
@@ -33,7 +34,7 @@ from app.services.case_manager import (
     utc_now_iso,
 )
 from app.services.docx_feedback import parse_docx_comments
-from app.services.openclaw_client import OpenClawClient
+from app.services.openclaw_maintenance import run_auto_tune_for_feedback, trigger_backend_maintenance
 
 router = APIRouter()
 
@@ -116,6 +117,7 @@ async def get_case(radicado: str):
 @router.post("/cases/{radicado}/feedback")
 async def upload_feedback(
     radicado: str,
+    background_tasks: BackgroundTasks,
     feedback_docx: UploadFile = File(...),
 ):
     if not (feedback_docx.filename or "").lower().endswith(".docx"):
@@ -150,6 +152,17 @@ async def upload_feedback(
         reviewed_docx_path=reviewed_docx_path,
         comments_path=comments_path,
         comments=comments,
+    )
+    append_feedback_corpus_event(
+        radicado=radicado,
+        iteration=current_iteration,
+        comments=comments,
+    )
+    background_tasks.add_task(
+        run_auto_tune_for_feedback,
+        radicado=radicado,
+        iteration=current_iteration,
+        comments_count=len(comments),
     )
     return build_case_response(state, iteration=current_iteration)
 
@@ -255,36 +268,9 @@ async def trigger_openclaw_backend_maintenance(
     x_admin_token: Optional[str] = Header(default=None),
 ):
     _require_admin_token(x_admin_token)
-
-    context_lines = [
-        "Trabaja SOLO sobre el backend de Notar-IA.",
-        "Lee el feedback acumulado de Word y las regresiones del backend.",
-        "Haz cambios pequeños, respaldados por tests o verificaciones locales.",
-        "No modifiques el frontend.",
-        "Si vas a proponer un deploy, verifica antes los checks aplicables.",
-    ]
-
-    if payload.radicado:
-        try:
-            state = load_case_state(payload.radicado)
-            context_lines.append(f"Radicado objetivo: {payload.radicado}.")
-            context_lines.append(
-                f"Directorio del caso: {case_dir(payload.radicado).resolve()}."
-            )
-            context_lines.append(
-                "Resume primero los comentarios cargados y utilízalos para priorizar ajustes del backend."
-            )
-            context_lines.append(f"Estado del caso: {json.dumps(build_case_response(state), ensure_ascii=False)}")
-        except CaseStateError:
-            context_lines.append(f"Radicado objetivo informado, pero sin estado local: {payload.radicado}.")
-
-    if payload.prompt:
-        context_lines.append(payload.prompt.strip())
-
-    client = OpenClawClient()
-    response = await client.trigger_agent_task(
-        name="Notar-IA backend maintenance",
-        message="\n".join(context_lines),
-        model=settings.OPENCLAW_MAINTENANCE_MODEL,
+    response = await trigger_backend_maintenance(
+        radicado=payload.radicado,
+        prompt=payload.prompt,
+        trigger="admin_endpoint",
     )
     return {"ok": True, "openclaw": response}
