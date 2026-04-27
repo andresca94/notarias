@@ -1,18 +1,39 @@
+from typing import List
+
 from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Any
 
-class UploadResult(BaseModel):
-    saved: List[str] = Field(default_factory=list)
 
-class GenerateRequest(BaseModel):
-    comentario: Optional[str] = "(Sin comentarios)"
-    template_id: Optional[str] = None  # si no viene, usa env GOOGLE_TEMPLATE_DOC_ID
+class ArtifactLinks(BaseModel):
+    docx_url: str
+    pdf_url: str
 
-class GenerateResponse(BaseModel):
-    run_id: str
+
+class ActionLinks(BaseModel):
+    case_url: str
+    feedback_upload_url: str
+    next_iteration_url: str
+
+
+class FeedbackStatus(BaseModel):
+    uploaded: bool
+    comments_count: int = 0
+
+
+class IterationSummary(BaseModel):
+    iteration: int
+    status: str
+    comments_count: int = 0
+    feedback_uploaded: bool
+    artifacts: ArtifactLinks
+
+
+class CaseResponse(BaseModel):
+    ok: bool = True
     radicado: str
-    case_folder_id: str
-    output_doc_id: str
-    output_pdf_file_id: str
-    output_pdf_name: str
-    debug: Dict[str, Any] = Field(default_factory=dict)
+    current_iteration: int
+    status: str
+    artifacts: ArtifactLinks
+    actions: ActionLinks
+    feedback: FeedbackStatus
+    iterations: List[IterationSummary] = Field(default_factory=list)
+    download_url: str

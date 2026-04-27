@@ -1,0 +1,23 @@
+services:
+  backend:
+    image: ${BACKEND_IMAGE:-ghcr.io/andresca94/notarias-backend}:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    env_file:
+      - ${BACKEND_ENV_FILE:-/srv/notar-ia/backend/shared/backend.env}
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - ${BACKEND_OUTPUTS_DIR:-/srv/notar-ia/data/outputs}:/app/outputs
+      - ${BACKEND_SECRETS_DIR:-/srv/notar-ia/backend/shared/secrets}:/app/secrets:ro
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+    volumes:
+      - ./ops/deploy/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ${FRONTEND_STATIC_DIR:-/srv/notar-ia/frontend/current}:/usr/share/nginx/html:ro
+      - ${NGINX_HTPASSWD_FILE:-/srv/notar-ia/nginx/.htpasswd}:/etc/nginx/.htpasswd:ro

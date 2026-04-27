@@ -16,6 +16,13 @@ class Settings(BaseSettings):
     PDF_ENGINE: str = "libreoffice"
 
     RAG_STORE_DIR: str = "rag_store"
+    CORS_ALLOW_ORIGINS: str = "http://localhost:5173"
+
+    OPENCLAW_BASE_URL: str | None = None
+    OPENCLAW_HOOK_TOKEN: str | None = None
+    OPENCLAW_AGENT_HOOK_PATH: str = "/hooks/agent"
+    OPENCLAW_MAINTENANCE_MODEL: str | None = None
+    INTERNAL_ADMIN_TOKEN: str | None = None
 
 
 settings = Settings()

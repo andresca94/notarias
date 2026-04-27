@@ -5,10 +5,15 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# deps del sistema (git solo si realmente instalas algo desde git; aquí no lo necesitas)
+# deps del sistema requeridas para OCR/render y exportación DOCX -> PDF
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     ffmpeg \
+    libreoffice \
+    libreoffice-writer \
+    poppler-utils \
+    fonts-dejavu-core \
+    fonts-liberation \
     && rm -rf /var/lib/apt/lists/*
 
 # Copia solo metadata primero para cache

@@ -18,6 +18,11 @@ dist/
 # Generated outputs
 outputs/
 
+# Deploy / ops secrets
+ops/deploy/.env
+ops/deploy/.htpasswd
+ops/openclaw/.env
+
 # Debug artifacts
 **/__raw.txt
 **/debug/

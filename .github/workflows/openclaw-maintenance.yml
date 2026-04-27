@@ -1,0 +1,37 @@
+name: OpenClaw Backend Maintenance
+
+on:
+  workflow_dispatch:
+    inputs:
+      radicado:
+        description: "Radicado opcional para enfocar la revisión"
+        required: false
+        type: string
+      prompt:
+        description: "Instrucción adicional opcional"
+        required: false
+        type: string
+  schedule:
+    - cron: "0 12 * * 1-5"
+
+jobs:
+  trigger-maintenance:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Trigger maintenance on VPS
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            set -eu
+            curl -fsS -X POST http://127.0.0.1:8080/admin/openclaw/backend-maintenance \
+              -H "Content-Type: application/json" \
+              -H "x-admin-token: ${{ secrets.INTERNAL_ADMIN_TOKEN }}" \
+              -d '{
+                "radicado": "${{ github.event.inputs.radicado || '' }}",
+                "prompt": "${{ github.event.inputs.prompt || '' }}"
+              }'
