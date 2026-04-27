@@ -43,6 +43,7 @@ def _build_context(
         "No modifiques el frontend.",
         "Si vas a proponer un deploy, verifica antes los checks aplicables.",
         f"Origen del disparo: {trigger}.",
+        *_build_workspace_guardrails(),
     ]
 
     if comments_count is not None:
@@ -72,6 +73,21 @@ def _build_context(
     return "\n".join(context_lines)
 
 
+def _build_workspace_guardrails() -> list[str]:
+    workspace = Path(settings.OPENCLAW_MAINTENANCE_WORKSPACE).resolve()
+    live_checkout = Path(settings.OPENCLAW_MAINTENANCE_LIVE_CHECKOUT).resolve()
+    guardrails = [
+        f"Workspace de mantenimiento esperado: {workspace}.",
+        f"Rama de trabajo esperada: {settings.OPENCLAW_MAINTENANCE_BRANCH}.",
+        "Antes de cambiar nada, ejecuta `git status --short` y si el worktree no esta limpio, aborta sin cambios.",
+    ]
+    if workspace != live_checkout:
+        guardrails.append(
+            f"No modifiques {live_checkout}; ese checkout queda reservado para pull y deploy."
+        )
+    return guardrails
+
+
 def _build_auto_tune_prompt(*, iteration: int) -> str:
     instructions = [
         "Este disparo fue activado automaticamente despues de subir feedback experto en Word.",
@@ -79,8 +95,10 @@ def _build_auto_tune_prompt(*, iteration: int) -> str:
         "Busca patrones corregibles en prompts, reglas, parsers, validaciones o tests del backend.",
         "Si el cambio es seguro y verificable, aplicalo. Si no, deja un no-op claro.",
         "No toques el frontend ni nginx.",
-        "Trabaja solamente dentro de /srv/notar-ia/backend/current.",
+        *_build_workspace_guardrails(),
+        f"Trabaja solamente dentro de {Path(settings.OPENCLAW_MAINTENANCE_WORKSPACE).resolve()}.",
         "Si modificas archivos, ejecuta los checks mas pequenos y relevantes antes de continuar.",
+        "Si el worktree termina con archivos inesperados o fuera de alcance, aborta sin commit ni push.",
         "Si hay cambios backend-only validos, haz git add y git commit con un mensaje corto y especifico.",
     ]
 

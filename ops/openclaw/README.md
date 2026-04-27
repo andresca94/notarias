@@ -27,9 +27,13 @@ openclaw gateway status
 
 ## Workspace
 
-- Point the OpenClaw workspace at the backend checkout on the VPS, for example `/srv/notar-ia/backend/current`.
+- Use two backend checkouts on the VPS:
+  - isolated maintenance workspace, for example `/srv/notar-ia/backend/autotune`
+  - live deployment checkout, for example `/srv/notar-ia/backend/current`
+- Point the OpenClaw workspace at the isolated maintenance checkout, not the live deployment checkout.
 - Keep the frontend repo out of the workspace instructions.
 - Use [backend-maintenance-prompt.md](/Users/andrescarvajal/Documents/Notar-IA/notar-ia-fastapi/ops/openclaw/backend-maintenance-prompt.md) as the standing maintenance prompt.
+- The backend deploy command should pull `origin/main` into the live deployment checkout before rebuilding the container.
 
 ## Trigger paths
 

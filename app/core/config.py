@@ -23,11 +23,16 @@ class Settings(BaseSettings):
     OPENCLAW_AGENT_HOOK_PATH: str = "/hooks/agent"
     OPENCLAW_MAINTENANCE_MODEL: str | None = None
     OPENCLAW_MAINTENANCE_PROMPT_FILE: str = "ops/openclaw/backend-maintenance-prompt.md"
+    OPENCLAW_MAINTENANCE_WORKSPACE: str = "/srv/notar-ia/backend/current"
+    OPENCLAW_MAINTENANCE_LIVE_CHECKOUT: str = "/srv/notar-ia/backend/current"
+    OPENCLAW_MAINTENANCE_BRANCH: str = "main"
     OPENCLAW_AUTO_TUNE_ENABLED: bool = False
     OPENCLAW_AUTO_TUNE_MIN_COMMENTS: int = 1
     OPENCLAW_AUTO_TUNE_GIT_PUSH_ENABLED: bool = False
     OPENCLAW_AUTO_TUNE_DEPLOY_ENABLED: bool = False
     OPENCLAW_AUTO_TUNE_DEPLOY_COMMAND: str = (
+        "cd /srv/notar-ia/backend/current && "
+        "git pull --ff-only origin main && "
         "docker build -t ghcr.io/andresca94/notarias-backend:latest . && "
         "docker compose -f /srv/notar-ia/backend/current/ops/deploy/docker-compose.yml up -d --force-recreate backend && "
         "curl -fsS http://127.0.0.1:8080/docs >/dev/null"
