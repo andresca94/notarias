@@ -111,6 +111,15 @@ def _guess_mime(path: str) -> str:
     return "application/octet-stream"
 
 
+def _is_antecedente_support_filename(filename: str | None) -> bool:
+    name = Path(str(filename or "")).name.lower()
+    stem = Path(name).stem.lower()
+    return (
+        any(kw in name for kw in ("antecedente", "ep_anterior"))
+        or bool(re.match(r"^ant(?:$|[_\-.\s\d])", stem))
+    )
+
+
 def _safe_get(d: Dict[str, Any], path: List[str], default=None):
     cur: Any = d
     for k in path:
@@ -738,7 +747,7 @@ def _build_universal_context(
         # Extraer números de paz y salvo — PAZ-1: excluir antecedentes (tienen números históricos).
         # PAZ-2: usar el nombre del archivo para saber qué campo es confiable en cada documento.
         _fname_lower = (s.get("_fileName") or "").lower()
-        _is_antecedente_doc = any(kw in _fname_lower for kw in ("antecedente", "ep_anterior"))
+        _is_antecedente_doc = _is_antecedente_support_filename(s.get("_fileName"))
         if not _is_antecedente_doc:
             for _campo in ["paz_salvo_predial", "paz_salvo_valorizacion", "paz_salvo_area_metro"]:
                 _val = str((extra or {}).get(_campo) or "").strip()

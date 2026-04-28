@@ -6,6 +6,7 @@ from app.pipeline.boilerplate import (
     build_certificados_paz_y_salvo_detalle,
 )
 from app.pipeline.orchestrator import (
+    _build_universal_context,
     _prepare_ep_sections,
     _should_keep_condicion_resolutoria_paragraph,
 )
@@ -75,3 +76,33 @@ def test_otorgamiento_section_bypasses_binder_and_keeps_full_static_clauses():
     assert "MANIFESTACIÓN DE LOS COMPARECIENTES:" in otorgamiento["passthrough_text"]
     assert "ADVERTENCIA NOTARIAL:" in otorgamiento["passthrough_text"]
     assert "cliente@example.com" in otorgamiento["passthrough_text"]
+
+
+def test_universal_context_ignores_ant_support_paz_y_salvo_numbers():
+    contexto = _build_universal_context(
+        {},
+        [
+            {
+                "_fileName": "ANT.pdf",
+                "hallazgos_variables": {
+                    "paz_salvo_predial": "2585075",
+                    "paz_salvo_valorizacion": "2585077",
+                    "paz_salvo_area_metro": "2585077",
+                },
+            },
+            {
+                "_fileName": "PAZ Y SALVO.pdf",
+                "hallazgos_variables": {
+                    "paz_salvo_predial": "2615433",
+                    "paz_salvo_valorizacion": "2615434",
+                    "paz_salvo_area_metro": "PIN.646295E99F",
+                },
+            },
+        ],
+        [],
+        resolved_radicado="25963",
+    )
+
+    assert contexto["DATOS_EXTRA"]["PAZ_SALVO_PREDIAL"] == "2615433"
+    assert contexto["DATOS_EXTRA"]["PAZ_SALVO_VALORIZACION"] == "2615434"
+    assert contexto["DATOS_EXTRA"]["PAZ_SALVO_AREA_METRO"] == "PIN.646295E99F"
