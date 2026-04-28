@@ -1,11 +1,8 @@
-from pathlib import Path
-
-import pytest
 from fastapi.testclient import TestClient
 
 from app.core.config import settings
 from app.main import app
-from app.services.openclaw_maintenance import _build_auto_tune_prompt, _sync_maintenance_workspace
+from app.services.openclaw_maintenance import _build_auto_tune_prompt
 
 
 def test_build_auto_tune_prompt_respects_push_and_deploy_flags():
@@ -34,9 +31,12 @@ def test_build_auto_tune_prompt_respects_push_and_deploy_flags():
         assert "/srv/notar-ia/data/outputs" in prompt
         assert "Rama de trabajo esperada: main." in prompt
         assert "git status --short" in prompt
+        assert "git fetch origin main" in prompt
+        assert "git pull --ff-only origin main" in prompt
         assert "git push origin main" in prompt
         assert "deploy-backend-command" in prompt
         assert "report_backend_maintenance_status.sh" in prompt
+        assert "si falta, reporta failure y aborta" in prompt
         assert "reporta running" in prompt
         assert "reporta completion" in prompt
         assert "Objetivo principal" in prompt
@@ -78,57 +78,3 @@ def test_admin_endpoint_queues_background_maintenance(monkeypatch):
     assert response.json() == {"ok": True, "queued": True}
     assert captured["prompt"] == "smoke prompt"
     assert captured["trigger"] == "admin_endpoint"
-
-
-def test_sync_maintenance_workspace_rejects_dirty_checkout(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
-    original_workspace = settings.OPENCLAW_MAINTENANCE_WORKSPACE
-    original_branch = settings.OPENCLAW_MAINTENANCE_BRANCH
-    settings.OPENCLAW_MAINTENANCE_WORKSPACE = str(tmp_path)
-    settings.OPENCLAW_MAINTENANCE_BRANCH = "main"
-    (tmp_path / ".git").mkdir()
-
-    def fake_run_git(args, *, cwd):
-        assert cwd == tmp_path
-        if args == ["status", "--short"]:
-            return " M app.py"
-        return ""
-
-    monkeypatch.setattr("app.services.openclaw_maintenance._run_git", fake_run_git)
-
-    try:
-        with pytest.raises(RuntimeError, match="Workspace de mantenimiento sucio"):
-            _sync_maintenance_workspace()
-    finally:
-        settings.OPENCLAW_MAINTENANCE_WORKSPACE = original_workspace
-        settings.OPENCLAW_MAINTENANCE_BRANCH = original_branch
-
-
-def test_sync_maintenance_workspace_requires_report_script(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
-    original_workspace = settings.OPENCLAW_MAINTENANCE_WORKSPACE
-    original_branch = settings.OPENCLAW_MAINTENANCE_BRANCH
-    settings.OPENCLAW_MAINTENANCE_WORKSPACE = str(tmp_path)
-    settings.OPENCLAW_MAINTENANCE_BRANCH = "main"
-    (tmp_path / ".git").mkdir()
-
-    calls: list[list[str]] = []
-
-    def fake_run_git(args, *, cwd):
-        assert cwd == tmp_path
-        calls.append(args)
-        return ""
-
-    monkeypatch.setattr("app.services.openclaw_maintenance._run_git", fake_run_git)
-
-    try:
-        with pytest.raises(RuntimeError, match="No existe el script de reporte"):
-            _sync_maintenance_workspace()
-    finally:
-        settings.OPENCLAW_MAINTENANCE_WORKSPACE = original_workspace
-        settings.OPENCLAW_MAINTENANCE_BRANCH = original_branch
-
-    assert calls == [
-        ["status", "--short"],
-        ["fetch", "origin", "main"],
-        ["switch", "main"],
-        ["pull", "--ff-only", "origin", "main"],
-    ]
