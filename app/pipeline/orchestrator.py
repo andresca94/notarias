@@ -120,6 +120,47 @@ def _safe_get(d: Dict[str, Any], path: List[str], default=None):
     return cur
 
 
+def _should_keep_condicion_resolutoria_paragraph(forma_de_pago: Any) -> bool:
+    """Return True only when the payment terms show deferred or financed payment.
+
+    Word feedback indicates the estándar parágrafo segundo de condición resolutoria
+    should stay only when the price is not paid de contado.
+    """
+    text = (forma_de_pago or "").strip()
+    if not text:
+        return False
+
+    normalized = text.upper()
+    contado_markers = (
+        "CONTADO",
+        "DE CONTADO",
+        "PAGO TOTAL",
+        "PAGADO EN SU TOTALIDAD",
+        "CANCELADO EN SU TOTALIDAD",
+    )
+    if any(marker in normalized for marker in contado_markers):
+        return False
+
+    deferred_markers = (
+        "CUOTA",
+        "CUOTAS",
+        "SALDO",
+        "PENDIENTE",
+        "PLAZO",
+        "CRÉDITO",
+        "CREDITO",
+        "HIPOTECA",
+        "LEASING",
+        "FINANCIA",
+        "MENSUAL",
+        "ABONO",
+        "SE OBLIGA A PAGAR",
+        "PAGARÁ",
+        "PAGARA",
+    )
+    return any(marker in normalized for marker in deferred_markers)
+
+
 _RADICADO_TEXT_PATTERNS = (
     re.compile(r'"numero_radicado"\s*:\s*"?(?P<rad>\d{4,12})', re.IGNORECASE),
     re.compile(r'"radicacion"\s*:\s*\{.*?"numero"\s*:\s*"?(?P<rad>\d{4,12})', re.IGNORECASE | re.DOTALL),
@@ -2693,12 +2734,22 @@ def _prepare_ep_sections(contexto: Dict[str, Any], actos_docs: List[Dict[str, st
                     "'La forma de pago se realizó [[PENDIENTE: FORMA_DE_PAGO]]. ----------' "
                     "NO inventar ni asumir modalidad de pago (contado, cuotas, hipoteca). "
                 )
-            # Fix I-04: Conservar PARÁGRAFO SEGUNDO (condición resolutoria) en CUARTO — obligatorio
-            instruccion_acto += (
-                "NI-04-CUARTO: CONSERVAR ÍNTEGRAMENTE el PARÁGRAFO PRIMERO (Ley 2010/2019) y el "
-                "PARÁGRAFO SEGUNDO (condición resolutoria) tal como aparecen en la minuta de referencia. "
-                "PROHIBIDO eliminar o resumir cualquiera de los dos párrafos — ambos son texto legal obligatorio. "
-            )
+            # Fix I-04 ajustado por feedback Word: el PARÁGRAFO SEGUNDO de condición resolutoria
+            # solo se conserva cuando la forma de pago evidencia saldo pendiente o financiación.
+            if _should_keep_condicion_resolutoria_paragraph(fdp):
+                instruccion_acto += (
+                    "NI-04-CUARTO: CONSERVAR ÍNTEGRAMENTE el PARÁGRAFO PRIMERO (Ley 2010/2019) y el "
+                    "PARÁGRAFO SEGUNDO (condición resolutoria) tal como aparecen en la minuta de referencia, "
+                    "porque la forma de pago evidencia saldo pendiente, cuotas, crédito o financiación. "
+                    "PROHIBIDO eliminar o resumir cualquiera de los dos párrafos. "
+                )
+            else:
+                instruccion_acto += (
+                    "NI-04-CUARTO: CONSERVAR ÍNTEGRAMENTE el PARÁGRAFO PRIMERO (Ley 2010/2019). "
+                    "OMITIR el PARÁGRAFO SEGUNDO de condición resolutoria cuando el pago es de contado "
+                    "o cuando no existe evidencia de saldo pendiente, cuotas, crédito o hipoteca. "
+                    "PROHIBIDO inventar financiación para justificar ese parágrafo. "
+                )
             if fdp and not _is_garbage(fdp):
                 ctx_acto["FORMA_DE_PAGO"] = fdp
                 instruccion_acto += (

@@ -5,6 +5,7 @@ from app.pipeline.boilerplate import (
     REDAM_COMPRAVENTA_PROTOCOLIZACION_TEXT,
     build_certificados_paz_y_salvo_detalle,
 )
+from app.pipeline.orchestrator import _should_keep_condicion_resolutoria_paragraph
 
 
 def test_caratula_template_keeps_property_header_fields():
@@ -46,3 +47,11 @@ def test_build_certificados_paz_y_salvo_detalle_supports_no_cobro_valorizacion()
         "Paz y Salvo Predial N° 2615433.",
         "Constancia de no cobro de valorización: NO COBRA.",
     ]
+
+
+def test_condicion_resolutoria_only_stays_for_deferred_payment_terms():
+    assert _should_keep_condicion_resolutoria_paragraph(None) is False
+    assert _should_keep_condicion_resolutoria_paragraph("Pago de contado contra firma") is False
+    assert _should_keep_condicion_resolutoria_paragraph(
+        "30 cuotas mensuales de $1.000.000 con saldo financiado por crédito hipotecario"
+    ) is True
