@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import shlex
+import subprocess
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -200,6 +201,48 @@ def _maintenance_report_script_path() -> Path:
     return workspace / "ops" / "openclaw" / "report_backend_maintenance_status.sh"
 
 
+def _run_git(args: List[str], *, cwd: Path) -> str:
+    completed = subprocess.run(
+        ["git", *args],
+        cwd=str(cwd),
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if completed.returncode != 0:
+        stderr = (completed.stderr or "").strip()
+        stdout = (completed.stdout or "").strip()
+        detail = stderr or stdout or f"git {' '.join(args)} falló"
+        raise RuntimeError(detail)
+    return (completed.stdout or "").strip()
+
+
+def _sync_maintenance_workspace() -> None:
+    workspace = Path(settings.OPENCLAW_MAINTENANCE_WORKSPACE).resolve()
+    branch = settings.OPENCLAW_MAINTENANCE_BRANCH
+    if not workspace.exists():
+        raise RuntimeError(f"Workspace de mantenimiento inexistente: {workspace}")
+    if not (workspace / ".git").exists():
+        raise RuntimeError(f"Workspace de mantenimiento no es un checkout git: {workspace}")
+
+    dirty = _run_git(["status", "--short"], cwd=workspace)
+    if dirty:
+        raise RuntimeError(
+            "Workspace de mantenimiento sucio antes de iniciar auto-tune. "
+            "Limpia o descarta cambios pendientes en el checkout aislado."
+        )
+
+    _run_git(["fetch", "origin", branch], cwd=workspace)
+    _run_git(["switch", branch], cwd=workspace)
+    _run_git(["pull", "--ff-only", "origin", branch], cwd=workspace)
+
+    report_script = _maintenance_report_script_path()
+    if not report_script.exists():
+        raise RuntimeError(
+            f"No existe el script de reporte de maintenance en el workspace: {report_script}"
+        )
+
+
 def _build_maintenance_callback_instructions(*, radicado: str, iteration: int) -> list[str]:
     report_script = _maintenance_report_script_path()
 
@@ -380,6 +423,31 @@ async def run_auto_tune_for_feedback(
             radicado=radicado,
             iteration=iteration,
             message="No se alcanzó el mínimo de comentarios para auto-tune.",
+        )
+        return
+
+    try:
+        _sync_maintenance_workspace()
+    except Exception as exc:
+        message = f"Auto-tune abortado antes de OpenClaw: {exc}"
+        set_iteration_maintenance_status(
+            radicado,
+            iteration,
+            status="failed",
+            message=message,
+        )
+        set_backend_maintenance_state(
+            status="failed",
+            radicado=radicado,
+            iteration=iteration,
+            message=message,
+        )
+        _record_maintenance_failure(
+            trigger="feedback_upload_auto_tune_workspace_sync",
+            radicado=radicado,
+            comments_count=comments_count,
+            iteration=iteration,
+            error=str(exc),
         )
         return
 
