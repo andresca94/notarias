@@ -7,6 +7,7 @@ from app.pipeline.boilerplate import (
 )
 from app.pipeline.orchestrator import (
     _build_universal_context,
+    _is_garbage,
     _prepare_ep_sections,
     _should_keep_condicion_resolutoria_paragraph,
 )
@@ -59,6 +60,31 @@ def test_condicion_resolutoria_only_stays_for_deferred_payment_terms():
     assert _should_keep_condicion_resolutoria_paragraph(
         "30 cuotas mensuales de $1.000.000 con saldo financiado por crédito hipotecario"
     ) is True
+
+
+def test_caratula_normalizes_property_flags_and_ignores_placeholderish_cadastral_values():
+    assert _is_garbage("<<codigo.catastral.anterior>>") is True
+
+    misiones = _prepare_ep_sections(
+        {
+            "RADICACION": "25963",
+            "INMUEBLE": {
+                "direccion": "APARTAMENTO 203",
+                "matricula": "300-366931",
+                "predial_nacional": "68-001-01-06-00-00-0052-0014-9-01-02-0007",
+                "CODIGO_CATASTRAL_ANTERIOR": "680010106000000520014901020007",
+                "afectacion_vivienda": "NO_AFECTADO",
+                "patrimonio_familia": "NO",
+            },
+            "DATOS_EXTRA": {},
+        },
+        [],
+    )
+
+    caratula = next(m for m in misiones if m["descripcion"] == "EP_CARATULA")
+    assert caratula["contexto_datos"]["CODIGO_CATASTRAL_ANTERIOR"] == "680010106000000520014901020007"
+    assert caratula["contexto_datos"]["AFECTACION_VIVIENDA_FAMILIAR"] == "NO"
+    assert caratula["contexto_datos"]["PATRIMONIO_FAMILIA_INEMBARGABLE"] == "NO"
 
 
 def test_otorgamiento_section_bypasses_binder_and_keeps_full_static_clauses():

@@ -261,7 +261,32 @@ def _is_garbage(v: Any) -> bool:
         return True
     if "NO_DETECTADO" in s or "NO_APLICA" in s or "PENDIENTE" in s:
         return True
+    if re.fullmatch(r"<<[^<>]{1,120}>>", str(v).strip()) or re.fullmatch(r"\[\[[^\[\]]{1,120}\]\]", str(v).strip()):
+        return True
     return False
+
+
+def _normalize_binary_legal_flag(value: Any) -> str | None:
+    if _is_garbage(value):
+        return None
+    normalized = str(value).strip().upper().replace("Á", "A")
+    positives = {"SI", "SÍ", "AFECTADO", "VIGENTE", "APLICA", "CONSTITUIDO", "CONSTITUIDA"}
+    negatives = {
+        "NO",
+        "NO_AFECTADO",
+        "NO AFECTADO",
+        "SIN AFECTACION",
+        "SIN AFECTACIÓN",
+        "NO_CONSTITUIDO",
+        "NO CONSTITUIDA",
+        "NO CONSTITUIDO",
+        "LIBRE",
+    }
+    if normalized in positives:
+        return "SÍ"
+    if normalized in negatives:
+        return "NO"
+    return None
 
 
 def _is_current_linderos(v: str) -> bool:
@@ -1371,15 +1396,11 @@ def _prepare_ep_sections(contexto: Dict[str, Any], actos_docs: List[Dict[str, st
         or inmueble.get("codigo_catastral_anterior")
         or "[[PENDIENTE: CODIGO_CATASTRAL_ANTERIOR]]"
     )
-    _afectacion_vivienda = (inmueble.get("afectacion_vivienda") or "").strip().upper()
-    if _afectacion_vivienda in {"SI", "SÍ", "NO"}:
-        _afectacion_vivienda = "SÍ" if _afectacion_vivienda in {"SI", "SÍ"} else "NO"
-    else:
+    _afectacion_vivienda = _normalize_binary_legal_flag(inmueble.get("afectacion_vivienda"))
+    if not _afectacion_vivienda:
         _afectacion_vivienda = "[[PENDIENTE: AFECTACION_VIVIENDA_FAMILIAR]]"
-    _patrimonio_familia = (inmueble.get("patrimonio_familia") or "").strip().upper()
-    if _patrimonio_familia in {"SI", "SÍ", "NO"}:
-        _patrimonio_familia = "SÍ" if _patrimonio_familia in {"SI", "SÍ"} else "NO"
-    else:
+    _patrimonio_familia = _normalize_binary_legal_flag(inmueble.get("patrimonio_familia"))
+    if not _patrimonio_familia:
         _patrimonio_familia = "[[PENDIENTE: PATRIMONIO_FAMILIA_INEMBARGABLE]]"
     misiones.append({
         "orden": 1,
