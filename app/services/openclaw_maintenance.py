@@ -258,7 +258,10 @@ def _build_auto_tune_prompt(*, radicado: str, iteration: int) -> str:
         f"Radicado objetivo: {radicado}.",
         f"Iteracion objetivo: {iteration}.",
         "Objetivo principal: convertir este feedback experto en una mejora real del backend cuando exista una regla, validacion, prompt, parser o test que pueda generalizarse.",
+        "Aplica como maximo una sola mejora backend principal por corrida.",
+        "Elige la correccion generalizable mas pequena posible y valida con un solo test o check focalizado.",
         "Busca patrones corregibles en prompts, reglas, parsers, validaciones o tests del backend.",
+        "Evita tocar archivos del rag_store o plantillas textuales salvo que el feedback demuestre que no existe una alternativa mas pequena en la logica del backend.",
         "No uses `skipped` como salida por defecto.",
         "Si al menos un comentario revela un patron backend corregible y verificable, aplica el cambio mas pequeno posible y respáldalo con un test o check relevante.",
         "Usa `skipped` solo si todos los comentarios son puramente especificos del caso, dependen de hechos no generalizables, o ya estan cubiertos por el comportamiento actual del backend sin requerir cambio real.",
@@ -314,6 +317,13 @@ async def trigger_backend_maintenance(
         name="Notar-IA backend maintenance",
         message=message,
         model=settings.OPENCLAW_MAINTENANCE_MODEL,
+        timeout_seconds=max(
+            300,
+            min(
+                int(settings.OPENCLAW_MAINTENANCE_AGENT_TIMEOUT_SECONDS or 840),
+                max(300, int(settings.OPENCLAW_MAINTENANCE_PENDING_TIMEOUT_SECONDS or 900) - 60),
+            ),
+        ),
     )
     _append_jsonl(
         feedback_corpus_runs_path(),
