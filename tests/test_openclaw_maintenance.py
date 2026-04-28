@@ -33,7 +33,9 @@ def test_build_auto_tune_prompt_respects_push_and_deploy_flags():
         assert "git status --short" in prompt
         assert "git push origin main" in prompt
         assert "deploy-backend-command" in prompt
-        assert "/admin/openclaw/backend-maintenance/status" in prompt
+        assert "report_backend_maintenance_status.sh" in prompt
+        assert "reporta running" in prompt
+        assert "reporta completion" in prompt
         assert "Objetivo principal" in prompt
         assert "No uses `skipped` como salida por defecto." in prompt
         assert "Comentarios Word relevantes" in prompt or "si todos los comentarios son puramente especificos" in prompt

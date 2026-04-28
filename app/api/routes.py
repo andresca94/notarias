@@ -229,6 +229,13 @@ async def upload_feedback(
             iteration=current_iteration,
             message=maintenance_message,
         )
+        record_maintenance_status_update(
+            trigger="feedback_upload_queued",
+            radicado=radicado,
+            iteration=current_iteration,
+            status="queued",
+            message=maintenance_message,
+        )
         background_tasks.add_task(
             run_auto_tune_for_feedback,
             radicado=radicado,

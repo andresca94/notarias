@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import shlex
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -194,37 +195,47 @@ def _build_workspace_guardrails() -> list[str]:
     return guardrails
 
 
-def _build_maintenance_callback_instructions(*, radicado: str, iteration: int) -> list[str]:
-    callback_url = "http://127.0.0.1:8080/admin/openclaw/backend-maintenance/status"
-    token_source = (
-        "ADMIN_TOKEN=\"$(grep '^INTERNAL_ADMIN_TOKEN=' /srv/notar-ia/backend/shared/backend.env | cut -d= -f2-)\""
-    )
-    callback_prefix = (
-        f"{token_source} && curl -fsS -X POST {callback_url} "
-        "-H \"x-admin-token: ${ADMIN_TOKEN}\" "
-        "-H \"Content-Type: application/json\" "
-    )
+def _maintenance_report_script_path() -> Path:
+    workspace = Path(settings.OPENCLAW_MAINTENANCE_WORKSPACE).resolve()
+    return workspace / "ops" / "openclaw" / "report_backend_maintenance_status.sh"
 
-    def _payload(status: str, message: str) -> str:
-        escaped_message = json.dumps(message, ensure_ascii=False)
-        return (
-            f"'{json.dumps({'radicado': radicado, 'iteration': iteration, 'status': status}, ensure_ascii=False)[:-1]}, "
-            f"\"message\": {escaped_message}}}'"
+
+def _build_maintenance_callback_instructions(*, radicado: str, iteration: int) -> list[str]:
+    report_script = _maintenance_report_script_path()
+
+    def _cmd(status: str, message: str) -> str:
+        return " ".join(
+            [
+                "bash",
+                shlex.quote(str(report_script)),
+                shlex.quote(status),
+                shlex.quote(radicado),
+                shlex.quote(str(iteration)),
+                shlex.quote(message),
+            ]
         )
 
     return [
         "Nunca marques la actualización como finalizada antes de tener una verificación real del resultado.",
         (
+            "Apenas empieces trabajo real en el workspace, reporta running con este comando exacto: "
+            f"{_cmd('running', 'Codex aceptó la tarea y sigue procesando la mejora del backend.')}"
+        ),
+        (
+            "Si un paso largo tarda más de ~120 segundos (tests, push, deploy, espera de contenedor), "
+            f"vuelve a reportar running para mantener vivo el estado usando este comando base: {shlex.quote(str(report_script))} running {shlex.quote(radicado)} {shlex.quote(str(iteration))} 'mensaje actualizado'."
+        ),
+        (
             "Cuando completes un deploy exitoso y `curl -fsS http://127.0.0.1:8080/docs >/dev/null` responda bien, "
-            f"reporta completion con este comando exacto: {callback_prefix}-d {_payload('completed', 'Backend actualizado y verificado para la siguiente iteración.')}."
+            f"reporta completion con este comando exacto: {_cmd('completed', 'Backend actualizado y verificado para la siguiente iteración.')}"
         ),
         (
             "Si concluyes que no corresponde aplicar un cambio global seguro o decides un no-op explícito, "
-            f"reporta skip con este comando exacto: {callback_prefix}-d {_payload('skipped', 'No se aplicó un cambio global seguro; la siguiente iteración solo validará el feedback del caso.')}."
+            f"reporta skip con este comando exacto: {_cmd('skipped', 'No se aplicó un cambio global seguro; la siguiente iteración solo validará el feedback del caso.')}"
         ),
         (
             "Si fallan checks, push o deploy y el backend sigue accesible por loopback, "
-            f"reporta failure con este comando exacto: {callback_prefix}-d {_payload('failed', 'La actualización automática del backend falló; revisa logs antes de reintentar.')}."
+            f"reporta failure con este comando exacto: {_cmd('failed', 'La actualización automática del backend falló; revisa logs antes de reintentar.')}"
         ),
         (
             "Si el backend no queda accesible para reportar failure, no inventes completion; "
@@ -385,6 +396,13 @@ async def run_auto_tune_for_feedback(
         iteration=iteration,
         message="Codex está actualizando el backend con este feedback.",
     )
+    record_maintenance_status_update(
+        trigger="feedback_upload_auto_tune_started",
+        radicado=radicado,
+        iteration=iteration,
+        status="running",
+        message="Codex está actualizando el backend con este feedback.",
+    )
 
     try:
         response = await trigger_backend_maintenance(
@@ -412,6 +430,16 @@ async def run_auto_tune_for_feedback(
             message=(
                 "La tarea de Codex fue aceptada y ahora espera una confirmación final "
                 "después del deploy del backend."
+            ),
+            run_id=run_id,
+        )
+        record_maintenance_status_update(
+            trigger="feedback_upload_auto_tune_accepted",
+            radicado=radicado,
+            iteration=iteration,
+            status="running",
+            message=(
+                "La tarea de Codex fue aceptada y quedó esperando callback final del backend."
             ),
             run_id=run_id,
         )
