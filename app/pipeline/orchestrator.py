@@ -120,6 +120,15 @@ def _safe_get(d: Dict[str, Any], path: List[str], default=None):
     return cur
 
 
+def _resolve_static_placeholders(template: str, replacements: Dict[str, Any]) -> str:
+    resolved = template
+    for key, value in (replacements or {}).items():
+        if value is None:
+            continue
+        resolved = resolved.replace(f"[[{key}]]", str(value))
+    return resolved
+
+
 def _should_keep_condicion_resolutoria_paragraph(forma_de_pago: Any) -> bool:
     """Return True only when the payment terms show deferred or financed payment.
 
@@ -3508,13 +3517,18 @@ def _prepare_ep_sections(contexto: Dict[str, Any], actos_docs: List[Dict[str, st
     })
 
     # OTORGAMIENTO
+    _email_notificaciones = datos_extra.get("EMAIL_NOTIFICACIONES") or "tramites@notaria3bga.com"
     misiones.append({
         "orden": 80,
         "descripcion": "EP_OTORGAMIENTO",
         "plantilla_con_huecos": EP_OTORGAMIENTO_TEMPLATE,
+        "passthrough_text": _resolve_static_placeholders(
+            EP_OTORGAMIENTO_TEMPLATE,
+            {"EMAIL_NOTIFICACIONES": _email_notificaciones},
+        ),
         "contexto_datos": {
             **contexto,
-            "EMAIL_NOTIFICACIONES": datos_extra.get("EMAIL_NOTIFICACIONES") or "tramites@notaria3bga.com",
+            "EMAIL_NOTIFICACIONES": _email_notificaciones,
         },
         "instrucciones": "Manten el texto; solo reemplaza placeholders si hay datos. Sin markdown.",
     })
@@ -3831,6 +3845,11 @@ async def run_pipeline(
     debug.clear_binder_outputs()
 
     async def _run_mision(m: Dict[str, Any]) -> Dict[str, Any]:
+        if m.get("passthrough_text"):
+            out = str(m["passthrough_text"])
+            debug.dump_binder_output(m["orden"], m["descripcion"], out)
+            return {"orden": m["orden"], "descripcion": m["descripcion"], "texto": out}
+
         user = DATABINDER_USER.format(
             contexto_json=json.dumps(m["contexto_datos"], ensure_ascii=False),
             plantilla=m["plantilla_con_huecos"],

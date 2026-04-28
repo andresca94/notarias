@@ -5,7 +5,10 @@ from app.pipeline.boilerplate import (
     REDAM_COMPRAVENTA_PROTOCOLIZACION_TEXT,
     build_certificados_paz_y_salvo_detalle,
 )
-from app.pipeline.orchestrator import _should_keep_condicion_resolutoria_paragraph
+from app.pipeline.orchestrator import (
+    _prepare_ep_sections,
+    _should_keep_condicion_resolutoria_paragraph,
+)
 
 
 def test_caratula_template_keeps_property_header_fields():
@@ -55,3 +58,20 @@ def test_condicion_resolutoria_only_stays_for_deferred_payment_terms():
     assert _should_keep_condicion_resolutoria_paragraph(
         "30 cuotas mensuales de $1.000.000 con saldo financiado por crédito hipotecario"
     ) is True
+
+
+def test_otorgamiento_section_bypasses_binder_and_keeps_full_static_clauses():
+    misiones = _prepare_ep_sections(
+        {
+            "RADICACION": "25963",
+            "INMUEBLE": {"matricula": "300-366931"},
+            "DATOS_EXTRA": {"EMAIL_NOTIFICACIONES": "cliente@example.com"},
+        },
+        [],
+    )
+
+    otorgamiento = next(m for m in misiones if m["descripcion"] == "EP_OTORGAMIENTO")
+    assert otorgamiento["passthrough_text"].startswith("OTORGAMIENTO y AUTORIZACIÓN")
+    assert "MANIFESTACIÓN DE LOS COMPARECIENTES:" in otorgamiento["passthrough_text"]
+    assert "ADVERTENCIA NOTARIAL:" in otorgamiento["passthrough_text"]
+    assert "cliente@example.com" in otorgamiento["passthrough_text"]
