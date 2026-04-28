@@ -16,6 +16,10 @@ def build_certificados_paz_y_salvo_detalle(
     paz_salvo_predial: str | None,
     paz_salvo_valorizacion: str | None,
     paz_salvo_area_metro: str | None,
+    *,
+    predial_metadata: dict | None = None,
+    valorizacion_metadata: dict | None = None,
+    area_metro_metadata: dict | None = None,
 ) -> list[str]:
     def _norm(value: str | None) -> str:
         return str(value or "").strip()
@@ -26,20 +30,46 @@ def build_certificados_paz_y_salvo_detalle(
         upper = value.upper()
         return upper not in {"NO APLICA", "N/A", "NULL", "NONE"} and "[[PENDIENTE:" not in upper
 
+    def _detail_line(label: str, number: str, metadata: dict | None) -> str:
+        if not metadata:
+            return f"{label} N° {number}."
+
+        detail_parts: list[str] = []
+        direccion = _norm(metadata.get("direccion"))
+        titular = _norm(metadata.get("titular"))
+        codigo_catastral = _norm(metadata.get("codigo_catastral"))
+        predial_nacional = _norm(metadata.get("predial_nacional"))
+        fecha = _norm(metadata.get("fecha"))
+
+        if direccion:
+            detail_parts.append(f"del inmueble ubicado en {direccion}")
+        if titular:
+            detail_parts.append(f"a nombre de {titular}")
+        if codigo_catastral:
+            detail_parts.append(f"con código catastral {codigo_catastral}")
+        elif predial_nacional:
+            detail_parts.append(f"con número predial nacional {predial_nacional}")
+        if fecha:
+            detail_parts.append(f"expedido el {fecha}")
+
+        if not detail_parts:
+            return f"{label} N° {number}."
+        return f"{label} N° {number}, " + ", ".join(detail_parts) + "."
+
     predial = _norm(paz_salvo_predial)
     valorizacion = _norm(paz_salvo_valorizacion)
     area_metro = _norm(paz_salvo_area_metro)
 
     lines: list[str] = []
     if _usable(predial):
-        lines.append(f"Paz y Salvo Predial N° {predial}.")
+        lines.append(_detail_line("Paz y Salvo Predial", predial, predial_metadata))
     if _usable(valorizacion):
         if "NO COBRA" in valorizacion.upper():
             lines.append(f"Constancia de no cobro de valorización: {valorizacion}.")
         else:
-            lines.append(f"Paz y Salvo de Valorización N° {valorizacion}.")
+            lines.append(_detail_line("Paz y Salvo de Valorización", valorizacion, valorizacion_metadata))
     if _usable(area_metro):
-        lines.append(f"Paz y salvo de Área Metropolitana N° {area_metro}.")
+        lines.append(_detail_line("Paz y salvo de Área Metropolitana", area_metro, area_metro_metadata))
     return lines
 
 

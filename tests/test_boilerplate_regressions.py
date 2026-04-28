@@ -54,6 +54,24 @@ def test_build_certificados_paz_y_salvo_detalle_supports_no_cobro_valorizacion()
     ]
 
 
+def test_build_certificados_paz_y_salvo_detalle_prefers_textual_transcription_when_metadata_exists():
+    lines = build_certificados_paz_y_salvo_detalle(
+        "2619751",
+        None,
+        None,
+        predial_metadata={
+            "direccion": "K 35 11 23 BR LOS PINOS",
+            "titular": "MARTINEZ CORNEJO HILDE",
+            "codigo_catastral": "680010103000002590020000000000",
+            "fecha": "28 de Febrero de 2026",
+        },
+    )
+
+    assert lines == [
+        "Paz y Salvo Predial N° 2619751, del inmueble ubicado en K 35 11 23 BR LOS PINOS, a nombre de MARTINEZ CORNEJO HILDE, con código catastral 680010103000002590020000000000, expedido el 28 de Febrero de 2026.",
+    ]
+
+
 def test_condicion_resolutoria_only_stays_for_deferred_payment_terms():
     assert _should_keep_condicion_resolutoria_paragraph(None) is False
     assert _should_keep_condicion_resolutoria_paragraph("Pago de contado contra firma") is False
@@ -123,6 +141,11 @@ def test_universal_context_ignores_ant_support_paz_y_salvo_numbers():
                     "paz_salvo_valorizacion": "2615434",
                     "paz_salvo_area_metro": "PIN.646295E99F",
                 },
+                "datos_inmueble": {
+                    "direccion": "CALLE 1 # 2-3",
+                    "codigo_catastral_anterior": "680010000000000000000000000000",
+                },
+                "personas_detalle": [{"nombre": "ANA PEREZ"}],
             },
         ],
         [],
@@ -132,3 +155,10 @@ def test_universal_context_ignores_ant_support_paz_y_salvo_numbers():
     assert contexto["DATOS_EXTRA"]["PAZ_SALVO_PREDIAL"] == "2615433"
     assert contexto["DATOS_EXTRA"]["PAZ_SALVO_VALORIZACION"] == "2615434"
     assert contexto["DATOS_EXTRA"]["PAZ_SALVO_AREA_METRO"] == "PIN.646295E99F"
+    assert contexto["DATOS_EXTRA"]["PAZ_SALVO_PREDIAL_DETALLE"] == {
+        "direccion": "CALLE 1 # 2-3",
+        "titular": "ANA PEREZ",
+        "codigo_catastral": "680010000000000000000000000000",
+        "predial_nacional": "",
+        "fecha": "",
+    }

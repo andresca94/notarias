@@ -774,6 +774,8 @@ def _build_universal_context(
         _fname_lower = (s.get("_fileName") or "").lower()
         _is_antecedente_doc = _is_antecedente_support_filename(s.get("_fileName"))
         if not _is_antecedente_doc:
+            _datos_inmueble_soporte = s.get("datos_inmueble") or {}
+            _personas_soporte = s.get("personas_detalle") or []
             for _campo in ["paz_salvo_predial", "paz_salvo_valorizacion", "paz_salvo_area_metro"]:
                 _val = str((extra or {}).get(_campo) or "").strip()
                 if not _val or _is_garbage(_val):
@@ -800,6 +802,18 @@ def _build_universal_context(
                 _key = _campo.upper()
                 if not contexto["DATOS_EXTRA"].get(_key):
                     contexto["DATOS_EXTRA"][_key] = _val
+                _detail_key = f"{_key}_DETALLE"
+                if not contexto["DATOS_EXTRA"].get(_detail_key):
+                    _titular = ""
+                    if _personas_soporte:
+                        _titular = str((_personas_soporte[0] or {}).get("nombre") or "").strip()
+                    contexto["DATOS_EXTRA"][_detail_key] = {
+                        "direccion": str(_datos_inmueble_soporte.get("direccion") or "").strip(),
+                        "titular": _titular,
+                        "codigo_catastral": str(_datos_inmueble_soporte.get("codigo_catastral_anterior") or "").strip(),
+                        "predial_nacional": str(_datos_inmueble_soporte.get("predial_nacional") or "").strip(),
+                        "fecha": str((extra or {}).get("fecha_escritura_referenciada") or "").strip(),
+                    }
 
         # Bug 8: forma_de_pago — first-wins (primer doc que lo mencione)
         _fdp = str((extra or {}).get("forma_de_pago") or "").strip()
@@ -3491,6 +3505,9 @@ def _prepare_ep_sections(contexto: Dict[str, Any], actos_docs: List[Dict[str, st
         _pz_predial if not _is_garbage(_pz_predial) else "",
         _pz_valoriz if not _is_garbage(_pz_valoriz) else "",
         _pz_metro if not _is_garbage(_pz_metro) else "",
+        predial_metadata=datos_extra.get("PAZ_SALVO_PREDIAL_DETALLE"),
+        valorizacion_metadata=datos_extra.get("PAZ_SALVO_VALORIZACION_DETALLE"),
+        area_metro_metadata=datos_extra.get("PAZ_SALVO_AREA_METRO_DETALLE"),
     )
     # Agregar cámaras de comercio de empresas reales (solo NIT — excluye personas naturales AP)
     _disp_map_ins = contexto.get("EMPRESA_DISPLAY_MAP") or {}
