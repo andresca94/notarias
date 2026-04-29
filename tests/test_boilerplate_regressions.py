@@ -20,10 +20,14 @@ def test_caratula_template_keeps_property_header_fields():
     assert "PATRIMONIO DE FAMILIA INEMBARGABLE: [[PATRIMONIO_FAMILIA_INEMBARGABLE]]" in EP_CARATULA_TEMPLATE
 
 
-def test_otorgamiento_template_keeps_manifestacion_y_advertencia_clauses():
+def test_otorgamiento_template_matches_minuta_wording_for_static_legal_clauses():
     assert "MANIFESTACIÓN DE LOS COMPARECIENTES:" in EP_OTORGAMIENTO_TEMPLATE
     assert "Ley de Víctimas y Restitución de Tierras" in EP_OTORGAMIENTO_TEMPLATE
-    assert "artículo 1947 del Código Civil Colombiano" in EP_OTORGAMIENTO_TEMPLATE
+    assert "DEL OBJETO LICITO: El (la, los) compareciente(s) manifiesta(n) que el objeto del presente negocio o acto jurídico se encuentra enmarcado dentro de las normas legales vigentes, que no contraviene la ley, que los bienes, cosas y derechos que se comprometen en esta transacción jurídica" in EP_OTORGAMIENTO_TEMPLATE
+    assert "Las declaraciones consignadas en este instrumento corresponden a la verdad, el(los) otorgantes lo aprueban totalmente, sin reserva alguna" in EP_OTORGAMIENTO_TEMPLATE
+    assert "CLÁUSULA DE CONOCIMIENTO: La Notaria en ejercicio del control de legalidad que le asiste advierte a las partes intervinientes en el negocio jurídico de la importancia de verificar previamente la identidad, condiciones legales de los otorgantes." in EP_OTORGAMIENTO_TEMPLATE
+    assert "A los otorgantes se les advirtió que una vez firmado este instrumento público La Notaria no asumirá correcciones o modificaciones si no en la forma y casos previstos por la ley" in EP_OTORGAMIENTO_TEMPLATE
+    assert "artículo ARTICULO 1947 del C.C. Colombiano" in EP_OTORGAMIENTO_TEMPLATE
 
 
 def test_redam_protocolizacion_text_matches_feedback_wording():
