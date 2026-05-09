@@ -222,6 +222,11 @@ def _acto_kind(acto_nombre: str) -> str:
         return "DONACION"
     if "AFECTAC" in a and "VIVIENDA" in a:
         return "AFECTACION_VF"
+    if (
+        ("ACTUALIZACION" in a or "ACTUALIZACIÓN" in a)
+        and ("CODIGO CATASTRAL" in a or "CÓDIGO CATASTRAL" in a)
+    ):
+        return "ACTUALIZACION_CODIGO_CATASTRAL"
     if "ACTUALIZACION" in a or "ACTUALIZACIÓN" in a or "NOMENCLATURA" in a:
         return "ACTUALIZACION_NOMENCLATURA"
     if "ACLARACION" in a or "ACLARACIÓN" in a:

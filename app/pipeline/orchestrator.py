@@ -179,6 +179,50 @@ def _should_keep_condicion_resolutoria_paragraph(forma_de_pago: Any) -> bool:
     return any(marker in normalized for marker in deferred_markers)
 
 
+def _generated_act_has_body(text: str) -> bool:
+    if not text:
+        return False
+
+    normalized = re.sub(r"\s+", " ", text).strip().upper()
+    if not normalized or "TEXTO NO ENCONTRADO" in normalized:
+        return False
+
+    has_comparecencia = any(
+        marker in normalized for marker in ("COMPARECIÓ", "COMPARECIO", "COMPARECIERON")
+    )
+    clause_hits = sum(
+        1
+        for marker in ("PRIMERO:", "PRIMERA:", "SEGUNDO:", "SEGUNDA:", "TERCERO:", "TERCERA:")
+        if marker in normalized
+    )
+
+    # Un acto válido debe contener comparecencia y al menos una cláusula,
+    # o bien múltiples cláusulas si la comparecencia fue redactada con otra fórmula.
+    return (has_comparecencia and clause_hits >= 1) or clause_hits >= 2
+
+
+def _validate_generated_act_sections(results: List[Dict[str, Any]], actos: List[Any]) -> None:
+    act_results = [r for r in results if str(r.get("descripcion") or "").startswith("EP_ACTO")]
+    if len(act_results) != len(actos):
+        raise RuntimeError(
+            "La escritura generada no contiene el mismo número de secciones de acto "
+            "que la radicación; se aborta para evitar una minuta mutilada."
+        )
+
+    invalid_sections: List[str] = []
+    for idx, (acto, result) in enumerate(zip(actos, act_results), start=1):
+        nombre_acto = acto.get("nombre") if isinstance(acto, dict) else str(acto)
+        if not _generated_act_has_body(str(result.get("texto") or "")):
+            invalid_sections.append(f"acto {idx} ({nombre_acto})")
+
+    if invalid_sections:
+        raise RuntimeError(
+            "La escritura generada perdió el cuerpo de acto en "
+            + ", ".join(invalid_sections)
+            + ". Se aborta antes de guardar para evitar una minuta incompleta."
+        )
+
+
 _RADICADO_TEXT_PATTERNS = (
     re.compile(r'"numero_radicado"\s*:\s*"?(?P<rad>\d{4,12})', re.IGNORECASE),
     re.compile(r'"radicacion"\s*:\s*\{.*?"numero"\s*:\s*"?(?P<rad>\d{4,12})', re.IGNORECASE | re.DOTALL),
@@ -3455,6 +3499,14 @@ def _prepare_ep_sections(contexto: Dict[str, Any], actos_docs: List[Dict[str, st
                 "Para AFECTACION A VIVIENDA FAMILIAR: comparecen los cónyuges/compañeros. "
                 "Marco legal: Ley 258 de 1996 modificada por Ley 854 de 2003. "
             )
+        elif _ak(nombre_acto) == "ACTUALIZACION_CODIGO_CATASTRAL":
+            instruccion_acto += (
+                "Para ACTUALIZACION DE CODIGO CATASTRAL: referenciar la escritura que se actualiza con "
+                "EP_ANTECEDENTE_NUMERO, EP_ANTECEDENTE_FECHA y EP_ANTECEDENTE_NOTARIA. "
+                "El dato que se corrige es el código catastral del inmueble. "
+                "Conserva la estructura completa del acto y NO lo conviertas en actualización de nomenclatura, "
+                "aclaración genérica ni cancelación. "
+            )
         elif _ak(nombre_acto) in ("ACLARACION", "ACTUALIZACION_NOMENCLATURA"):
             instruccion_acto += (
                 "Para ACLARACION/ACTUALIZACION: referenciar la escritura que se aclara con "
@@ -3912,6 +3964,7 @@ async def run_pipeline(
 
     results = await asyncio.gather(*[_run_mision(m) for m in misiones])
     results.sort(key=lambda x: x["orden"])
+    _validate_generated_act_sections(results, actos)
 
     # Los actos individuales (EP_ACTO_*) reciben un salto de línea extra antes
     # para que haya separación visual clara entre el inicio de cada acto y la sección anterior.
