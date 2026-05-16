@@ -28,12 +28,12 @@ _EP_RE = re.compile(
     r'ESCRITURA\s+(?:P[ÚU]BLICA\s+)?'
     r'N?[°º]?\s*(\d[\d.]*)\s+DEL?\s+'
     r'(\d{2}[-/\s]\d{2}[-/\s]\d{4}|\d+\s+DE\s+\w+\s+DE\s+\d{4})'
-    r'(?:[\s,]*(?:DE\s+LA\s+)?NOT[AÁ]RI[AO]\s+(.+?))?(?:[\.,]|$)',
+    r'(?:[\s,]*(?:DE\s+LA\s+)?NOT[AÁ]R[IÍ][AO]\s+(.+?))?(?:[\.,]|$)',
     re.IGNORECASE,
 )
 
 _NOTA_RE = re.compile(
-    r'NOT[AÁ]RI[AO]\s+(?:PRIMERA?|SEGUNDA?|TERCERA?|CUARTA?|QUINTA?|\d+)\s+DE\s+[A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑA-Za-záéíóúñ ]+',
+    r'NOT[AÁ]R[IÍ][AO]\s+(?:PRIMERA?|SEGUNDA?|TERCERA?|CUARTA?|QUINTA?|\d+)\s+DE\s+[A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑA-Za-záéíóúñ ]+',
     re.IGNORECASE,
 )
 
@@ -175,6 +175,57 @@ def _parse_resumen_eventos(events: list) -> List[Annotation]:
             doc_date=ep_date,
             authority=ep_nota,
             source="resumen_eventos",
+        )
+        classify_annotation(ann)
+        anns.append(ann)
+    return anns
+
+
+def _parse_string_annotations(items: list, source: str) -> List[Annotation]:
+    """
+    Formato híbrido: anotaciones_registrales/anotaciones_historicas como lista de strings.
+    Ejemplo:
+    "Anotación 002: Fecha: 21-06-2007 ... Documento: ESCRITURA 2676 ... Especificación: COMPRAVENTA.
+     Personas: DE: X A: Y."
+    """
+    anns: List[Annotation] = []
+    for item in items:
+        if not isinstance(item, str):
+            continue
+        text = item.strip()
+        text_up = text.upper()
+        if not text:
+            continue
+
+        m_num = re.search(r'ANOTACI[OÓ]N\s*(?:N[°º]?)?\s*(\d+)', text_up)
+        num = int(m_num.group(1)) if m_num else 0
+
+        m_spec = re.search(
+            r'ESPECIFICACI[OÓ]N:\s*(.+?)(?:\.\s*PERSONAS:|\.?\s*$)',
+            text,
+            re.IGNORECASE,
+        )
+        spec = (m_spec.group(1).strip() if m_spec else text[:120]).upper()
+
+        m_de = re.search(r'\bDE:\s*(.+?)(?:\s+A:|\.|$)', text, re.IGNORECASE)
+        m_a = re.search(r'\bA:\s*(.+?)(?:\.\s*\(|\.|$)', text, re.IGNORECASE)
+        from_name = (m_de.group(1).strip(" .") if m_de else "")
+        to_name = (m_a.group(1).strip(" .") if m_a else "")
+
+        ep_num, ep_date, ep_nota = _extract_ep(text)
+        if not ep_date:
+            m_fecha = re.search(r'FECHA:\s*([0-9]{2}[-/][0-9]{2}[-/][0-9]{4})', text, re.IGNORECASE)
+            ep_date = m_fecha.group(1) if m_fecha else None
+
+        ann = Annotation(
+            number=num,
+            raw_specification=spec,
+            from_parties=[_party(from_name)] if from_name else [],
+            to_parties=[_party(to_name)] if to_name else [],
+            doc_number=ep_num,
+            doc_date=ep_date,
+            authority=ep_nota,
+            source=source,
         )
         classify_annotation(ann)
         anns.append(ann)
@@ -367,7 +418,12 @@ def parse_ctl_json(soporte_json: dict) -> List[Annotation]:
         for key in ("anotaciones_registrales", "anotaciones_historicas"):
             cand = hist.get(key)
             if isinstance(cand, list) and cand:
-                return _parse_structured_list(cand, key)
+                if any(isinstance(item, dict) for item in cand):
+                    result = _parse_structured_list(cand, key)
+                else:
+                    result = _parse_string_annotations(cand, key)
+                if result:
+                    return result
 
         # Intento 2: anotaciones con intervinientes string
         cand = hist.get("anotaciones")

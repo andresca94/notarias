@@ -1,14 +1,18 @@
 from pathlib import Path
+import unicodedata
 
 import pytest
 
 from app.pipeline.act_engine import _acto_kind, build_act_context
 from app.pipeline.orchestrator import (
     _generated_act_has_body,
+    _pick_best_ctl_support,
+    _pick_preferred_previous_cadastral_code,
     _recover_missing_actos_a_firmar,
     _validate_generated_act_sections,
 )
 from app.services.rag.local_rag import LocalRAG
+from app.services.ctl import resolve_ctl, to_deed_context
 
 
 def test_acto_kind_distinguishes_codigo_catastral_from_nomenclatura():
@@ -110,3 +114,87 @@ def test_build_act_context_uses_support_people_when_radicacion_only_has_interesa
     solicitantes = (ctx.get("ROLES_ACTO") or {}).get("SOLICITANTES") or []
     assert solicitantes
     assert "APODERADO" in str(solicitantes[0].get("rol_detectado") or "").upper()
+
+
+def test_pick_best_ctl_support_prefers_structured_annotations():
+    supports = [
+        {
+            "_fileName": "CLT.pdf",
+            "datos_inmueble": {"tradicion": "Historia amplia sin anotaciones estructuradas."},
+            "historia_y_antecedentes": {},
+        },
+        {
+            "_fileName": "CLT0001.pdf",
+            "datos_inmueble": {
+                "tradicion": "Adquirido por compraventa según Escritura Pública 2676 del 08-06-2007."
+            },
+            "historia_y_antecedentes": {
+                "anotaciones_registrales": [
+                    {
+                        "anotacion": 2,
+                        "especificacion": "COMPRAVENTA",
+                        "de": "LESMES ARENGAS NELLY ESPERANZA",
+                        "a": "FLOREZ IBAÑEZ CARMELINA",
+                        "documento": "ESCRITURA 2676 del 08-06-2007 Notaría Séptima de BUCARAMANGA",
+                    }
+                ]
+            },
+        },
+    ]
+
+    best = _pick_best_ctl_support(supports)
+
+    assert best is not None
+    assert best["_fileName"] == "CLT0001.pdf"
+
+
+def test_pick_preferred_previous_cadastral_code_prefers_paz_y_salvo_legacy_code():
+    contexto = {
+        "INMUEBLE": {
+            "predial_nacional": "68-001-01-07-00-00-0149-0021-0-00-00-0000",
+            "codigo_catastral_anterior": "00-00-00-00-0003-1004-0-000-00-0000",
+        },
+        "DATOS_EXTRA": {
+            "PAZ_SALVO_PREDIAL_DETALLE": {
+                "codigo_catastral": "",
+                "predial_nacional": "00-00-0003-0738-000",
+            },
+            "PAZ_SALVO_VALORIZACION_DETALLE": {
+                "codigo_catastral": "",
+                "predial_nacional": "00-00-0003-0738-000",
+            },
+        },
+    }
+
+    assert _pick_preferred_previous_cadastral_code(contexto) == "00-00-0003-0738-000"
+
+
+def test_ctl_resolver_parses_string_annotations_for_title_acquisition():
+    soporte = {
+        "datos_inmueble": {"matricula": "300-311985"},
+        "historia_y_antecedentes": {
+            "anotaciones_registrales": [
+                "Anotación 001: Fecha: 05-06-2007, Radicación: 2007-300-6-26371. Documento: ESCRITURA 2054 del 04-05-2007 Notaría 7 de BUCARAMANGA. Especificación: DIVISION MATERIAL. Personas: DE: LESMES ARENGAS NELLY ESPERANZA.",
+                "Anotación 002: Fecha: 21-06-2007, Radicación: 2007-300-6-28645. Documento: ESCRITURA 2676 del 08-06-2007 Notaría Séptima de BUCARAMANGA. Especificación: COMPRAVENTA. Personas: DE: LESMES ARENGAS NELLY ESPERANZA A: FLOREZ IBAÑEZ CARMELINA.",
+                "Anotación 003: Fecha: 19-02-2009, Radicación: 2009-300-6-7621. Documento: ESCRITURA 822 del 18-02-2009 Notaría Tercera de BUCARAMANGA. Especificación: HIPOTECA. Valor Acto: $10,000,000. Personas: DE: FLOREZ IBAÑEZ CARMELINA A: ANAYA HILARIO.",
+            ]
+        },
+        "personas_detalle": [
+            {
+                "nombre": "FLOREZ IBAÑEZ CARMELINA",
+                "identificacion": "CC 63285526",
+                "rol_en_hoja": "Propietario, Deudor (Hipoteca)",
+            }
+        ],
+    }
+
+    state = resolve_ctl(soporte, {})
+    deed = to_deed_context(state)
+
+    assert deed["title_doc_number"] == "2676"
+    assert deed["title_doc_date"] == "08-06-2007"
+    authority_norm = unicodedata.normalize("NFKD", deed["title_authority"] or "").encode("ascii", "ignore").decode()
+    assert "SEPTIMA" in authority_norm.upper()
+    assert deed["title_acquisition_mode"] == "compraventa"
+    assert deed["title_from_party"] == "LESMES ARENGAS NELLY ESPERANZA"
+    assert "2676" in (deed["titulo_adquisicion_text"] or "")

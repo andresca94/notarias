@@ -121,6 +121,92 @@ def _is_antecedente_support_filename(filename: str | None) -> bool:
     )
 
 
+def _score_ctl_support_candidate(soporte_json: Dict[str, Any]) -> int:
+    """Rank CTL-like supports by how useful they are for title-acquisition recovery."""
+    if not isinstance(soporte_json, dict):
+        return -1
+
+    score = 0
+    filename = str(soporte_json.get("_fileName") or "").lower()
+    if any(kw in filename for kw in ("ctl", "clt", "certificado_tradicion", "certificado de tradicion")):
+        score += 10
+
+    hist = soporte_json.get("historia_y_antecedentes") or {}
+    if isinstance(hist, dict):
+        for key in ("anotaciones_registrales", "anotaciones_historicas", "anotaciones"):
+            value = hist.get(key)
+            if isinstance(value, list) and value:
+                score += 100 + min(len(value), 25)
+                break
+        resumen = hist.get("resumen_eventos")
+        if isinstance(resumen, list) and resumen:
+            score += 50 + min(len(resumen), 10)
+        for key in ("cadena_de_tradicion_complementacion", "cadena_de_tradicion", "texto", "descripcion"):
+            value = hist.get(key)
+            if isinstance(value, str) and value.strip():
+                score += 20
+                break
+
+    trad = str(((soporte_json.get("datos_inmueble") or {}).get("tradicion") or "")).strip()
+    if trad and re.search(r"adquiri|compraventa|adjudicaci", trad, re.IGNORECASE):
+        score += 15
+
+    return score
+
+
+def _pick_best_ctl_support(soportes_json_list: List[Dict[str, Any]] | None) -> Optional[Dict[str, Any]]:
+    ctl_candidates = [
+        s for s in (soportes_json_list or [])
+        if isinstance(s, dict)
+        and any(
+            kw in (str(s.get("_fileName") or "").lower())
+            for kw in ("ctl", "clt", "certificado_tradicion", "certificado de tradicion")
+        )
+    ]
+    if not ctl_candidates:
+        return None
+    return max(ctl_candidates, key=_score_ctl_support_candidate)
+
+
+def _looks_long_cadastral_code(raw: str | None) -> bool:
+    digits = re.sub(r"[^0-9]", "", str(raw or ""))
+    return len(digits) >= 20
+
+
+def _looks_legacy_cadastral_code(raw: str | None) -> bool:
+    value = str(raw or "").strip()
+    digits = re.sub(r"[^0-9]", "", value)
+    if len(digits) < 8 or len(digits) >= 20:
+        return False
+    return "-" in value or "." in value
+
+
+def _pick_preferred_previous_cadastral_code(contexto: Dict[str, Any]) -> str:
+    """Prefer short legacy cadastral codes surfaced by paz-y-salvo details."""
+    datos_extra = contexto.get("DATOS_EXTRA") or {}
+    candidates: List[str] = []
+    for detail_key in ("PAZ_SALVO_PREDIAL_DETALLE", "PAZ_SALVO_VALORIZACION_DETALLE"):
+        detail = datos_extra.get(detail_key) or {}
+        if not isinstance(detail, dict):
+            continue
+        for field in ("codigo_catastral", "predial_nacional"):
+            raw = str(detail.get(field) or "").strip()
+            if raw and _looks_legacy_cadastral_code(raw):
+                candidates.append(raw)
+
+    current_predial_digits = re.sub(
+        r"[^0-9]", "", str(((contexto.get("INMUEBLE") or {}).get("predial_nacional") or ""))
+    )
+    seen: set[str] = set()
+    for raw in candidates:
+        digits = re.sub(r"[^0-9]", "", raw)
+        if digits == current_predial_digits or digits in seen:
+            continue
+        seen.add(digits)
+        return raw
+    return ""
+
+
 def _safe_get(d: Dict[str, Any], path: List[str], default=None):
     cur: Any = d
     for k in path:
@@ -1058,12 +1144,7 @@ def _build_universal_context(
     # CTL STATE ENGINE — Point 1: detectar soporte CTL y ejecutar engine determinista.
     # El soporte CTL se identifica por _fileName. Se ejecuta aquí para que DATOS_EXTRA
     # (con PAZ_SALVO_VALORIZACION ya populado) esté disponible como entrada al engine.
-    _ctl_soporte_json = next(
-        (s for s in (soportes_json_list or [])
-         if any(kw in (s.get("_fileName") or "").lower()
-                for kw in ("ctl", "certificado_tradicion", "certificado de tradicion"))),
-        None,
-    )
+    _ctl_soporte_json = _pick_best_ctl_support(soportes_json_list)
     if _ctl_soporte_json:
         try:
             from app.services.ctl import resolve_ctl as _ctl_resolve
@@ -1076,15 +1157,18 @@ def _build_universal_context(
             _ctl_state = _ctl_resolve(_ctl_soporte_json, _ctl_paz_data)
             contexto["ctl_state"] = _dc.asdict(_ctl_state)   # JSON-serializable
             contexto["_ctl_deed_ctx"] = _ctl_deed_ctx_fn(_ctl_state)
+            contexto["_ctl_source_file"] = _ctl_soporte_json.get("_fileName")
         except Exception as _ctl_exc:
             contexto["ctl_state"] = None
             contexto["_ctl_deed_ctx"] = {}
+            contexto["_ctl_source_file"] = None
             contexto.setdefault("_warnings", []).append(
                 f"CTL State Engine falló: {_ctl_exc}"
             )
     else:
         contexto["ctl_state"] = None
         contexto["_ctl_deed_ctx"] = {}
+        contexto["_ctl_source_file"] = None
 
     # B6: forma_de_pago desde radicación (prioridad sobre DOCS si está explícita)
     _fdp_rad = str((radicacion_json or {}).get("negocio_actual", {}).get("forma_de_pago") or "").strip()
@@ -1185,6 +1269,23 @@ def _build_universal_context(
             if (not _is_garbage(_cc_post_d)
                     and _cc_post_d.strip().upper() not in ("SIN INFORMACION", "SIN INFORMACIÓN")):
                 break
+
+    _cc_paz_pref = _pick_preferred_previous_cadastral_code(contexto)
+    _cc_cur_final = str((contexto.get("INMUEBLE") or {}).get("codigo_catastral_anterior") or "").strip()
+    if _cc_paz_pref:
+        _cc_cur_digits = re.sub(r"[^0-9]", "", _cc_cur_final)
+        _predial_digits = re.sub(
+            r"[^0-9]", "", str((contexto.get("INMUEBLE") or {}).get("predial_nacional") or "")
+        )
+        _cc_pref_digits = re.sub(r"[^0-9]", "", _cc_paz_pref)
+        if (
+            not _cc_cur_final
+            or _looks_long_cadastral_code(_cc_cur_final)
+            or _cc_cur_digits == _predial_digits
+        ) and _cc_pref_digits and _cc_pref_digits != _predial_digits:
+            contexto.setdefault("INMUEBLE", {})["codigo_catastral_anterior"] = _cc_paz_pref
+            contexto["INMUEBLE"]["CODIGO_CATASTRAL_ANTERIOR"] = _cc_paz_pref
+            contexto["INMUEBLE"]["CEDULA_CATASTRAL"] = _cc_paz_pref
 
     # A-02 (v12): Normalizar cabida_area — si empieza con "0 hectáreas", omitir esa parte.
     # Ejemplo: "0 hectáreas 160 metros cuadrados" → "160 metros cuadrados"
@@ -1716,9 +1817,26 @@ def _prepare_ep_sections(contexto: Dict[str, Any], actos_docs: List[Dict[str, st
         ctx_acto["NOMBRE_ACTO_ACTUAL"] = nombre_acto
         ctx_acto["CIUDAD"] = ciudad
         ctx_acto["NOTARIA_NOMBRE"] = notaria
+        from app.pipeline.act_engine import _acto_kind as _ak
+        _acto_kind_actual = _ak(nombre_acto)
 
         # Propagar ep_antecedente_pacto como variables explícitas para todos los actos
         ep_ant_global = inmueble.get("ep_antecedente_pacto") or {}
+        _ctl_deed_ctx_ref = contexto.get("_ctl_deed_ctx") or {}
+        if (
+            _acto_kind_actual in ("ACTUALIZACION_CODIGO_CATASTRAL", "ACTUALIZACION_NOMENCLATURA", "ACLARACION")
+            and any(_ctl_deed_ctx_ref.get(k) for k in ("title_doc_number", "title_doc_date", "title_authority"))
+        ):
+            ep_ant_global = {
+                "numero_ep": _ctl_deed_ctx_ref.get("title_doc_number") or ep_ant_global.get("numero_ep"),
+                "fecha": _ctl_deed_ctx_ref.get("title_doc_date") or ep_ant_global.get("fecha"),
+                "notaria": _ctl_deed_ctx_ref.get("title_authority") or ep_ant_global.get("notaria"),
+                "vendedor": _ctl_deed_ctx_ref.get("title_from_party") or ep_ant_global.get("vendedor"),
+                "tipo_adquisicion": (
+                    (_ctl_deed_ctx_ref.get("title_acquisition_mode") or "").upper()
+                    or ep_ant_global.get("tipo_adquisicion")
+                ),
+            }
         ctx_acto["EP_ANTECEDENTE_NUMERO"] = ep_ant_global.get("numero_ep") or "[[PENDIENTE: EP_ANTECEDENTE_NUMERO]]"
         ctx_acto["EP_ANTECEDENTE_FECHA"] = ep_ant_global.get("fecha") or "[[PENDIENTE: EP_ANTECEDENTE_FECHA]]"
         ctx_acto["EP_ANTECEDENTE_NOTARIA"] = ep_ant_global.get("notaria") or "[[PENDIENTE: EP_ANTECEDENTE_NOTARIA]]"
@@ -1758,7 +1876,6 @@ def _prepare_ep_sections(contexto: Dict[str, Any], actos_docs: List[Dict[str, st
         _orip_raw = inmueble.get("oficina_registro") or inmueble.get("ciudad_registro") or ""
         ctx_acto["OFICINA_REGISTRO"] = _norm_orip(_orip_raw) if _orip_raw else "[[PENDIENTE: OFICINA_REGISTRO]]"
 
-        from app.pipeline.act_engine import _acto_kind as _ak
         instruccion_acto = (
             f"Encabeza con el separador exacto:\n---{ctx_acto['ORDINAL_ACTO']} ACTO---\n---{nombre_acto.upper()}---\n"
             "Sin markdown. No inventes. "
@@ -3711,15 +3828,17 @@ def _prepare_ep_sections(contexto: Dict[str, Any], actos_docs: List[Dict[str, st
                 "Para AFECTACION A VIVIENDA FAMILIAR: comparecen los cónyuges/compañeros. "
                 "Marco legal: Ley 258 de 1996 modificada por Ley 854 de 2003. "
             )
-        elif _ak(nombre_acto) == "ACTUALIZACION_CODIGO_CATASTRAL":
+        elif _acto_kind_actual == "ACTUALIZACION_CODIGO_CATASTRAL":
             instruccion_acto += (
                 "Para ACTUALIZACION DE CODIGO CATASTRAL: referenciar la escritura que se actualiza con "
                 "EP_ANTECEDENTE_NUMERO, EP_ANTECEDENTE_FECHA y EP_ANTECEDENTE_NOTARIA. "
                 "El dato que se corrige es el código catastral del inmueble. "
+                "Usa CODIGO_CATASTRAL_ANTERIOR/CEDULA_CATASTRAL como el código anterior exacto del inmueble; "
+                "NO lo reemplaces por PREDIAL_NACIONAL ni por otra referencia larga del IGAC. "
                 "Conserva la estructura completa del acto y NO lo conviertas en actualización de nomenclatura, "
                 "aclaración genérica ni cancelación. "
             )
-        elif _ak(nombre_acto) in ("ACLARACION", "ACTUALIZACION_NOMENCLATURA"):
+        elif _acto_kind_actual in ("ACLARACION", "ACTUALIZACION_NOMENCLATURA"):
             instruccion_acto += (
                 "Para ACLARACION/ACTUALIZACION: referenciar la escritura que se aclara con "
                 "EP_ANTECEDENTE_NUMERO, EP_ANTECEDENTE_FECHA y EP_ANTECEDENTE_NOTARIA. "
