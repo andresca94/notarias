@@ -32,6 +32,13 @@ _EP_RE = re.compile(
     re.IGNORECASE,
 )
 
+_EP_SHORT_RE = re.compile(
+    r'\bEP\s*(\d[\d.]*)\s+DE\s+'
+    r'(\d{2}[-/\s]\d{2}[-/\s]\d{4}|\d+\s+DE\s+\w+\s+DE\s+\d{4})'
+    r'(?:[\s,]*(?:DE\s+LA\s+)?NOT[AÁ]R[IÍ][AO]\s+(.+?))?(?:[\.,]|$)',
+    re.IGNORECASE,
+)
+
 _NOTA_RE = re.compile(
     r'NOT[AÁ]R[IÍ][AO]\s+(?:PRIMERA?|SEGUNDA?|TERCERA?|CUARTA?|QUINTA?|\d+)\s+DE\s+[A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑA-Za-záéíóúñ ]+',
     re.IGNORECASE,
@@ -67,7 +74,9 @@ _OWNER_ROLE_KW = ("PROPIETARIO ACTUAL", "PROPIETARIA ACTUAL", "TITULAR", "DUENO"
 
 def _extract_ep(text: str) -> tuple[Optional[str], Optional[str], Optional[str]]:
     """Extrae (número_ep, fecha, notaría) de un texto."""
-    m = _EP_RE.search(text.upper())
+    m = _EP_RE.search(text)
+    if not m:
+        m = _EP_SHORT_RE.search(text)
     if m:
         return m.group(1), m.group(2), (m.group(3) or "").strip() or None
     return None, None, None
@@ -97,15 +106,29 @@ def _parse_structured_list(items: list, source: str) -> List[Annotation]:
         from_name = _clean(item.get("de") or item.get("from") or "")
         to_name = _clean(item.get("a") or item.get("to") or item.get("para") or "")
 
-        # Intervinientes como string "DE: X, A: Y"
-        if not from_name and not to_name and item.get("intervinientes"):
-            intv = _clean(item["intervinientes"]).upper()
-            m_de = re.search(r'\bDE:\s*(.+?)(?:,\s*A:|$)', intv)
-            m_a  = re.search(r'\bA:\s*(.+?)(?:\s*\(|\s*,|$)', intv)
-            if m_de:
-                from_name = m_de.group(1).strip()
-            if m_a:
-                to_name = m_a.group(1).strip()
+        # Intervinientes/personas como string "DE: X, A: Y"
+        if not from_name and not to_name and isinstance(item.get("personas"), list):
+            for persona in item.get("personas") or []:
+                if not isinstance(persona, dict):
+                    continue
+                role = _clean(persona.get("rol") or persona.get("rol_en_hoja") or "").upper()
+                name = _clean(persona.get("nombre") or "")
+                if not name:
+                    continue
+                if not from_name and role.startswith("DE"):
+                    from_name = name
+                elif not to_name and role.startswith("A"):
+                    to_name = name
+
+        if not from_name and not to_name:
+            raw_parties = _clean(item.get("intervinientes") or item.get("personas") or "")
+            if raw_parties:
+                m_de = re.search(r'\bDE:\s*(.+?)(?:,\s*A:|\.?\s+A:|$)', raw_parties, re.IGNORECASE)
+                m_a = re.search(r'\bA:\s*(.+?)(?:\s*\(|\.|$)', raw_parties, re.IGNORECASE)
+                if m_de:
+                    from_name = m_de.group(1).strip(" .")
+                if m_a:
+                    to_name = m_a.group(1).strip(" .")
 
         doc_raw = _clean(item.get("documento") or item.get("doc") or "")
         fecha_raw = _clean(item.get("fecha") or item.get("date") or "")
@@ -226,6 +249,95 @@ def _parse_string_annotations(items: list, source: str) -> List[Annotation]:
             doc_date=ep_date,
             authority=ep_nota,
             source=source,
+        )
+        classify_annotation(ann)
+        anns.append(ann)
+    return anns
+
+
+def _parse_eventos_strings(items: list) -> List[Annotation]:
+    """
+    Formato historia_y_antecedentes.eventos como lista de strings narrativos.
+    Ejemplo:
+    "FLOREZ IBAÑEZ CARMELINA adquirió por compraventa de LESMES ..., según EP 2676..."
+    """
+    anns: List[Annotation] = []
+    for item in items:
+        if not isinstance(item, str):
+            continue
+        text = item.strip()
+        text_up = text.upper()
+        if not text:
+            continue
+
+        m_num = re.search(r'ANOTACI[OÓ]N\s*(?:NRO|N[°º])?\s*0*(\d+)', text_up)
+        num = int(m_num.group(1)) if m_num else 0
+        m_leading_date = re.match(r'^\s*(\d{2}-\d{2}-\d{4})\s*:', text)
+        leading_date = m_leading_date.group(1) if m_leading_date else None
+
+        m_to = re.match(
+            r'^\s*(?:\d{2}-\d{2}-\d{4}:\s*)?([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ ]+?)\s+(?:adquiere|adquiri[oó]|efectu[oó]|efectua|fue)\b',
+            text,
+            re.IGNORECASE,
+        )
+        to_name = m_to.group(1).strip() if m_to else ""
+
+        spec = ""
+        from_name = ""
+        if "COMPRAVENTA" in text_up:
+            spec = "COMPRAVENTA"
+            m_from = re.search(
+                r'COMPRAVENTA\s+DE\s+(.+?)(?:\s*\(EP|,\s*SEG[ÚU]N|$)',
+                text,
+                re.IGNORECASE,
+            )
+            from_name = m_from.group(1).strip(" .") if m_from else ""
+        elif "ADJUDICACI" in text_up and "SUCESI" in text_up:
+            spec = "ADJUDICACION EN SUCESION"
+            m_from = re.search(
+                r'ADJUDICACI[OÓ]N(?:\s+QUE\s+SE\s+LE\s+HIZO)?\s+EN\s+EL\s+JUICIO\s+DE\s+SUCESI[OÓ]N\s+(?:DEL\s+CAUSANTE\s+|DE\s+)(.+?)(?:\s*\(EP|,\s*SEG[ÚU]N|$)',
+                text,
+                re.IGNORECASE,
+            )
+            from_name = m_from.group(1).strip(" .") if m_from else ""
+        elif "PERMUTA" in text_up:
+            spec = "PERMUTA"
+            m_from = re.search(r'PERMUTA.+?\s+CON\s+(.+?)(?:,\s*SEG[ÚU]N|$)', text, re.IGNORECASE)
+            from_name = m_from.group(1).strip(" .") if m_from else ""
+        elif "DONACI" in text_up:
+            spec = "DONACION"
+            m_from = re.search(r'DONACI[OÓ]N\s+DE\s+(.+?)(?:,\s*SEG[ÚU]N|$)', text, re.IGNORECASE)
+            from_name = m_from.group(1).strip(" .") if m_from else ""
+        elif "HIPOTECA" in text_up:
+            spec = "HIPOTECA"
+        elif "EMBARGO" in text_up:
+            spec = "EMBARGO"
+        elif "VALORIZ" in text_up:
+            spec = "VALORIZACION"
+        else:
+            continue
+
+        ep_num, ep_date, ep_nota = _extract_ep(text)
+        if not ep_num:
+            m_ep_inline = re.search(
+                r'\(EP\s*(\d[\d.]*)\s*,\s*Notar[íi]a\s+(.+?)\)',
+                text,
+                re.IGNORECASE,
+            )
+            if m_ep_inline:
+                ep_num = m_ep_inline.group(1)
+                ep_nota = m_ep_inline.group(2).strip()
+        if not ep_date:
+            ep_date = leading_date
+        ann = Annotation(
+            number=num,
+            raw_specification=spec,
+            from_parties=[_party(from_name)] if from_name else [],
+            to_parties=[_party(to_name)] if to_name else [],
+            doc_number=ep_num,
+            doc_date=ep_date,
+            authority=ep_nota,
+            source="historia_eventos",
         )
         classify_annotation(ann)
         anns.append(ann)
@@ -439,6 +551,15 @@ def parse_ctl_json(soporte_json: dict) -> List[Annotation]:
             if result:
                 return result
 
+        # Intento 3b: historia_y_antecedentes.eventos
+        for key in ("eventos", "eventos_historicos"):
+            cand = hist.get(key)
+            if isinstance(cand, list) and cand:
+                result = _parse_eventos_strings(cand)
+                if result:
+                    result += _parse_personas_detalle(personas, ep_ant)
+                    return result
+
         # Intento 4: anotacion_NNN keys
         result = _parse_anotacion_nnn(hist)
         if result:
@@ -452,7 +573,7 @@ def parse_ctl_json(soporte_json: dict) -> List[Annotation]:
                 return result
 
         # Intento 6: texto libre o descripcion
-        for key in ("texto", "descripcion"):
+        for key in ("texto", "descripcion", "COMPLEMENTACION"):
             cand = hist.get(key)
             if isinstance(cand, str) and cand.strip():
                 result = _parse_complementacion_string(cand)

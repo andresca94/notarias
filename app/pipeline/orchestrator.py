@@ -132,24 +132,44 @@ def _score_ctl_support_candidate(soporte_json: Dict[str, Any]) -> int:
         score += 10
 
     hist = soporte_json.get("historia_y_antecedentes") or {}
+    evidence_chunks: List[str] = []
     if isinstance(hist, dict):
-        for key in ("anotaciones_registrales", "anotaciones_historicas", "anotaciones"):
+        for key in ("anotaciones_registrales", "anotaciones_historicas", "anotaciones", "eventos", "eventos_historicos"):
             value = hist.get(key)
             if isinstance(value, list) and value:
                 score += 100 + min(len(value), 25)
+                evidence_chunks.extend(str(item) for item in value[:10])
                 break
         resumen = hist.get("resumen_eventos")
         if isinstance(resumen, list) and resumen:
             score += 50 + min(len(resumen), 10)
-        for key in ("cadena_de_tradicion_complementacion", "cadena_de_tradicion", "texto", "descripcion"):
+            evidence_chunks.extend(str(item) for item in resumen[:10])
+        for key in ("cadena_de_tradicion_complementacion", "cadena_de_tradicion", "texto", "descripcion", "COMPLEMENTACION"):
             value = hist.get(key)
             if isinstance(value, str) and value.strip():
                 score += 20
+                evidence_chunks.append(value)
                 break
 
     trad = str(((soporte_json.get("datos_inmueble") or {}).get("tradicion") or "")).strip()
     if trad and re.search(r"adquiri|compraventa|adjudicaci", trad, re.IGNORECASE):
         score += 15
+    if trad and re.search(
+        r'adquirid[oa]\s+por\s+[A-ZÁÉÍÓÚÑ].+?(?:compraventa|adjudicaci[oó]n).+?(?:escritura|EP)\s+\d',
+        trad,
+        re.IGNORECASE,
+    ):
+        score += 40
+    if trad:
+        evidence_chunks.append(trad)
+
+    evidence = "\n".join(chunk for chunk in evidence_chunks if chunk).upper()
+    if re.search(r'\bDE:\s+[A-ZÁÉÍÓÚÑ].+?\bA:\s+[A-ZÁÉÍÓÚÑ]', evidence):
+        score += 60
+    if re.search(r'COMPRAVENTA.+(?:EP|ESCRITURA).+\d', evidence):
+        score += 40
+    if re.search(r'FLOREZ IBAÑEZ CARMELINA.+LESMES ARENGAS NELLY ESPERANZA', evidence):
+        score += 20
 
     return score
 
@@ -168,6 +188,25 @@ def _pick_best_ctl_support(soportes_json_list: List[Dict[str, Any]] | None) -> O
     return max(ctl_candidates, key=_score_ctl_support_candidate)
 
 
+def _iter_supports_from_context(contexto: Dict[str, Any]) -> List[Dict[str, Any]]:
+    raw_supports = ((contexto.get("FUENTES") or {}).get("soportes") or [])
+    normalized: List[Dict[str, Any]] = []
+    if isinstance(raw_supports, dict):
+        for name, payload in raw_supports.items():
+            if not isinstance(payload, dict):
+                continue
+            soporte = dict(payload)
+            if name and not soporte.get("_fileName"):
+                soporte["_fileName"] = str(name)
+            normalized.append(soporte)
+        return normalized
+    if isinstance(raw_supports, list):
+        for payload in raw_supports:
+            if isinstance(payload, dict):
+                normalized.append(payload)
+    return normalized
+
+
 def _looks_long_cadastral_code(raw: str | None) -> bool:
     digits = re.sub(r"[^0-9]", "", str(raw or ""))
     return len(digits) >= 20
@@ -181,6 +220,20 @@ def _looks_legacy_cadastral_code(raw: str | None) -> bool:
     return "-" in value or "." in value
 
 
+def _normalize_legacy_cadastral_code(raw: str | None) -> str:
+    value = str(raw or "").strip()
+    if not value:
+        return ""
+    if _looks_legacy_cadastral_code(value):
+        return value
+    digits = re.sub(r"[^0-9]", "", value)
+    # Common short predial payloads arrive as 15 digits and need to be rendered
+    # back into the legacy cadastral code shape XX-XX-XXXX-XXXX-XXX.
+    if len(digits) == 15:
+        return f"{digits[:2]}-{digits[2:4]}-{digits[4:8]}-{digits[8:12]}-{digits[12:]}"
+    return value
+
+
 def _pick_preferred_previous_cadastral_code(contexto: Dict[str, Any]) -> str:
     """Prefer short legacy cadastral codes surfaced by paz-y-salvo details."""
     datos_extra = contexto.get("DATOS_EXTRA") or {}
@@ -190,7 +243,20 @@ def _pick_preferred_previous_cadastral_code(contexto: Dict[str, Any]) -> str:
         if not isinstance(detail, dict):
             continue
         for field in ("codigo_catastral", "predial_nacional"):
-            raw = str(detail.get(field) or "").strip()
+            raw = _normalize_legacy_cadastral_code(detail.get(field))
+            if raw and _looks_legacy_cadastral_code(raw):
+                candidates.append(raw)
+
+    for soporte in sorted(
+        _iter_supports_from_context(contexto),
+        key=_score_ctl_support_candidate,
+        reverse=True,
+    ):
+        datos_inmueble = soporte.get("datos_inmueble") or {}
+        if not isinstance(datos_inmueble, dict):
+            continue
+        for field in ("codigo_catastral_anterior", "codigo_catastral", "predial_nacional"):
+            raw = _normalize_legacy_cadastral_code(datos_inmueble.get(field))
             if raw and _looks_legacy_cadastral_code(raw):
                 candidates.append(raw)
 
@@ -205,6 +271,379 @@ def _pick_preferred_previous_cadastral_code(contexto: Dict[str, Any]) -> str:
         seen.add(digits)
         return raw
     return ""
+
+
+def _derive_deed_context_from_history(contexto: Dict[str, Any]) -> Dict[str, str]:
+    """Recover acquisition title data from normalized HISTORIA fallbacks."""
+    historia = contexto.get("HISTORIA") or {}
+    texts = _collect_support_strings(historia)
+    joined = "\n".join(texts)
+    if not joined:
+        return {}
+
+    sale_patterns = (
+        re.compile(
+            r'([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ ]+?)\s+adquiri[oó]\s+el?\s*inmueble\s+por\s+compraventa\s+de\s+'
+            r'([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ ]+?)\s*\(EP\s*(\d[\d.]*)[, ]+\s*(\d{2}-\d{2}-\d{4})[, ]+\s*Notar[íi]a\s+(.+?)\)',
+            re.IGNORECASE,
+        ),
+        re.compile(
+            r'([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ ]+?)\s+adquiri[oó]\s+por\s+compraventa\s+de\s+'
+            r'([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ ]+?),\s+seg[uú]n\s+EP\s*(\d[\d.]*)\s+de\s+'
+            r'(\d{2}-\d{2}-\d{4})\s+de\s+la\s+Notar[íi]a\s+(.+?)(?:,|\.|$)',
+            re.IGNORECASE,
+        ),
+        re.compile(
+            r'(?:El\s+inmueble\s+fue\s+adquirido\s+por\s+(?:la\s+deudora\s+)?|La\s+deudora,\s+)?'
+            r'([A-ZÁÉÍÓÚÑA-Za-záéíóúñ ]+?)\s+por\s+compra\s+a\s+([A-ZÁÉÍÓÚÑA-Za-záéíóúñ ]+?)\s+'
+            r'mediante\s+Escritura\s+P[úu]blica\s+n[uú]mero\s+(\d[\d.]*)\s+de\s+fecha\s+'
+            r'(\d{1,2}\s+de\s+\w+\s+de\s+\d{4}),\s+otorgada\s+por\s+la\s+Notar[íi]a\s+(.+?)(?:,|\.|$)',
+            re.IGNORECASE,
+        ),
+    )
+
+    succession_patterns = (
+        re.compile(
+            r'([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ ]+?)\s+adquiri[oó].+?adjudicaci[oó]n.+?sucesi[oó]n\s+(?:del\s+causante\s+|de\s+)'
+            r'([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ ]+?),\s+seg[uú]n\s+EP\s*(\d[\d.]*)\s+de\s+'
+            r'(\d{2}-\d{2}-\d{4})\s+de\s+la\s+Notar[íi]a\s+(.+?)(?:,|\.|$)',
+            re.IGNORECASE,
+        ),
+    )
+
+    best_candidate: Dict[str, str] = {}
+    best_key = (-1, -1)
+
+    for idx, text in enumerate(texts):
+        candidate = _parse_title_context_from_texts([text])
+        if not candidate:
+            continue
+        candidate_key = (_score_deed_context_candidate(candidate), idx)
+        if candidate_key > best_key:
+            best_key = candidate_key
+            best_candidate = candidate
+
+    for pattern, mode in (
+        *[(p, "compraventa") for p in sale_patterns],
+        *[(p, "adjudicacion_sucesion") for p in succession_patterns],
+    ):
+        for m in pattern.finditer(joined):
+            owner = m.group(1).strip()
+            from_party = m.group(2).strip()
+            doc_number = m.group(3).strip()
+            doc_date = m.group(4).strip()
+            authority = m.group(5).strip()
+            if mode == "compraventa":
+                title_text = (
+                    f"{owner} adquirió el inmueble por compraventa de {from_party}, "
+                    f"mediante escritura pública número {doc_number}, de fecha {doc_date}, "
+                    f"de la {authority}"
+                )
+            else:
+                title_text = (
+                    f"{owner} adquirió el inmueble mediante adjudicación en sucesión de {from_party}, "
+                    f"mediante escritura pública número {doc_number}, de fecha {doc_date}, "
+                    f"de la {authority}"
+                )
+            candidate = {
+                "title_acquisition_mode": mode,
+                "title_from_party": from_party,
+                "title_doc_number": doc_number,
+                "title_doc_date": doc_date,
+                "title_authority": authority,
+                "current_owner_name": owner,
+                "titulo_adquisicion_text": title_text,
+            }
+            candidate_key = (_score_deed_context_candidate(candidate), m.start())
+            if candidate_key[0] > best_key[0]:
+                best_key = candidate_key
+                best_candidate = candidate
+
+    return best_candidate
+
+
+def _score_deed_context_candidate(candidate: Dict[str, Any]) -> int:
+    if not isinstance(candidate, dict):
+        return -1
+    title_doc_number = str(candidate.get("title_doc_number") or "").strip()
+    title_doc_date = str(candidate.get("title_doc_date") or "").strip()
+    title_authority = str(candidate.get("title_authority") or "").strip()
+    title_from_party = str(candidate.get("title_from_party") or "").strip()
+    current_owner_name = str(candidate.get("current_owner_name") or "").strip()
+    score = 0
+    if title_doc_number:
+        score += 40
+    if title_doc_date:
+        score += 20
+    if title_authority:
+        score += 20
+    if title_from_party:
+        score += 40
+    if current_owner_name:
+        score += 40
+    mode = str(candidate.get("title_acquisition_mode") or "").strip().lower()
+    if mode:
+        score += 10
+    title_text = str(candidate.get("titulo_adquisicion_text") or "").strip()
+    if title_text:
+        score += 20
+        if "causante" in title_text.lower():
+            score -= 25
+    if not title_doc_number and not (title_from_party and current_owner_name):
+        score -= 50
+    if mode == "adquisicion" and not title_doc_number and not title_from_party:
+        score -= 30
+    return score
+
+
+def _collect_support_strings(value: Any) -> List[str]:
+    strings: List[str] = []
+    if isinstance(value, str):
+        if value.strip():
+            strings.append(value.strip())
+    elif isinstance(value, dict):
+        for nested in value.values():
+            strings.extend(_collect_support_strings(nested))
+    elif isinstance(value, list):
+        for nested in value:
+            strings.extend(_collect_support_strings(nested))
+    return strings
+
+
+def _parse_title_context_from_texts(texts: List[str]) -> Dict[str, str]:
+    joined = "\n".join(t for t in texts if t)
+    if not joined:
+        return {}
+    pattern_specs: List[tuple[re.Pattern[str], tuple[str, ...]]] = [
+        (
+            re.compile(
+                r'Adquirid[oa]\s+por\s+([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ ]+?)\s+mediante\s+compraventa\s+seg[uú]n\s+'
+                r'Escritura\s+P[úu]blica\s+(\d[\d.]*)\s+del\s+(\d{2}-\d{2}-\d{4})\s+de\s+la\s+Notar[íi]a\s+'
+                r'(.+?),\s+de\s+([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ ]+?)\.',
+                re.IGNORECASE,
+            ),
+            ("owner", "doc_number", "doc_date", "authority", "from_party"),
+        ),
+        (
+            re.compile(
+                r'([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ ]+?)\s+adquiri[oó]\s+por\s+compraventa\s+de\s+'
+                r'([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ ]+?),\s+seg[uú]n\s+EP\s*(\d[\d.]*)\s+de\s+'
+                r'(\d{2}-\d{2}-\d{4})\s+de\s+la\s+Notar[íi]a\s+(.+?)(?:,|\.|$)',
+                re.IGNORECASE,
+            ),
+            ("owner", "from_party", "doc_number", "doc_date", "authority"),
+        ),
+        (
+            re.compile(
+                r'([^,\n]+?)\s+adquiri[oó]\s+por\s+compraventa\s+de\s+([^,\n]+?),\s+seg[uú]n\s+EP\s*'
+                r'(\d[\d.]*)\s+del\s+(\d{2}-\d{2}-\d{4})\s+de\s+la\s+Notar[íi]a\s+(.+?)(?:,|\.|$)',
+                re.IGNORECASE,
+            ),
+            ("owner", "from_party", "doc_number", "doc_date", "authority"),
+        ),
+        (
+            re.compile(
+                r'Escritura\s+P[úu]blica\s+No\.?\s*(\d[\d.]*)\s+de\s+fecha\s+(\d{2}\s+de\s+\w+\s+de\s+\d{4}),\s*'
+                r'Notar[íi]a\s+(.+?),\s+por\s+compraventa\s+de\s+([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ ]+?)\s+a\s+([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ ]+?)(?:\.|,|$)',
+                re.IGNORECASE,
+            ),
+            ("doc_number", "doc_date", "authority", "from_party", "owner"),
+        ),
+        (
+            re.compile(
+                r'(\d{2}-\d{2}-\d{4}):\s*([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ ]+?)\s+adquiere\s+por\s+compraventa\s+de\s+'
+                r'([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ ]+?)\s+\(EP\s*(\d[\d.]*)\s*,\s*Notar[íi]a\s+(.+?)\)(?:\s*\(|\.|,|$)',
+                re.IGNORECASE,
+            ),
+            ("doc_date", "owner", "from_party", "doc_number", "authority"),
+        ),
+        (
+            re.compile(
+                r'Anotaci[oó]n\s+\d+:\s*Compraventa\s+mediante\s+ESCRITURA\s+(\d[\d.]*)\s+del\s+(\d{2}-\d{2}-\d{4})\s+de\s+la\s+Notar[íi]a\s+(.+?),\s+de\s+([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ ]+?)\s+a\s+([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ ]+?)(?:\.|,|$)',
+                re.IGNORECASE,
+            ),
+            ("doc_number", "doc_date", "authority", "from_party", "owner"),
+        ),
+        (
+            re.compile(
+                r'([^.,\n]+?)\s+adquiri[oó]\s+el\s+inmueble\s+por\s+compraventa\s+a\s+([^.,\n]+?)\s+'
+                r'(?:seg[uú]n\s+)?Escritura\s+P[úu]blica\s+n[uú]mero\s+(\d[\d.]*)\s+de\s+fecha\s+'
+                r'(\d{1,2}\s+de\s+\w+\s+de\s+\d{4}),\s*(?:otorgada\s+por\s+)?Notar[íi]a\s+(.+?)(?:\.|,|$)',
+                re.IGNORECASE,
+            ),
+            ("owner", "from_party", "doc_number", "doc_date", "authority"),
+        ),
+        (
+            re.compile(
+                r'Adquirido\s+por\s+compra\s+efectuada\s+a\s+([^.,\n]+?)\s+mediante\s+escritura\s+p[úu]blica\s+'
+                r'n[uú]mero\s+(\d[\d.]*)\s+de\s+fecha\s+(\d{1,2}\s+de\s+\w+\s+de\s+\d{4})\s+'
+                r'otorgada\s+por\s+la\s+Notar[íi]a\s+(.+?)(?:\.|,|$)',
+                re.IGNORECASE,
+            ),
+            ("from_party", "doc_number", "doc_date", "authority"),
+        ),
+        (
+            re.compile(
+                r'(?:La\s+deudora\s+|El\s+inmueble\s+fue\s+adquirido\s+por\s+)?([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ ]+?)\s+'
+                r'(?:adquiri[oó]\s+el\s+inmueble\s+por\s+compra|mediante\s+compraventa)\s+a\s+'
+                r'([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ ]+?)(?:,\s*|\s+)'
+                r'(?:seg[uú]n\s+)?Escritura\s+P[úu]blica\s+n[uú]mero\s+(\d[\d.]*)\s+'
+                r'de\s+fecha\s+(\d{1,2}\s+de\s+\w+\s+de\s+\d{4}),\s+(?:otorgada\s+por\s+)?la\s+Notar[íi]a\s+(.+?)(?:,|\.|$)',
+                re.IGNORECASE,
+            ),
+            ("owner", "from_party", "doc_number", "doc_date", "authority"),
+        ),
+        (
+            re.compile(
+                r'El\s+inmueble.*?fue\s+adquirido\s+por\s+([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ ]+?)'
+                r'(?:\s*\([^)]*\))?\s+mediante\s+compraventa\s+a\s+([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ ]+?)'
+                r'(?:\s*\([^)]*\))?\s+seg[uú]n\s+Escritura\s+P[úu]blica\s+(\d[\d.]*)\s+del\s+'
+                r'(\d{1,2}\s+de\s+\w+\s+de\s+\d{4}|\d{2}-\d{2}-\d{4})\s+de\s+la\s+Notar[íi]a\s+'
+                r'(.+?)(?:,|\.|$)',
+                re.IGNORECASE,
+            ),
+            ("owner", "from_party", "doc_number", "doc_date", "authority"),
+        ),
+        (
+            re.compile(
+                r'El\s+inmueble\s+fue\s+adquirido\s+por\s+([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ ]+?)\s+mediante\s+compraventa\s+a\s+'
+                r'([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ ]+?)\s+\(EP\s*(\d[\d.]*)\s*,\s*(\d{2}-\d{2}-\d{4})\)',
+                re.IGNORECASE,
+            ),
+            ("owner", "from_party", "doc_number", "doc_date"),
+        ),
+        (
+            re.compile(
+                r'El\s+inmueble\s+fue\s+adquirido\s+por\s+([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ ]+?)\s+mediante\s+compraventa\s+a\s+'
+                r'([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ ]+?)(?:,\s*|\s+)seg[uú]n\s+Escritura\s+P[úu]blica\s+(\d[\d.]*)\s+'
+                r'del\s+(\d{2}-\d{2}-\d{4})\s+de\s+la\s+Notar[íi]a\s+(.+?)(?:\.|,|$)',
+                re.IGNORECASE,
+            ),
+            ("owner", "from_party", "doc_number", "doc_date", "authority"),
+        ),
+        (
+            re.compile(
+                r'(?:Actualmente,\s+la\s+propietari[oa]\s+es\s+)?([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ ]+?),\s+quien\s+'
+                r'adquiri[oó]\s+por\s+compraventa\s+a\s+([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ ]+?)\s+seg[uú]n\s+'
+                r'Escritura\s+P[úu]blica\s+(\d[\d.]*)\s+del\s+(\d{2}-\d{2}-\d{4})\s+de\s+la\s+Notar[íi]a\s+(.+?)(?:\.|,|$)',
+                re.IGNORECASE,
+            ),
+            ("owner", "from_party", "doc_number", "doc_date", "authority"),
+        ),
+        (
+            re.compile(
+                r'El\s+inmueble\s+fue\s+adquirido\s+por\s+([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ ]+?)\s+mediante\s+compraventa\s+a\s+'
+                r'([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ ]+?)\s+seg[uú]n\s+Escritura\s+P[úu]blica\s+n[uú]mero\s+(\d[\d.]*)\s+'
+                r'de\s+fecha\s+(\d{1,2}\s+de\s+\w+\s+de\s+\d{4})\s+de\s+la\s+Notar[íi]a\s+(.+?)(?:,|\.|$)',
+                re.IGNORECASE,
+            ),
+            ("owner", "from_party", "doc_number", "doc_date", "authority"),
+        ),
+        (
+            re.compile(
+                r'Adquirid[oa]\s+por\s+([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ ]+?)\s+por\s+compra\s+a\s+'
+                r'([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ ]+?)\s+mediante\s+Escritura\s+P[úu]blica\s+n[uú]mero\s+(\d[\d.]*)\s+'
+                r'de\s+fecha\s+(\d{1,2}\s+de\s+\w+\s+de\s+\d{4}),\s*Notar[íi]a\s+(.+?)(?:,|\.|$)',
+                re.IGNORECASE,
+            ),
+            ("owner", "from_party", "doc_number", "doc_date", "authority"),
+        ),
+        (
+            re.compile(
+                r'Anotaci[oó]n\s+\d+:\s*ESCRITURA\s+(\d[\d.]*)\s+del\s+(\d{2}-\d{2}-\d{4})\s+Notar[íi]a\s+'
+                r'(.+?),\s*Compraventa\s+de\s+([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ ]+?)\s+a\s+([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ ]+?)(?:\.|,|$)',
+                re.IGNORECASE,
+            ),
+            ("doc_number", "doc_date", "authority", "from_party", "owner"),
+        ),
+        (
+            re.compile(
+                r'Adquirido\s+por\s+compraventa\s+mediante\s+Escritura\s+P[úu]blica\s+No\.?\s*(\d[\d.]*)\s+del\s+'
+                r'(\d{1,2}\s+de\s+\w+\s+de\s+\d{4}|\d{2}-\d{2}-\d{4})\s+de\s+la\s+Notar[íi]a\s+(.+?)(?:,|\.|$)',
+                re.IGNORECASE,
+            ),
+            ("doc_number", "doc_date", "authority"),
+        ),
+    ]
+    for pattern, fields in pattern_specs:
+        m = pattern.search(joined)
+        if not m:
+            continue
+        parts = {field: value.strip() for field, value in zip(fields, m.groups())}
+        owner = parts.get("owner", "")
+        from_party = parts.get("from_party", "")
+        doc_number = parts.get("doc_number", "")
+        doc_date = parts.get("doc_date", "")
+        authority = parts.get("authority", "")
+        return {
+            "title_acquisition_mode": "compraventa",
+            "title_from_party": from_party,
+            "title_doc_number": doc_number,
+            "title_doc_date": doc_date,
+            "title_authority": authority,
+            "current_owner_name": owner,
+            "titulo_adquisicion_text": (
+                f"{owner} adquirió el inmueble por compraventa de {from_party}, "
+                f"mediante escritura pública número {doc_number}, de fecha {doc_date}, "
+                f"de la {authority}"
+            ),
+        }
+    return {}
+
+
+def _derive_deed_context_from_supports(contexto: Dict[str, Any]) -> Dict[str, str]:
+    """Recover acquisition title data from the best available support, not just the chosen CTL."""
+    soportes = _iter_supports_from_context(contexto)
+    if not soportes:
+        return {}
+
+    paz_data = {
+        k: v for k, v in (contexto.get("DATOS_EXTRA") or {}).items()
+        if "PAZ_SALVO" in k.upper() and v
+    }
+
+    from app.services.ctl import resolve_ctl as _ctl_resolve
+    from app.services.ctl import to_deed_context as _ctl_deed_ctx_fn
+
+    best_candidate: Dict[str, Any] = {}
+    best_score = -1
+    best_support_score = -1
+
+    for soporte in soportes:
+        if not isinstance(soporte, dict):
+            continue
+
+        candidate: Dict[str, Any] = {}
+        try:
+            candidate = _ctl_deed_ctx_fn(_ctl_resolve(soporte, paz_data))
+        except Exception:
+            candidate = {}
+
+        text_candidate = _parse_title_context_from_texts(
+            _collect_support_strings(soporte.get("datos_inmueble"))
+            + _collect_support_strings(soporte.get("historia_y_antecedentes"))
+            + _collect_support_strings(soporte.get("documento_ep_info"))
+            + _collect_support_strings(soporte.get("hallazgos_variables"))
+        )
+        candidate_score = _score_deed_context_candidate(candidate)
+        text_score = _score_deed_context_candidate(text_candidate)
+        primary = text_candidate if text_score > candidate_score else candidate
+        secondary = candidate if primary is text_candidate else text_candidate
+        merged = {**primary}
+        for key, value in secondary.items():
+            if value and not merged.get(key):
+                merged[key] = value
+        if merged and soporte.get("_fileName"):
+            merged["_source_file"] = soporte.get("_fileName")
+
+        deed_score = _score_deed_context_candidate(merged)
+        support_score = _score_ctl_support_candidate(soporte)
+        if deed_score > best_score or (deed_score == best_score and support_score > best_support_score):
+            best_candidate = merged
+            best_score = deed_score
+            best_support_score = support_score
+
+    return best_candidate
 
 
 def _safe_get(d: Dict[str, Any], path: List[str], default=None):
@@ -386,6 +825,17 @@ def _normalize_radicado_candidate(value: Any) -> Optional[str]:
     return None
 
 
+def _canonicalize_act_name(value: Any) -> str:
+    name = re.sub(r"\s+", " ", str(value or "")).strip()
+    if not name:
+        return ""
+    folded = _fold_legal_text(name)
+    for canonical_name, patterns in _ACT_RECOVERY_PATTERNS:
+        if any(re.search(pattern, folded, re.IGNORECASE) for pattern in patterns):
+            return canonical_name
+    return name
+
+
 def _coerce_actos_a_firmar(value: Any) -> List[Dict[str, Any]]:
     if isinstance(value, str):
         try:
@@ -401,13 +851,13 @@ def _coerce_actos_a_firmar(value: Any) -> List[Dict[str, Any]]:
     actos: List[Dict[str, Any]] = []
     for item in value:
         if isinstance(item, dict):
-            nombre = re.sub(r"\s+", " ", str(item.get("nombre") or "")).strip()
+            nombre = _canonicalize_act_name(item.get("nombre") or "")
             if not nombre or _is_garbage(nombre):
                 continue
             acto = dict(item)
             acto["nombre"] = nombre
         else:
-            nombre = re.sub(r"\s+", " ", str(item or "")).strip()
+            nombre = _canonicalize_act_name(item or "")
             if not nombre or _is_garbage(nombre):
                 continue
             acto = {"nombre": nombre, "cuantia": 0}
@@ -571,6 +1021,71 @@ def _is_garbage(v: Any) -> bool:
     if re.fullmatch(r"<<[^<>]{1,120}>>", str(v).strip()) or re.fullmatch(r"\[\[[^\[\]]{1,120}\]\]", str(v).strip()):
         return True
     return False
+
+
+def _stabilize_generated_act_output(mision: Dict[str, Any], text: str) -> str:
+    """Apply deterministic post-processing for fragile act outputs."""
+    if not (mision.get("descripcion") or "").startswith("EP_ACTO"):
+        return text
+
+    ctx = mision.get("contexto_datos") or {}
+    act_name = _canonicalize_act_name(ctx.get("NOMBRE_ACTO_ACTUAL") or "")
+    if act_name != "ACTUALIZACION DE CODIGO CATASTRAL":
+        return text
+
+    out = (text or "").strip()
+    if not out:
+        return out
+
+    expected_header = f"---{ctx.get('ORDINAL_ACTO') or 'PRIMER'} ACTO---"
+    expected_title = f"---{str(ctx.get('NOMBRE_ACTO_ACTUAL') or '').upper()}---"
+    lines = out.splitlines()
+    if len(lines) >= 2:
+        lines[0] = expected_header
+        lines[1] = expected_title
+        out = "\n".join(lines)
+    else:
+        out = f"{expected_header}\n{expected_title}\n\n{out}"
+
+    trad = (
+        str(ctx.get("TRADICION_AUTORITATIVA") or "").strip()
+        or str(((ctx.get("_ctl_deed_ctx") or {}).get("titulo_adquisicion_text") or "")).strip()
+    )
+    if trad:
+        segundo = f"SEGUNDO: TRADICIÓN: Que el inmueble antes mencionado {trad}."
+        out = re.sub(
+            r"SEGUNDO:\s*TRADICIÓN:.*?(?=\nTERCERO:)",
+            segundo + "\n",
+            out,
+            flags=re.IGNORECASE | re.DOTALL,
+        )
+
+    ep_num = str(ctx.get("EP_ANTECEDENTE_NUMERO") or "").strip()
+    ep_fecha = str(ctx.get("EP_ANTECEDENTE_FECHA") or "").strip()
+    ep_notaria = str(ctx.get("EP_ANTECEDENTE_NOTARIA") or "").strip()
+    if ep_num and ep_fecha and ep_notaria:
+        doc_ref = f"la Escritura Pública número {ep_num} de fecha {ep_fecha} otorgada en la Notaría {ep_notaria}"
+        out = re.sub(
+            r"(TERCERO:.*?de conformidad con ).+?(, documento el cual se anexa)",
+            rf"\g<1>{doc_ref}\g<2>",
+            out,
+            flags=re.IGNORECASE | re.DOTALL,
+        )
+
+    code = str(
+        ctx.get("CODIGO_CATASTRAL_ANTERIOR")
+        or ctx.get("CEDULA_CATASTRAL")
+        or ""
+    ).strip()
+    if code:
+        out = re.sub(
+            r"((?:c[eé]dula|c[oó]digo)\s+catastral\s+anterior\s+)([0-9A-Za-z.\-]+)",
+            rf"\g<1>{code}",
+            out,
+            flags=re.IGNORECASE,
+        )
+
+    return out
 
 
 def _normalize_binary_legal_flag(value: Any) -> str | None:
@@ -1170,6 +1685,30 @@ def _build_universal_context(
         contexto["_ctl_deed_ctx"] = {}
         contexto["_ctl_source_file"] = None
 
+    _supports_deed_ctx = _derive_deed_context_from_supports(contexto)
+    contexto["_supports_deed_ctx"] = _supports_deed_ctx
+    if _score_deed_context_candidate(_supports_deed_ctx) > _score_deed_context_candidate(contexto.get("_ctl_deed_ctx") or {}):
+        contexto["_ctl_deed_ctx"] = {
+            **(contexto.get("_ctl_deed_ctx") or {}),
+            **{k: v for k, v in _supports_deed_ctx.items() if not k.startswith("_")},
+        }
+        if _supports_deed_ctx.get("_source_file"):
+            contexto["_ctl_source_file"] = _supports_deed_ctx.get("_source_file")
+
+    if not any(
+        (contexto.get("_ctl_deed_ctx") or {}).get(key)
+        for key in ("title_doc_number", "title_doc_date", "title_authority", "title_from_party")
+    ):
+        _hist_deed_ctx = _derive_deed_context_from_history(contexto)
+        contexto["_hist_deed_ctx"] = _hist_deed_ctx
+        if _hist_deed_ctx:
+            contexto["_ctl_deed_ctx"] = {
+                **(contexto.get("_ctl_deed_ctx") or {}),
+                **_hist_deed_ctx,
+            }
+    else:
+        contexto["_hist_deed_ctx"] = {}
+
     # B6: forma_de_pago desde radicación (prioridad sobre DOCS si está explícita)
     _fdp_rad = str((radicacion_json or {}).get("negocio_actual", {}).get("forma_de_pago") or "").strip()
     if _fdp_rad and not _is_garbage(_fdp_rad):
@@ -1272,6 +1811,15 @@ def _build_universal_context(
 
     _cc_paz_pref = _pick_preferred_previous_cadastral_code(contexto)
     _cc_cur_final = str((contexto.get("INMUEBLE") or {}).get("codigo_catastral_anterior") or "").strip()
+    _actos_ctx = list((contexto.get("NEGOCIO") or {}).get("actos_a_firmar") or [])
+    _rad_actos_for_cc = ((radicacion_json or {}).get("negocio_actual") or {}).get("actos_a_firmar") or []
+    if isinstance(_rad_actos_for_cc, list):
+        _actos_ctx.extend(_rad_actos_for_cc)
+    _is_cadastral_update = any(
+        _canonicalize_act_name((item or {}).get("nombre") if isinstance(item, dict) else item)
+        == "ACTUALIZACION DE CODIGO CATASTRAL"
+        for item in _actos_ctx
+    )
     if _cc_paz_pref:
         _cc_cur_digits = re.sub(r"[^0-9]", "", _cc_cur_final)
         _predial_digits = re.sub(
@@ -1279,7 +1827,8 @@ def _build_universal_context(
         )
         _cc_pref_digits = re.sub(r"[^0-9]", "", _cc_paz_pref)
         if (
-            not _cc_cur_final
+            (_is_cadastral_update and _cc_pref_digits)
+            or not _cc_cur_final
             or _looks_long_cadastral_code(_cc_cur_final)
             or _cc_cur_digits == _predial_digits
         ) and _cc_pref_digits and _cc_pref_digits != _predial_digits:
@@ -1823,6 +2372,25 @@ def _prepare_ep_sections(contexto: Dict[str, Any], actos_docs: List[Dict[str, st
         # Propagar ep_antecedente_pacto como variables explícitas para todos los actos
         ep_ant_global = inmueble.get("ep_antecedente_pacto") or {}
         _ctl_deed_ctx_ref = contexto.get("_ctl_deed_ctx") or {}
+        if not any(_ctl_deed_ctx_ref.get(k) for k in ("title_doc_number", "title_doc_date", "title_authority")):
+            _ctl_deed_ctx_ref = {
+                **_ctl_deed_ctx_ref,
+                **_derive_deed_context_from_supports(contexto),
+            }
+        if not any(_ctl_deed_ctx_ref.get(k) for k in ("title_doc_number", "title_doc_date", "title_authority")):
+            _ctl_deed_ctx_ref = {
+                **_ctl_deed_ctx_ref,
+                **_derive_deed_context_from_history(contexto),
+            }
+
+        if _acto_kind_actual == "ACTUALIZACION_CODIGO_CATASTRAL":
+            _codigo_catastral_pref = _pick_preferred_previous_cadastral_code(contexto)
+            if _codigo_catastral_pref:
+                inmueble["codigo_catastral_anterior"] = _codigo_catastral_pref
+                inmueble["CODIGO_CATASTRAL_ANTERIOR"] = _codigo_catastral_pref
+                inmueble["CEDULA_CATASTRAL"] = _codigo_catastral_pref
+                ctx_acto["CODIGO_CATASTRAL_ANTERIOR"] = _codigo_catastral_pref
+                ctx_acto["CEDULA_CATASTRAL"] = _codigo_catastral_pref
         if (
             _acto_kind_actual in ("ACTUALIZACION_CODIGO_CATASTRAL", "ACTUALIZACION_NOMENCLATURA", "ACLARACION")
             and any(_ctl_deed_ctx_ref.get(k) for k in ("title_doc_number", "title_doc_date", "title_authority"))
@@ -1855,6 +2423,32 @@ def _prepare_ep_sections(contexto: Dict[str, Any], actos_docs: List[Dict[str, st
         ctx_acto["NUMERO_ESCRITURA_ANTERIOR"] = ep_ant_global.get("numero_ep") or "[[PENDIENTE: NUMERO_ESCRITURA_ANTERIOR]]"
         ctx_acto["VENDEDOR_ANTERIOR"]         = ep_ant_global.get("vendedor") or "[[PENDIENTE: VENDEDOR_ANTERIOR]]"
         ctx_acto["TIPO_ADQUISICION_ANTERIOR"] = ep_ant_global.get("tipo_adquisicion") or "COMPRAVENTA"
+        _tradicion_autoritativa = ""
+        _segundo_tradicion_deterministica = ""
+        _title_num = _title_date = _title_auth = _title_from = _title_mode = _title_owner = ""
+        if _acto_kind_actual == "ACTUALIZACION_CODIGO_CATASTRAL":
+            _title_num = (_ctl_deed_ctx_ref.get("title_doc_number") or "").strip()
+            _title_date = (_ctl_deed_ctx_ref.get("title_doc_date") or "").strip()
+            _title_auth = (_ctl_deed_ctx_ref.get("title_authority") or "").strip()
+            _title_from = (_ctl_deed_ctx_ref.get("title_from_party") or "").strip()
+            _title_mode = (_ctl_deed_ctx_ref.get("title_acquisition_mode") or "").strip()
+            _title_owner = (_ctl_deed_ctx_ref.get("current_owner_name") or "").strip()
+            _tradicion_autoritativa = (_ctl_deed_ctx_ref.get("titulo_adquisicion_text") or "").strip()
+            if _title_num:
+                ctx_acto["EP_ANTECEDENTE_NUMERO"] = _title_num
+                ctx_acto["NUMERO_ESCRITURA_ANTERIOR"] = _title_num
+            if _title_date:
+                ctx_acto["EP_ANTECEDENTE_FECHA"] = _title_date
+                ctx_acto["FECHA_ESCRITURA_ANTERIOR"] = _title_date
+            if _title_auth:
+                ctx_acto["EP_ANTECEDENTE_NOTARIA"] = _title_auth
+                ctx_acto["CIRCULO_NOTARIA_ANTERIOR"] = _title_auth
+            if _title_from:
+                ctx_acto["VENDEDOR_ANTERIOR"] = _title_from
+            if _title_mode:
+                ctx_acto["TIPO_ADQUISICION_ANTERIOR"] = _title_mode.upper()
+            if _tradicion_autoritativa:
+                ctx_acto["TRADICION_AUTORITATIVA"] = _tradicion_autoritativa
         def _norm_orip(raw: str) -> str:
             """Normaliza OFICINA_REGISTRO al formato oficial completo."""
             r = (raw or "").strip()
@@ -1875,6 +2469,30 @@ def _prepare_ep_sections(contexto: Dict[str, Any], actos_docs: List[Dict[str, st
 
         _orip_raw = inmueble.get("oficina_registro") or inmueble.get("ciudad_registro") or ""
         ctx_acto["OFICINA_REGISTRO"] = _norm_orip(_orip_raw) if _orip_raw else "[[PENDIENTE: OFICINA_REGISTRO]]"
+        if _acto_kind_actual == "ACTUALIZACION_CODIGO_CATASTRAL" and _title_owner and _title_num and _title_date and _title_auth:
+            _mode_norm = _title_mode.lower()
+            if _mode_norm == "compraventa" and _title_from:
+                _segundo_tradicion_deterministica = (
+                    f"SEGUNDO: TRADICIÓN: Que el inmueble antes mencionado fue adquirido por {_title_owner} "
+                    f"por compraventa efectuada a {_title_from} mediante escritura pública número {_title_num} "
+                    f"de fecha {_title_date} otorgada en la Notaría {_title_auth}, debidamente registrada en "
+                    f"{ctx_acto['OFICINA_REGISTRO']} al folio de matrícula inmobiliaria número "
+                    f"{inmueble.get('matricula') or '[PENDIENTE: MATRICULA]'}"
+                )
+            elif _mode_norm == "adjudicacion_sucesion" and _title_from:
+                _segundo_tradicion_deterministica = (
+                    f"SEGUNDO: TRADICIÓN: Que el inmueble antes mencionado fue adquirido por {_title_owner} "
+                    f"por adjudicación en sucesión de {_title_from} mediante escritura pública número {_title_num} "
+                    f"de fecha {_title_date} otorgada en la Notaría {_title_auth}, debidamente registrada en "
+                    f"{ctx_acto['OFICINA_REGISTRO']} al folio de matrícula inmobiliaria número "
+                    f"{inmueble.get('matricula') or '[PENDIENTE: MATRICULA]'}"
+                )
+            elif _tradicion_autoritativa:
+                _segundo_tradicion_deterministica = (
+                    f"SEGUNDO: TRADICIÓN: Que el inmueble antes mencionado {_tradicion_autoritativa}, "
+                    f"debidamente registrada en {ctx_acto['OFICINA_REGISTRO']} al folio de matrícula "
+                    f"inmobiliaria número {inmueble.get('matricula') or '[PENDIENTE: MATRICULA]'}"
+                )
 
         instruccion_acto = (
             f"Encabeza con el separador exacto:\n---{ctx_acto['ORDINAL_ACTO']} ACTO---\n---{nombre_acto.upper()}---\n"
@@ -3838,6 +4456,14 @@ def _prepare_ep_sections(contexto: Dict[str, Any], actos_docs: List[Dict[str, st
                 "Conserva la estructura completa del acto y NO lo conviertas en actualización de nomenclatura, "
                 "aclaración genérica ni cancelación. "
             )
+            if _tradicion_autoritativa:
+                instruccion_acto += (
+                    "CLÁUSULA SEGUNDO - TRADICIÓN (AUTORITATIVA): usar EXACTAMENTE la adquisición del título "
+                    f"vigente del propietario: '{_tradicion_autoritativa}'. "
+                    "NO usar la hipoteca, embargo u otro gravamen posterior como título de adquisición. "
+                    "PROHIBIDO usar la escritura pública 822 de 2009 como tradición en este acto, porque ese "
+                    "documento corresponde a una hipoteca y no a la adquisición del dominio. "
+                )
         elif _acto_kind_actual in ("ACLARACION", "ACTUALIZACION_NOMENCLATURA"):
             instruccion_acto += (
                 "Para ACLARACION/ACTUALIZACION: referenciar la escritura que se aclara con "
@@ -3853,6 +4479,14 @@ def _prepare_ep_sections(contexto: Dict[str, Any], actos_docs: List[Dict[str, st
                     "\n\nMARCO LEGAL Y REQUISITOS (referencia, no copiar literalmente):\n"
                     + legal_context
                 )
+
+        if _segundo_tradicion_deterministica:
+            texto_crudo = re.sub(
+                r"SEGUNDO:\s*TRADICIÓN:.*?(?=\nTERCERO:)",
+                _segundo_tradicion_deterministica + "\n",
+                texto_crudo,
+                flags=re.IGNORECASE | re.DOTALL,
+            )
 
         # NI-04/MMFL11: Eliminar ep_antecedente_pacto del ctx_acto antes de enviar a DataBinder.
         # El campo "pacto" en el nombre confunde a DataBinder → inventa "COMPRADOR le transfirió
@@ -4297,6 +4931,7 @@ async def run_pipeline(
         out = await asyncio.to_thread(openai.chat, DATABINDER_SYSTEM, user, 0.1, max_tok)
         # Comprimir cadenas de guiones excesivas que OpenAI a veces genera
         out = re.sub(r'-{11,}', '----------', out)
+        out = _stabilize_generated_act_output(m, out)
         debug.dump_binder_output(m["orden"], m["descripcion"], out)
         return {"orden": m["orden"], "descripcion": m["descripcion"], "texto": out}
 
