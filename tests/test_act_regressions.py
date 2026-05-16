@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from app.pipeline.act_engine import _acto_kind
+from app.pipeline.act_engine import _acto_kind, build_act_context
 from app.pipeline.orchestrator import (
     _generated_act_has_body,
     _recover_missing_actos_a_firmar,
@@ -85,3 +85,28 @@ def test_recover_missing_actos_from_radicacion_text_and_filenames():
             "beneficiarios": [],
         }
     ]
+
+
+def test_build_act_context_uses_support_people_when_radicacion_only_has_interesado():
+    contexto = {
+        "PERSONAS_ACTIVOS": [
+            {"nombre": "JAIME GOMEZ FLOREZ", "rol_detectado": "INTERESADO", "_source": "radicacion"},
+        ],
+        "PERSONAS": [
+            {"nombre": "JAIME GOMEZ FLOREZ", "rol_detectado": "INTERESADO", "_source": "radicacion"},
+            {"nombre": "JAIME GOMEZ FLOREZ", "rol_detectado": "APODERADO ESPECIAL DE LA VENDEDORA"},
+            {"nombre": "CARMELINA FLOREZ IBAÑEZ", "rol_detectado": "TITULAR DE DERECHO REAL DE DOMINIO"},
+        ],
+        "EMPRESA_RL_MAP": {},
+        "INMUEBLE": {},
+    }
+
+    ctx = build_act_context(
+        contexto,
+        {"nombre": "ACTUALIZACION DE CODIGO CATASTRAL", "cuantia": 0, "otorgantes": [], "beneficiarios": []},
+        0,
+    )
+
+    solicitantes = (ctx.get("ROLES_ACTO") or {}).get("SOLICITANTES") or []
+    assert solicitantes
+    assert "APODERADO" in str(solicitantes[0].get("rol_detectado") or "").upper()

@@ -259,6 +259,8 @@ def infer_roles_por_acto(
     # La normalización DE→VENDEDOR/OTORGANTE y A→COMPRADOR/BENEFICIARIO se hace en orchestrator.py
     vendedores = [p for p in personas_globales if has_role(p, "VENDEDOR") or has_role(p, "OTORGANTE")]
     compradores = [p for p in personas_globales if has_role(p, "COMPRADOR") or has_role(p, "BENEFICIARIO")]
+    apoderados = [p for p in personas_globales if has_role(p, "APODERADO") or has_role(p, "REPRESENTANTE")]
+    propietarios = [p for p in personas_globales if has_role(p, "PROPIETAR") or has_role(p, "TITULAR")]
 
     # fallback: si no hay nada, todos son intervinientes
     intervinientes = list(personas_globales or [])
@@ -390,9 +392,15 @@ def infer_roles_por_acto(
             "INTERVINIENTES": intervinientes,
         }
 
-    if kind in ("AFECTACION_VF", "ACTUALIZACION_NOMENCLATURA", "ACLARACION", "CAMBIO_RAZON_SOCIAL"):
+    if kind in (
+        "AFECTACION_VF",
+        "ACTUALIZACION_CODIGO_CATASTRAL",
+        "ACTUALIZACION_NOMENCLATURA",
+        "ACLARACION",
+        "CAMBIO_RAZON_SOCIAL",
+    ):
         return {
-            "SOLICITANTES": (vendedores or compradores or intervinientes)[:2],
+            "SOLICITANTES": (apoderados or propietarios or vendedores or compradores or intervinientes)[:2],
             "INTERVINIENTES": intervinientes,
         }
 
@@ -425,10 +433,33 @@ def build_act_context(
       - PERSONAS_ACTO (lista "priorizada" para ese acto)
       - variables convenientes
     """
-    # Usar PERSONAS_ACTIVOS (ya filtrado a source=radicacion) para evitar duplicados
-    # de soportes (ej: INSELEM aparece también en cámara de comercio con NIT distinto).
-    personas = (contexto_universal.get("PERSONAS_ACTIVOS")
-                or dedupe_personas(contexto_universal.get("PERSONAS") or []))
+    # Preferir PERSONAS_ACTIVOS cuando la radicación trae roles útiles.
+    # Si la radicación solo dejó "INTERESADO/INTERVINIENTE", caer al pool completo
+    # para no perder apoderados o titulares extraídos de soportes.
+    personas_activos = contexto_universal.get("PERSONAS_ACTIVOS") or []
+    personas_todas = dedupe_personas(contexto_universal.get("PERSONAS") or [])
+
+    def _has_strong_role(p: Dict[str, Any]) -> bool:
+        role = (p.get("rol_detectado") or p.get("rol_en_hoja") or p.get("rol") or "").upper()
+        strong_markers = (
+            "VENDEDOR",
+            "COMPRADOR",
+            "OTORGANTE",
+            "BENEFICIARIO",
+            "APODERADO",
+            "REPRESENTANTE",
+            "PROPIETAR",
+            "TITULAR",
+            "ACREEDOR",
+            "DEUDOR",
+            "SOLICITANTE",
+        )
+        return any(marker in role for marker in strong_markers)
+
+    if personas_activos and any(_has_strong_role(p) for p in personas_activos):
+        personas = personas_activos
+    else:
+        personas = personas_todas or personas_activos
     acto_nombre = ""
     cuantia = 0
 

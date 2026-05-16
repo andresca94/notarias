@@ -1782,15 +1782,27 @@ def _prepare_ep_sections(contexto: Dict[str, Any], actos_docs: List[Dict[str, st
                 "'bajo el número' al describir cada empresa. NO inventar números. "
             )
 
-        # AP-1: detectar apoderados en personas_activos (pueden estar en 'representantes',
-        # no necesariamente en COMPRADORES si Gemini los clasificó correctamente)
+        # AP-1: detectar apoderados en el pool completo de personas del acto.
+        # En muchos radicados la persona útil sale solo en soportes, no en PERSONAS_ACTIVOS.
         _acto_benef_raw = (acto.get("beneficiarios") or []) if isinstance(acto, dict) else []
         _acto_benef_norms = {_normalize_name(b) for b in _acto_benef_raw}
         _compradores_acto_norms = {_normalize_name(c.get("nombre") or "")
                                    for c in ((ctx_acto.get("ROLES_ACTO") or {}).get("COMPRADORES") or [])}
         _todos_compradores_norms = _acto_benef_norms | _compradores_acto_norms
-        _ap_list = [p for p in (personas_activos or [])
-                    if re.search(r"\bAP\b", (p.get("rol_en_hoja") or "").upper())]
+        _person_pool_ap = (
+            ctx_acto.get("PERSONAS_ACTO")
+            or ctx_acto.get("PERSONAS")
+            or contexto.get("PERSONAS")
+            or personas_activos
+            or []
+        )
+        _ap_list = [
+            p for p in _person_pool_ap
+            if any(
+                marker in ((p.get("rol_detectado") or p.get("rol_en_hoja") or p.get("rol") or "").upper())
+                for marker in ("APODERADO", "REPRESENTANTE")
+            )
+        ]
         if _ap_list:
             _ap_instr_parts = []
             for _ap_p in _ap_list:
@@ -1805,6 +1817,30 @@ def _prepare_ep_sections(contexto: Dict[str, Any], actos_docs: List[Dict[str, st
                         None
                     )
                     _ap_rep_a = (_first_comp.get("nombre") or "").strip() if _first_comp else ""
+                if not _ap_rep_a:
+                    _rep_candidates = []
+                    for _pp_ap in _person_pool_ap:
+                        _pp_name = (_pp_ap.get("nombre") or "").strip()
+                        if not _pp_name or _normalize_name(_pp_name) == _normalize_name(_ap_nombre):
+                            continue
+                        _pp_role = (
+                            (_pp_ap.get("rol_detectado") or _pp_ap.get("rol_en_hoja") or _pp_ap.get("rol") or "")
+                            .upper()
+                        )
+                        if "APODERADO" in _pp_role or "REPRESENTANTE" in _pp_role:
+                            continue
+                        _pp_score = 0
+                        if "PROPIETAR" in _pp_role or "TITULAR" in _pp_role:
+                            _pp_score += 4
+                        if "VENDEDOR" in _pp_role or "OTORGANTE" in _pp_role:
+                            _pp_score += 3
+                        if "REPRESENTADA" in _pp_role:
+                            _pp_score += 2
+                        if _pp_score:
+                            _rep_candidates.append((_pp_score, _pp_name))
+                    if _rep_candidates:
+                        _rep_candidates.sort(key=lambda item: item[0], reverse=True)
+                        _ap_rep_a = _rep_candidates[0][1]
                 # Solo inyectar si el representado está en este acto (o no hay filtro por acto)
                 _rep_en_acto = (not _todos_compradores_norms
                                 or (_ap_rep_a and _normalize_name(_ap_rep_a) in _todos_compradores_norms))
@@ -1813,10 +1849,9 @@ def _prepare_ep_sections(contexto: Dict[str, Any], actos_docs: List[Dict[str, st
                 if _ap_rep_a:
                     _ap_instr_parts.append(
                         f"'{_ap_nombre}' actúa como APODERADO de '{_ap_rep_a}'. "
-                        f"Para LA PARTE COMPRADORA: mencionar ÚNICAMENTE a '{_ap_nombre}' con sus "
-                        f"datos personales (cédula en PERSONAS_ACTIVOS) y la frase: 'obrando como "
-                        f"apoderado de {_ap_rep_a}, según poder que se adjunta y protocoliza con la "
-                        f"presente escritura'. "
+                        f"En la comparecencia del acto, mencionar ÚNICAMENTE a '{_ap_nombre}' con sus "
+                        f"datos personales y la frase: 'obrando como apoderado de {_ap_rep_a}, según "
+                        f"poder que se adjunta y protocoliza con la presente escritura'. "
                         f"NO mencionar a '{_ap_rep_a}' como compareciente que actúa 'en nombre y "
                         f"representación propia' — {_ap_rep_a} es el representado AUSENTE, no comparece "
                         f"directamente. En PRESENTES: usar '{_ap_nombre}, apoderado de {_ap_rep_a}'."
