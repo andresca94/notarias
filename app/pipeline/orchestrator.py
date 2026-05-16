@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import json
 import re
+import unicodedata
 import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -202,6 +203,12 @@ def _generated_act_has_body(text: str) -> bool:
 
 
 def _validate_generated_act_sections(results: List[Dict[str, Any]], actos: List[Any]) -> None:
+    if not actos:
+        raise RuntimeError(
+            "La radicación no produjo ningún acto válido en NEGOCIO.actos_a_firmar; "
+            "se aborta para evitar generar una minuta sin cuerpo de acto."
+        )
+
     act_results = [r for r in results if str(r.get("descripcion") or "").startswith("EP_ACTO")]
     if len(act_results) != len(actos):
         raise RuntimeError(
@@ -230,12 +237,182 @@ _RADICADO_TEXT_PATTERNS = (
     re.compile(r'\bradicad[oa]\b[^\d]{0,24}(?P<rad>\d{4,12})', re.IGNORECASE),
 )
 
+_ACT_RECOVERY_PATTERNS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    (
+        "ACTUALIZACION DE CODIGO CATASTRAL",
+        (
+            r"(?:SOLICITUD\s+DE\s+)?ACTUALIZACION(?:ES)?\s+DE\s+CODIGO\s+CATASTRAL",
+            r"(?:SOLICITUD\s+DE\s+)?ACTUALIZAR?\s+CODIGO\s+CATASTRAL",
+        ),
+    ),
+    (
+        "ACTUALIZACION DE NOMENCLATURA",
+        (
+            r"(?:SOLICITUD\s+DE\s+)?ACTUALIZACION(?:ES)?\s+DE\s+NOMENCLATURA",
+            r"CAMBIO\s+DE\s+NOMENCLATURA",
+        ),
+    ),
+    (
+        "COMPRAVENTA DE BIENES INMUEBLES",
+        (
+            r"COMPRAVENTA(?:\s+DE\s+BIEN(?:ES)?\s+INMUEBLES?)?",
+        ),
+    ),
+    (
+        "HIPOTECA ABIERTA SIN LIMITE DE CUANTIA",
+        (
+            r"HIPOTECA\s+ABIERTA(?:\s+SIN\s+LIMITE\s+DE\s+CUANTIA)?",
+        ),
+    ),
+    (
+        "CANCELACION DE HIPOTECA",
+        (
+            r"CANCELACION(?:\s+PARCIAL)?\s+DE\s+HIPOTECA",
+        ),
+    ),
+    (
+        "ACLARACION",
+        (
+            r"ACLARACION(?:\s+DE\s+[A-Z ]+)?",
+        ),
+    ),
+    (
+        "CAMBIO DE NOMBRE DE PREDIO",
+        (
+            r"CAMBIO\s+DE\s+NOMBRE(?:\s+DE\s+PREDIO)?",
+        ),
+    ),
+)
+
+
+def _fold_legal_text(text: str) -> str:
+    return "".join(
+        c
+        for c in unicodedata.normalize("NFD", str(text or "").upper())
+        if unicodedata.category(c) != "Mn"
+    )
+
 
 def _normalize_radicado_candidate(value: Any) -> Optional[str]:
     digits = re.sub(r"\D+", "", str(value or ""))
     if 4 <= len(digits) <= 12:
         return digits
     return None
+
+
+def _coerce_actos_a_firmar(value: Any) -> List[Dict[str, Any]]:
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except Exception:
+            value = []
+    elif isinstance(value, dict):
+        value = [value]
+
+    if not isinstance(value, list):
+        return []
+
+    actos: List[Dict[str, Any]] = []
+    for item in value:
+        if isinstance(item, dict):
+            nombre = re.sub(r"\s+", " ", str(item.get("nombre") or "")).strip()
+            if not nombre or _is_garbage(nombre):
+                continue
+            acto = dict(item)
+            acto["nombre"] = nombre
+        else:
+            nombre = re.sub(r"\s+", " ", str(item or "")).strip()
+            if not nombre or _is_garbage(nombre):
+                continue
+            acto = {"nombre": nombre, "cuantia": 0}
+        actos.append(acto)
+    return actos
+
+
+def _infer_actos_from_text_sources(text_sources: List[str]) -> List[str]:
+    hits: List[tuple[int, str]] = []
+    for source_index, raw in enumerate(text_sources):
+        folded = _fold_legal_text(raw)
+        if not folded:
+            continue
+        for canonical_name, patterns in _ACT_RECOVERY_PATTERNS:
+            best_pos: Optional[int] = None
+            for pattern in patterns:
+                match = re.search(pattern, folded, re.IGNORECASE)
+                if not match:
+                    continue
+                pos = match.start()
+                if best_pos is None or pos < best_pos:
+                    best_pos = pos
+            if best_pos is not None:
+                hits.append((source_index * 100000 + best_pos, canonical_name))
+
+    hits.sort(key=lambda item: item[0])
+    ordered: List[str] = []
+    seen: set[str] = set()
+    for _, name in hits:
+        if name in seen:
+            continue
+        seen.add(name)
+        ordered.append(name)
+    return ordered
+
+
+def _recover_missing_actos_a_firmar(
+    current_actos: Any,
+    *,
+    radicacion_json: Dict[str, Any],
+    radicacion_raw_text: str,
+    documentos_paths: List[str],
+) -> List[Dict[str, Any]]:
+    actos = _coerce_actos_a_firmar(current_actos)
+    if actos:
+        return actos
+
+    text_sources: List[str] = []
+    if radicacion_raw_text:
+        text_sources.append(radicacion_raw_text)
+
+    negocio_actual = (radicacion_json or {}).get("negocio_actual") or {}
+    if negocio_actual:
+        text_sources.append(json.dumps(negocio_actual, ensure_ascii=False))
+
+    actos_juridicos = (radicacion_json or {}).get("actos_juridicos") or []
+    if actos_juridicos:
+        text_sources.append(json.dumps(actos_juridicos, ensure_ascii=False))
+
+    for path in documentos_paths or []:
+        text_sources.append(Path(path).stem)
+
+    inferred_names = _infer_actos_from_text_sources(text_sources)
+
+    if not inferred_names:
+        total_venta = negocio_actual.get("total_venta_hoy") or 0
+        roles = (radicacion_json or {}).get("mapeo_roles") or {}
+        vendedores = roles.get("vendedores") or []
+        compradores = roles.get("compradores") or []
+        if total_venta and vendedores and compradores:
+            inferred_names = ["COMPRAVENTA DE BIENES INMUEBLES"]
+
+    if not inferred_names:
+        return []
+
+    roles = (radicacion_json or {}).get("mapeo_roles") or {}
+    vendedores = [v for v in (roles.get("vendedores") or []) if v]
+    compradores = [c for c in (roles.get("compradores") or []) if c]
+    total_venta = negocio_actual.get("total_venta_hoy") or 0
+
+    recovered: List[Dict[str, Any]] = []
+    for name in inferred_names:
+        recovered.append(
+            {
+                "nombre": name,
+                "cuantia": total_venta if "COMPRAVENTA" in name else 0,
+                "otorgantes": vendedores if "COMPRAVENTA" in name else [],
+                "beneficiarios": compradores if "COMPRAVENTA" in name else [],
+            }
+        )
+    return recovered
 
 
 def _extract_radicado_from_structure(node: Any, *, parent_key: str = "") -> Optional[str]:
@@ -3911,6 +4088,13 @@ async def run_pipeline(
                 if _name_part and _name_part in _nom_norm:
                     _p["estado_civil"] = _val
                     break
+
+    contexto["NEGOCIO"]["actos_a_firmar"] = _recover_missing_actos_a_firmar(
+        contexto["NEGOCIO"].get("actos_a_firmar"),
+        radicacion_json=rad_json,
+        radicacion_raw_text=rad_text,
+        documentos_paths=documentos_paths,
+    )
 
     debug.dump_stage_json("04_contexto_universal.json", contexto)
 

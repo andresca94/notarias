@@ -5,6 +5,7 @@ import pytest
 from app.pipeline.act_engine import _acto_kind
 from app.pipeline.orchestrator import (
     _generated_act_has_body,
+    _recover_missing_actos_a_firmar,
     _validate_generated_act_sections,
 )
 from app.services.rag.local_rag import LocalRAG
@@ -50,3 +51,37 @@ def test_validate_generated_act_sections_rejects_missing_body():
 
     with pytest.raises(RuntimeError, match="perdió el cuerpo de acto"):
         _validate_generated_act_sections(results, acts)
+
+
+def test_validate_generated_act_sections_rejects_zero_detected_acts():
+    with pytest.raises(RuntimeError, match="no produjo ningún acto válido"):
+        _validate_generated_act_sections([], [])
+
+
+def test_recover_missing_actos_from_radicacion_text_and_filenames():
+    rad_json = {
+        "negocio_actual": {
+            "numero_radicado": "25356",
+            "total_venta_hoy": 0,
+            "actos_a_firmar": [],
+        },
+        "mapeo_roles": {"vendedores": [], "compradores": []},
+    }
+
+    acts = _recover_missing_actos_a_firmar(
+        [],
+        radicacion_json=rad_json,
+        radicacion_raw_text="Solicitud de actualizacion de codigo catastral para el radicado 25356",
+        documentos_paths=[
+            "/tmp/Correo de Notaria Tercera de Bucaramanga - RAD 25356 INFORMACION IMPORTANTE DE SOLICITUD DE ACTUALIZACION DE CODIGO CATASTRAL.pdf",
+        ],
+    )
+
+    assert acts == [
+        {
+            "nombre": "ACTUALIZACION DE CODIGO CATASTRAL",
+            "cuantia": 0,
+            "otorgantes": [],
+            "beneficiarios": [],
+        }
+    ]
